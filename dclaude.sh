@@ -17,6 +17,8 @@ set -e
 DCLAUDE_CLAUDE_VERSION="${DCLAUDE_CLAUDE_VERSION:-latest}"
 # Default to Node 20, or use specified version (can be "20", "lts", "current", etc.)
 DCLAUDE_NODE_VERSION="${DCLAUDE_NODE_VERSION:-20}"
+# Default environment variables to pass (comma-separated list)
+DCLAUDE_ENV_VARS="${DCLAUDE_ENV_VARS:-ANTHROPIC_API_KEY,GH_TOKEN}"
 IMAGE_NAME="dclaude:latest"
 
 # Get the directory where this script is located
@@ -164,11 +166,25 @@ EOF
     fi
 fi
 
-# Load .env file if it exists
-if [ -f .env ]; then
+# Prepare env file for Docker
+# Use DCLAUDE_ENV_FILE if specified, otherwise default to .env
+ENV_FILE="${DCLAUDE_ENV_FILE:-.env}"
+ENV_FILE_FOR_DOCKER=""
+
+if [ -f "$ENV_FILE" ]; then
+    echo "Loading environment from: $ENV_FILE"
+    # Use absolute path for Docker --env-file
+    if [[ "$ENV_FILE" = /* ]]; then
+        ENV_FILE_FOR_DOCKER="$ENV_FILE"
+    else
+        ENV_FILE_FOR_DOCKER="$(pwd)/$ENV_FILE"
+    fi
+    # Also source it for script variables like DCLAUDE_*
     set -a
-    source .env
+    source "$ENV_FILE"
     set +a
+elif [ -n "$DCLAUDE_ENV_FILE" ]; then
+    echo "Warning: Specified env file not found: $ENV_FILE"
 fi
 
 # Check if ANTHROPIC_API_KEY is set (not required for shell mode)
@@ -194,6 +210,11 @@ fi
 
 # Mount current directory
 DOCKER_CMD+=(-v "$(pwd):/workspace")
+
+# Add env file if it exists
+if [ -n "$ENV_FILE_FOR_DOCKER" ]; then
+    DOCKER_CMD+=(--env-file "$ENV_FILE_FOR_DOCKER")
+fi
 
 # Mount .gitconfig for git identity
 if [ -f "$HOME/.gitconfig" ]; then
@@ -247,15 +268,18 @@ elif [ "$DCLAUDE_DOCKER_FORWARD" = "isolated" ] || [ "$DCLAUDE_DOCKER_FORWARD" =
     DOCKER_CMD+=(-e "DCLAUDE_DIND=true")
 fi
 
-# Pass environment variables (if set)
-if [ -n "$ANTHROPIC_API_KEY" ]; then
-    DOCKER_CMD+=(-e "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY")
-fi
-
-# Add GH_TOKEN if it's set
-if [ -n "$GH_TOKEN" ]; then
-    DOCKER_CMD+=(-e "GH_TOKEN=$GH_TOKEN")
-fi
+# Pass environment variables specified in DCLAUDE_ENV_VARS
+IFS=',' read -ra ENV_VAR_ARRAY <<< "$DCLAUDE_ENV_VARS"
+for var_name in "${ENV_VAR_ARRAY[@]}"; do
+    # Trim whitespace
+    var_name=$(echo "$var_name" | xargs)
+    # Get the value of the variable
+    var_value="${!var_name}"
+    # Add to docker command if set
+    if [ -n "$var_value" ]; then
+        DOCKER_CMD+=(-e "$var_name=$var_value")
+    fi
+done
 
 # Handle shell mode or normal mode
 if [ "$OPEN_SHELL" = true ]; then

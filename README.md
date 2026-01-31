@@ -276,6 +276,72 @@ Benefits:
   - Set to `isolated` or `true` for isolated Docker environment (recommended)
   - Set to `host` to mount host Docker socket (see all host containers)
   - Allows Claude Code to run Docker commands
+- **DCLAUDE_ENV_VARS** (optional, default: `ANTHROPIC_API_KEY,GH_TOKEN`): Environment variables to pass
+  - Comma-separated list of environment variable names to pass to the container
+  - Example: `DCLAUDE_ENV_VARS="ANTHROPIC_API_KEY,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY"`
+  - Only passes variables that are actually set in your environment
+- **DCLAUDE_ENV_FILE** (optional, default: `.env`): Path to environment file
+  - Specify a custom `.env` file to load instead of the default
+  - Example: `DCLAUDE_ENV_FILE=".env.production"` or `DCLAUDE_ENV_FILE="/path/to/config.env"`
+
+### Custom Environment Variables
+
+By default, `ANTHROPIC_API_KEY` and `GH_TOKEN` are passed to the container. You can customize which environment variables to pass using `DCLAUDE_ENV_VARS`:
+
+**Pass custom environment variables:**
+```bash
+# Pass AWS credentials
+export DCLAUDE_ENV_VARS="ANTHROPIC_API_KEY,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_REGION"
+./dclaude.sh
+
+# Pass only specific variables (override default)
+export DCLAUDE_ENV_VARS="ANTHROPIC_API_KEY,OPENAI_API_KEY,DATABASE_URL"
+./dclaude.sh
+
+# Add to your .env file
+echo "DCLAUDE_ENV_VARS=ANTHROPIC_API_KEY,MY_API_KEY,MY_SECRET" >> .env
+```
+
+**How it works:**
+- Specify a comma-separated list of environment variable names
+- Only variables that are actually set in your environment will be passed
+- Unset variables are silently skipped (no errors)
+- By default includes `ANTHROPIC_API_KEY` and `GH_TOKEN`
+
+**Example - Pass cloud credentials:**
+```bash
+# Set your environment variables
+export ANTHROPIC_API_KEY="your-key"
+export AWS_ACCESS_KEY_ID="your-aws-key"
+export AWS_SECRET_ACCESS_KEY="your-aws-secret"
+export AWS_REGION="us-east-1"
+
+# Specify which ones to pass
+export DCLAUDE_ENV_VARS="ANTHROPIC_API_KEY,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_REGION"
+
+# Run Claude Code - it can now use AWS CLI
+./dclaude.sh "Deploy this application to AWS"
+```
+
+**Use different environment files:**
+```bash
+# Use production settings
+export DCLAUDE_ENV_FILE=".env.production"
+./dclaude.sh
+
+# Use staging settings
+export DCLAUDE_ENV_FILE=".env.staging"
+./dclaude.sh
+
+# Use a file from another location
+export DCLAUDE_ENV_FILE="/etc/dclaude/config.env"
+./dclaude.sh
+
+# Create environment-specific files
+echo "ANTHROPIC_API_KEY=prod-key" > .env.production
+echo "DCLAUDE_ENV_VARS=ANTHROPIC_API_KEY,AWS_PROFILE" >> .env.production
+DCLAUDE_ENV_FILE=".env.production" ./dclaude.sh
+```
 
 ### GitHub CLI Integration
 
