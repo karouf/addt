@@ -287,6 +287,9 @@ Benefits:
 - **DCLAUDE_ENV_FILE** (optional, default: `.env`): Path to environment file
   - Specify a custom `.env` file to load instead of the default
   - Example: `DCLAUDE_ENV_FILE=".env.production"` or `DCLAUDE_ENV_FILE="/path/to/config.env"`
+- **DCLAUDE_GITHUB_DETECT** (optional, default: `false`): Auto-detect GitHub token from `gh` CLI
+  - Set to `true` to enable automatic token detection from `gh auth login`
+  - Convenient for automatically using your `gh` CLI authentication
 
 ### Custom Environment Variables
 
@@ -349,7 +352,34 @@ DCLAUDE_ENV_FILE=".env.production" ./dclaude.sh
 
 ### GitHub CLI Integration
 
-The container includes the official GitHub CLI (`gh`) for seamless GitHub operations. Claude Code can use it to:
+The container includes the official GitHub CLI (`gh`) for seamless GitHub operations.
+
+**Automatic token detection (opt-in):** Enable auto-detection to use your `gh` CLI authentication automatically.
+
+**Option 1: Enable auto-detection (convenient):**
+```bash
+# One-time: Authenticate with GitHub CLI
+gh auth login
+
+# Enable auto-detection
+export DCLAUDE_GITHUB_DETECT=true
+./dclaude.sh "Create a pull request"
+
+# Or add to .env file
+echo "DCLAUDE_GITHUB_DETECT=true" >> .env
+```
+
+**Option 2: Manual token (explicit):**
+```bash
+# Set token manually
+export GH_TOKEN="your-token"
+./dclaude.sh
+
+# Or add to .env file
+echo "GH_TOKEN=your-token" >> .env
+```
+
+Claude Code can use it to:
 
 - Create and manage pull requests
 - View and create issues
