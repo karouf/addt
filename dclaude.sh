@@ -13,12 +13,16 @@
 #   ./dclaude.sh --update  - Check for and install updates
 #   ./dclaude.sh --rebuild  - Rebuild the Docker image
 #   ./dclaude.sh --yolo  - Bypass all permission checks (same as --dangerously-skip-permissions)
+#   ./dclaude.sh containers [list|stop|remove|clean] - Manage persistent containers
+# Environment:
+#   DCLAUDE_PERSISTENT=true  - Enable persistent container mode (per-directory containers)
 # Examples:
 #   ./dclaude.sh --help
 #   ./dclaude.sh --version
 #   ./dclaude.sh "Fix the bug in app.js"
 #   ./dclaude.sh --model opus "Explain this codebase"
 #   ./dclaude.sh --yolo "Refactor this entire codebase"
+#   DCLAUDE_PERSISTENT=true ./dclaude.sh  # Start persistent session
 
 DCLAUDE_VERSION="1.0.0"
 
@@ -47,6 +51,8 @@ DCLAUDE_GITHUB_DETECT="${DCLAUDE_GITHUB_DETECT:-false}"
 DCLAUDE_PORTS="${DCLAUDE_PORTS:-}"
 # Port range start for automatic allocation (default: 30000)
 DCLAUDE_PORT_RANGE_START="${DCLAUDE_PORT_RANGE_START:-30000}"
+# Persistent container mode (default: false - ephemeral containers)
+DCLAUDE_PERSISTENT="${DCLAUDE_PERSISTENT:-false}"
 IMAGE_NAME="dclaude:latest"
 
 # Get the directory where this script is located
@@ -80,6 +86,31 @@ find_available_port() {
         port=$((port + 1))
     done
     echo "$port"
+}
+
+# Function to generate a container name based on working directory
+generate_container_name() {
+    local workdir="$(pwd)"
+    # Get the directory name (last component of path)
+    local dirname=$(basename "$workdir")
+    # Sanitize directory name (remove special chars, lowercase)
+    dirname=$(echo "$dirname" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | cut -c1-20)
+    # Create a hash of the full directory path for uniqueness
+    local hash=$(echo -n "$workdir" | md5sum 2>/dev/null | cut -d' ' -f1 || echo -n "$workdir" | md5 | cut -d' ' -f1)
+    # Combine: dclaude-persistent-<dirname>-<short-hash>
+    echo "dclaude-persistent-${dirname}-${hash:0:8}"
+}
+
+# Function to check if persistent container exists
+container_exists() {
+    local container_name=$1
+    docker ps -a --filter "name=^${container_name}$" --format '{{.Names}}' | grep -q "^${container_name}$"
+}
+
+# Function to check if container is running
+container_is_running() {
+    local container_name=$1
+    docker ps --filter "name=^${container_name}$" --format '{{.Names}}' | grep -q "^${container_name}$"
 }
 
 # Function to check for and install updates
@@ -160,6 +191,48 @@ fi
 if [ "$1" = "shell" ]; then
     OPEN_SHELL=true
     shift  # Remove "shell" from arguments
+fi
+
+# Check for "containers" command to manage persistent containers
+if [ "$1" = "containers" ]; then
+    shift  # Remove "containers" from arguments
+    ACTION="${1:-list}"
+
+    case "$ACTION" in
+        list|ls)
+            echo "Persistent dclaude containers:"
+            docker ps -a --filter "name=^dclaude-persistent-" --format "table {{.Names}}\t{{.Status}}\t{{.CreatedAt}}"
+            ;;
+        stop)
+            if [ -n "$2" ]; then
+                docker stop "$2"
+            else
+                echo "Usage: dclaude containers stop <container-name>"
+            fi
+            ;;
+        rm|remove)
+            if [ -n "$2" ]; then
+                docker rm -f "$2"
+            else
+                echo "Usage: dclaude containers remove <container-name>"
+            fi
+            ;;
+        clean)
+            echo "Removing all persistent dclaude containers..."
+            docker ps -a --filter "name=^dclaude-persistent-" --format "{{.Names}}" | xargs -r docker rm -f
+            echo "✓ Cleaned"
+            ;;
+        *)
+            echo "Usage: dclaude containers [list|stop|remove|clean]"
+            echo ""
+            echo "Commands:"
+            echo "  list, ls    - List all persistent containers"
+            echo "  stop <name> - Stop a persistent container"
+            echo "  remove <name> - Remove a persistent container"
+            echo "  clean       - Remove all persistent containers"
+            ;;
+    esac
+    exit 0
 fi
 
 # Replace --yolo with --dangerously-skip-permissions in arguments
@@ -359,11 +432,47 @@ fi
 #    exit 1
 #fi
 
-# Generate unique container name
-CONTAINER_NAME="dclaude-$(date +%Y%m%d-%H%M%S)-$$"
+# Generate container name (persistent or ephemeral)
+if [ "$DCLAUDE_PERSISTENT" = "true" ]; then
+    CONTAINER_NAME=$(generate_container_name)
+    USE_EXISTING_CONTAINER=false
+
+    # Check if persistent container exists
+    if container_exists "$CONTAINER_NAME"; then
+        echo "Found existing persistent container: $CONTAINER_NAME"
+
+        # Check if it's running
+        if container_is_running "$CONTAINER_NAME"; then
+            echo "Container is running, connecting..."
+            USE_EXISTING_CONTAINER=true
+        else
+            echo "Container is stopped, starting..."
+            docker start "$CONTAINER_NAME" > /dev/null
+            USE_EXISTING_CONTAINER=true
+        fi
+    else
+        echo "Creating new persistent container: $CONTAINER_NAME"
+    fi
+else
+    # Ephemeral mode - generate unique name
+    CONTAINER_NAME="dclaude-$(date +%Y%m%d-%H%M%S)-$$"
+    USE_EXISTING_CONTAINER=false
+fi
 
 # Build docker run command using array for proper argument escaping
-DOCKER_CMD=(docker run --rm --name "$CONTAINER_NAME")
+if [ "$USE_EXISTING_CONTAINER" = "true" ]; then
+    # Use exec to connect to existing container
+    DOCKER_CMD=(docker exec)
+else
+    # Create new container
+    if [ "$DCLAUDE_PERSISTENT" = "true" ]; then
+        # Persistent container - don't use --rm
+        DOCKER_CMD=(docker run --name "$CONTAINER_NAME")
+    else
+        # Ephemeral container - use --rm
+        DOCKER_CMD=(docker run --rm --name "$CONTAINER_NAME")
+    fi
+fi
 
 # Detect if we're running in an interactive terminal
 if [ -t 0 ] && [ -t 1 ]; then
@@ -372,8 +481,10 @@ else
     DOCKER_CMD+=(-i)
 fi
 
-# Mount current directory
-DOCKER_CMD+=(-v "$(pwd):/workspace")
+# Only add volumes and environment when creating a new container
+if [ "$USE_EXISTING_CONTAINER" = "false" ]; then
+    # Mount current directory
+    DOCKER_CMD+=(-v "$(pwd):/workspace")
 
 # Add env file if it exists
 if [ -n "$ENV_FILE_FOR_DOCKER" ]; then
@@ -510,6 +621,7 @@ for var_name in "${ENV_VAR_ARRAY[@]}"; do
         DOCKER_CMD+=(-e "$var_name=$var_value")
     fi
 done
+fi  # End of USE_EXISTING_CONTAINER = false block
 
 # Build and display concise status line
 build_status_line() {
@@ -559,6 +671,11 @@ build_status_line() {
         status="$status | Ports:$PORT_MAP_DISPLAY"
     fi
 
+    # Persistent container name
+    if [ "$DCLAUDE_PERSISTENT" = "true" ]; then
+        status="$status | Container:$CONTAINER_NAME"
+    fi
+
     echo "✓ $status"
 }
 
@@ -566,38 +683,51 @@ build_status_line() {
 build_status_line
 
 # Handle shell mode or normal mode
-if [ "$OPEN_SHELL" = true ]; then
-    echo "Opening bash shell in container..."
-    # If using isolated Docker mode, we need to start dockerd first
-    if [ "$DCLAUDE_DOCKER_FORWARD" = "isolated" ] || [ "$DCLAUDE_DOCKER_FORWARD" = "true" ]; then
-        # Use a wrapper that starts dockerd then opens shell
-        DOCKER_CMD+=("$IMAGE_NAME" /bin/bash -c "
-            if [ \"\$DCLAUDE_DIND\" = \"true\" ]; then
-                echo 'Starting Docker daemon in isolated mode...'
-                sudo dockerd --host=unix:///var/run/docker.sock >/tmp/docker.log 2>&1 &
-                echo 'Waiting for Docker daemon...'
-                for i in {1..30}; do
-                    if [ -S /var/run/docker.sock ]; then
-                        sudo chmod 666 /var/run/docker.sock
-                        if docker info >/dev/null 2>&1; then
-                            echo '✓ Docker daemon ready (isolated environment)'
-                            break
-                        fi
-                    fi
-                    sleep 1
-                done
-            fi
-            exec /bin/bash \"\$@\"
-        " bash "$@")
+if [ "$USE_EXISTING_CONTAINER" = "true" ]; then
+    # Exec into existing container
+    DOCKER_CMD+=("$CONTAINER_NAME")
+
+    if [ "$OPEN_SHELL" = true ]; then
+        DOCKER_CMD+=(/bin/bash "$@")
     else
-        # Normal shell mode without DinD
-        DOCKER_CMD+=(--entrypoint /bin/bash "$IMAGE_NAME")
-        DOCKER_CMD+=("$@")
+        # Run claude command in existing container
+        DOCKER_CMD+=(claude "$@")
     fi
 else
-    # Normal mode - run claude command (entrypoint handles DinD if needed)
-    DOCKER_CMD+=("$IMAGE_NAME")
-    DOCKER_CMD+=("$@")
+    # Create new container
+    if [ "$OPEN_SHELL" = true ]; then
+        echo "Opening bash shell in container..."
+        # If using isolated Docker mode, we need to start dockerd first
+        if [ "$DCLAUDE_DOCKER_FORWARD" = "isolated" ] || [ "$DCLAUDE_DOCKER_FORWARD" = "true" ]; then
+            # Use a wrapper that starts dockerd then opens shell
+            DOCKER_CMD+=("$IMAGE_NAME" /bin/bash -c "
+                if [ \"\$DCLAUDE_DIND\" = \"true\" ]; then
+                    echo 'Starting Docker daemon in isolated mode...'
+                    sudo dockerd --host=unix:///var/run/docker.sock >/tmp/docker.log 2>&1 &
+                    echo 'Waiting for Docker daemon...'
+                    for i in {1..30}; do
+                        if [ -S /var/run/docker.sock ]; then
+                            sudo chmod 666 /var/run/docker.sock
+                            if docker info >/dev/null 2>&1; then
+                                echo '✓ Docker daemon ready (isolated environment)'
+                                break
+                            fi
+                        fi
+                        sleep 1
+                    done
+                fi
+                exec /bin/bash \"\$@\"
+            " bash "$@")
+        else
+            # Normal shell mode without DinD
+            DOCKER_CMD+=(--entrypoint /bin/bash "$IMAGE_NAME")
+            DOCKER_CMD+=("$@")
+        fi
+    else
+        # Normal mode - run claude command (entrypoint handles DinD if needed)
+        DOCKER_CMD+=("$IMAGE_NAME")
+        DOCKER_CMD+=("$@")
+    fi
 fi
 
 # Log the command
