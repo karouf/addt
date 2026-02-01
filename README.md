@@ -89,22 +89,28 @@ Download the latest release for your platform:
 
 ```bash
 # macOS Apple Silicon (M1/M2/M3)
-curl -L https://github.com/jedi4ever/dclaude/releases/latest/download/dclaude-darwin-arm64 -o dclaude
+rm -f dclaude  # Remove old file if exists
+curl -fsSL https://github.com/jedi4ever/dclaude/releases/latest/download/dclaude-darwin-arm64 -o dclaude
 chmod +x dclaude
+xattr -c dclaude  # Remove macOS quarantine attributes
 sudo mv dclaude /usr/local/bin/
 
 # macOS Intel
-curl -L https://github.com/jedi4ever/dclaude/releases/latest/download/dclaude-darwin-amd64 -o dclaude
+rm -f dclaude
+curl -fsSL https://github.com/jedi4ever/dclaude/releases/latest/download/dclaude-darwin-amd64 -o dclaude
 chmod +x dclaude
+xattr -c dclaude  # Remove macOS quarantine attributes
 sudo mv dclaude /usr/local/bin/
 
 # Linux x86_64
-curl -L https://github.com/jedi4ever/dclaude/releases/latest/download/dclaude-linux-amd64 -o dclaude
+rm -f dclaude
+curl -fsSL https://github.com/jedi4ever/dclaude/releases/latest/download/dclaude-linux-amd64 -o dclaude
 chmod +x dclaude
 sudo mv dclaude /usr/local/bin/
 
 # Linux ARM64
-curl -L https://github.com/jedi4ever/dclaude/releases/latest/download/dclaude-linux-arm64 -o dclaude
+rm -f dclaude
+curl -fsSL https://github.com/jedi4ever/dclaude/releases/latest/download/dclaude-linux-arm64 -o dclaude
 chmod +x dclaude
 sudo mv dclaude /usr/local/bin/
 
@@ -117,9 +123,25 @@ dclaude --dversion
 If you need a specific version for reproducibility, use the version tag:
 
 ```bash
-# Example: Install v1.4.3 specifically
-curl -L https://github.com/jedi4ever/dclaude/releases/download/v1.4.3/dclaude-darwin-arm64 -o dclaude
+# Example: Install v1.4.3 specifically (macOS)
+rm -f dclaude
+curl -fsSL https://github.com/jedi4ever/dclaude/releases/download/v1.4.3/dclaude-darwin-arm64 -o dclaude
 chmod +x dclaude
+xattr -c dclaude  # Remove macOS quarantine attributes
+sudo mv dclaude /usr/local/bin/
+```
+
+**Upgrading to a newer version:**
+
+Simply remove the old binary and install the new one:
+
+```bash
+# Remove old version and install latest
+sudo rm -f /usr/local/bin/dclaude
+rm -f dclaude
+curl -fsSL https://github.com/jedi4ever/dclaude/releases/latest/download/dclaude-darwin-arm64 -o dclaude
+chmod +x dclaude
+xattr -c dclaude
 sudo mv dclaude /usr/local/bin/
 ```
 
