@@ -659,7 +659,7 @@ claude --version          # Check Claude version
 
 ## Contributing
 
-Contributions are welcome! Please see [README-development.md](README-development.md) for:
+Contributions are welcome! Please see [docs/README-development.md](docs/README-development.md) for:
 - Architecture details
 - Build system
 - Development workflow
