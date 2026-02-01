@@ -6,6 +6,7 @@ BUILD_DIR=dist
 SRC_DIR=src
 VERSION=$(shell cat VERSION 2>/dev/null || echo "dev")
 GO_FILES=$(shell find $(SRC_DIR) -name '*.go')
+ASSET_FILES=$(shell find $(SRC_DIR)/assets -type f 2>/dev/null)
 
 # Build targets for different platforms
 PLATFORMS=darwin/amd64 darwin/arm64 linux/amd64 linux/arm64
@@ -25,7 +26,7 @@ all: build
 # Build for current platform
 build: $(BUILD_DIR)/$(BINARY_NAME)
 
-$(BUILD_DIR)/$(BINARY_NAME): $(GO_FILES) $(SRC_DIR)/assets/**/*
+$(BUILD_DIR)/$(BINARY_NAME): $(GO_FILES) $(ASSET_FILES)
 	@echo "Building $(BINARY_NAME) v$(VERSION)..."
 	@mkdir -p $(BUILD_DIR)
 	@cd $(SRC_DIR) && go build -ldflags "-X main.Version=$(VERSION)" -o ../$(BUILD_DIR)/$(BINARY_NAME) .
