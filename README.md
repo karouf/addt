@@ -170,12 +170,30 @@ dclaude shell
 
 # Run a specific command in the container
 dclaude shell -c "git config --list"
+```
 
-# Manage persistent containers
-dclaude containers list           # List all persistent containers
-dclaude containers stop <name>    # Stop a container
-dclaude containers remove <name>  # Remove a container
-dclaude containers clean          # Remove all persistent containers
+### Container Management
+
+Manage persistent containers (see Persistent Mode section below):
+
+```bash
+# List all persistent containers with their status
+dclaude containers list
+dclaude containers ls              # Short form
+
+# Stop a running persistent container
+dclaude containers stop dclaude-persistent-myproject-a1b2c3d4
+
+# Remove a persistent container
+dclaude containers remove dclaude-persistent-myproject-a1b2c3d4
+dclaude containers rm dclaude-persistent-myproject-a1b2c3d4  # Short form
+
+# Remove all persistent containers
+dclaude containers clean
+```
+
+**Note:** Container management commands only work with persistent containers created using `DCLAUDE_PERSISTENT=true`. Ephemeral containers are automatically removed after each run.
+
 ```
 
 ### Persistent Mode
