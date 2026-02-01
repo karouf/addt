@@ -11,11 +11,14 @@
 # Special commands:
 #   ./dclaude.sh shell  - Open bash shell in container
 #   ./dclaude.sh --update  - Check for and install updates
+#   ./dclaude.sh --rebuild  - Rebuild the Docker image
+#   ./dclaude.sh --yolo  - Bypass all permission checks (same as --dangerously-skip-permissions)
 # Examples:
 #   ./dclaude.sh --help
 #   ./dclaude.sh --version
 #   ./dclaude.sh "Fix the bug in app.js"
 #   ./dclaude.sh --model opus "Explain this codebase"
+#   ./dclaude.sh --yolo "Refactor this entire codebase"
 
 DCLAUDE_VERSION="1.0.0"
 
@@ -161,6 +164,17 @@ if [ "$1" = "shell" ]; then
     OPEN_SHELL=true
     shift  # Remove "shell" from arguments
 fi
+
+# Replace --yolo with --dangerously-skip-permissions in arguments
+ARGS=()
+for arg in "$@"; do
+    if [ "$arg" = "--yolo" ]; then
+        ARGS+=("--dangerously-skip-permissions")
+    else
+        ARGS+=("$arg")
+    fi
+done
+set -- "${ARGS[@]}"
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then

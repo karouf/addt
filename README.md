@@ -169,6 +169,9 @@ DClaude adds special commands and flags:
 # Can combine with other commands
 ./dclaude --rebuild --version
 
+# YOLO mode - bypass all permission checks (shorthand for --dangerously-skip-permissions)
+./dclaude --yolo "Refactor this entire codebase"
+
 # Open bash shell inside the container
 ./dclaude shell
 
@@ -350,6 +353,49 @@ export AWS_ACCESS_KEY_ID="your-key"
 export AWS_SECRET_ACCESS_KEY="your-secret"
 export AWS_REGION="us-east-1"
 ./dclaude.sh
+```
+
+### Aliases and Shortcuts
+
+Create shell aliases for common dclaude configurations:
+
+```bash
+# Add to ~/.bashrc or ~/.zshrc
+
+# YOLO mode - bypasses all permission prompts (use with caution!)
+# Note: dclaude has built-in --yolo flag, this alias just makes it shorter
+alias dclaude-yolo='dclaude --yolo'
+
+# Dev mode - with Docker and port mapping
+alias dclaude-dev='DCLAUDE_DOCKER_FORWARD=isolated DCLAUDE_PORTS="3000,8080,5432" dclaude'
+
+# Opus mode - always use Claude Opus
+alias dclaude-opus='dclaude --model opus'
+
+# Quick shell access
+alias dshell='dclaude shell'
+```
+
+**⚠️ Warning about YOLO mode:**
+- `--yolo` (shorthand for `--dangerously-skip-permissions`) bypasses ALL Claude Code permission checks
+- Claude can execute any command, read any file, make any change without asking
+- **Only use in trusted, sandboxed environments** (like throwaway containers or VMs)
+- Never use with sensitive data or production systems
+- Great for demos, experimentation, or CI/CD pipelines
+
+**Usage:**
+```bash
+# Use --yolo flag directly (no alias needed)
+dclaude --yolo "Refactor this entire codebase"
+
+# Or set up aliases for convenience
+source ~/.bashrc  # or source ~/.zshrc
+
+# Then use them
+dclaude-yolo "Refactor this entire codebase"
+dclaude-dev "Create a full-stack app"
+dclaude-opus "Complex architectural question"
+dshell  # Quick shell access
 ```
 
 ## Troubleshooting
