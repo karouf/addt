@@ -18,11 +18,9 @@ Commands:
   --dversion                  Show dclaude version
   --dhelp                     Show this help
 
-Options (passed to claude):
-  --version                   Show Claude Code version (passed through)
-  --help                      Show Claude Code help (passed through)
+Options:
+  All options are passed to Claude Code. Additionally:
   --yolo                      Bypass all permission checks (alias for --dangerously-skip-permissions)
-  --model <model>             Specify model to use
 
 Environment Variables:
   DCLAUDE_PROVIDER            Provider type: docker or daytona (default: docker)
