@@ -10,7 +10,7 @@ var Version = "1.1.0"
 
 const (
 	DefaultNodeVersion    = "20"
-	DefaultGoVersion      = "1.23"
+	DefaultGoVersion      = "1.23.5"
 	DefaultPortRangeStart = 30000
 )
 
