@@ -59,27 +59,23 @@ jobs:
 
             ```bash
             # macOS Apple Silicon (M1/M2/M3)
-            rm -f dclaude
             curl -fsSL https://github.com/${{ github.repository }}/releases/latest/download/dclaude-darwin-arm64 -o dclaude
             chmod +x dclaude
-            xattr -c dclaude
+            xattr -c dclaude && codesign --sign - --force dclaude
             sudo mv dclaude /usr/local/bin/
 
             # macOS Intel
-            rm -f dclaude
             curl -fsSL https://github.com/${{ github.repository }}/releases/latest/download/dclaude-darwin-amd64 -o dclaude
             chmod +x dclaude
-            xattr -c dclaude
+            xattr -c dclaude && codesign --sign - --force dclaude
             sudo mv dclaude /usr/local/bin/
 
             # Linux x86_64
-            rm -f dclaude
             curl -fsSL https://github.com/${{ github.repository }}/releases/latest/download/dclaude-linux-amd64 -o dclaude
             chmod +x dclaude
             sudo mv dclaude /usr/local/bin/
 
             # Linux ARM64
-            rm -f dclaude
             curl -fsSL https://github.com/${{ github.repository }}/releases/latest/download/dclaude-linux-arm64 -o dclaude
             chmod +x dclaude
             sudo mv dclaude /usr/local/bin/
@@ -87,10 +83,9 @@ jobs:
 
             **Specific version:**
             ```bash
-            rm -f dclaude
             curl -fsSL https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/dclaude-darwin-arm64 -o dclaude
             chmod +x dclaude
-            xattr -c dclaude  # macOS only
+            xattr -c dclaude && codesign --sign - --force dclaude  # macOS only
             sudo mv dclaude /usr/local/bin/
             ```
 

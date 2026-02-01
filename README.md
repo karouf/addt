@@ -89,27 +89,23 @@ Download the latest release for your platform:
 
 ```bash
 # macOS Apple Silicon (M1/M2/M3)
-rm -f dclaude  # Remove old file if exists
 curl -fsSL https://github.com/jedi4ever/dclaude/releases/latest/download/dclaude-darwin-arm64 -o dclaude
 chmod +x dclaude
-xattr -c dclaude  # Remove macOS quarantine attributes
+xattr -c dclaude && codesign --sign - --force dclaude
 sudo mv dclaude /usr/local/bin/
 
 # macOS Intel
-rm -f dclaude
 curl -fsSL https://github.com/jedi4ever/dclaude/releases/latest/download/dclaude-darwin-amd64 -o dclaude
 chmod +x dclaude
-xattr -c dclaude  # Remove macOS quarantine attributes
+xattr -c dclaude && codesign --sign - --force dclaude
 sudo mv dclaude /usr/local/bin/
 
 # Linux x86_64
-rm -f dclaude
 curl -fsSL https://github.com/jedi4ever/dclaude/releases/latest/download/dclaude-linux-amd64 -o dclaude
 chmod +x dclaude
 sudo mv dclaude /usr/local/bin/
 
 # Linux ARM64
-rm -f dclaude
 curl -fsSL https://github.com/jedi4ever/dclaude/releases/latest/download/dclaude-linux-arm64 -o dclaude
 chmod +x dclaude
 sudo mv dclaude /usr/local/bin/
@@ -124,24 +120,21 @@ If you need a specific version for reproducibility, use the version tag:
 
 ```bash
 # Example: Install v1.4.3 specifically (macOS)
-rm -f dclaude
 curl -fsSL https://github.com/jedi4ever/dclaude/releases/download/v1.4.3/dclaude-darwin-arm64 -o dclaude
 chmod +x dclaude
-xattr -c dclaude  # Remove macOS quarantine attributes
+xattr -c dclaude && codesign --sign - --force dclaude
 sudo mv dclaude /usr/local/bin/
 ```
 
 **Upgrading to a newer version:**
 
-Simply remove the old binary and install the new one:
+Simply re-run the installation command (the codesign step is important to avoid corruption):
 
 ```bash
-# Remove old version and install latest
-sudo rm -f /usr/local/bin/dclaude
-rm -f dclaude
+# Upgrade to latest version (macOS)
 curl -fsSL https://github.com/jedi4ever/dclaude/releases/latest/download/dclaude-darwin-arm64 -o dclaude
 chmod +x dclaude
-xattr -c dclaude
+xattr -c dclaude && codesign --sign - --force dclaude
 sudo mv dclaude /usr/local/bin/
 ```
 
