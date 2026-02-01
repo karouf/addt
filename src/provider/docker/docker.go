@@ -609,17 +609,18 @@ func (p *DockerProvider) BuildIfNeeded(rebuild bool) error {
 
 // DetermineImageName determines the appropriate Docker image name based on config
 func (p *DockerProvider) DetermineImageName() string {
-	// Handle dist-tags (latest, stable)
-	if p.config.ClaudeVersion == "latest" || p.config.ClaudeVersion == "stable" {
+	// Handle dist-tags (latest, stable, next)
+	if p.config.ClaudeVersion == "latest" || p.config.ClaudeVersion == "stable" || p.config.ClaudeVersion == "next" {
 		// Query npm registry for the version pointed to by this tag
 		npmVersion := p.getNpmVersionByTag(p.config.ClaudeVersion)
 		if npmVersion != "" {
+			// Update config with resolved version (needed for BuildIfNeeded checks)
+			p.config.ClaudeVersion = npmVersion
 			// Check if we already have an image with this version
 			existingImage := p.FindImageByLabel("tools.claude.version", npmVersion)
 			if existingImage != "" {
 				return existingImage
 			}
-			p.config.ClaudeVersion = npmVersion
 			return fmt.Sprintf("dclaude:claude-%s", npmVersion)
 		}
 		return fmt.Sprintf("dclaude:%s", p.config.ClaudeVersion)
