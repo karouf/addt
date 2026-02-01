@@ -1,4 +1,4 @@
-.PHONY: all build clean test help install dist fmt
+.PHONY: all build clean test help install dist fmt release
 
 # Variables
 BINARY_NAME=dclaude
@@ -19,6 +19,7 @@ help:
 	@echo "  make install       - Build and install to /usr/local/bin"
 	@echo "  make clean         - Remove build artifacts"
 	@echo "  make test          - Run tests"
+	@echo "  make release       - Create and push a new release (requires VERSION and CHANGELOG.md updated)"
 	@echo "  make help          - Show this help"
 
 # Default target
@@ -85,3 +86,36 @@ check:
 	@cd $(SRC_DIR) && go vet ./...
 	@cd $(SRC_DIR) && go fmt ./...
 	@echo "✓ Code checked"
+
+# Create and push a new release
+release:
+	@if [ -z "$(VERSION)" ] || [ "$(VERSION)" = "dev" ]; then \
+		echo "Error: VERSION file not found or invalid"; \
+		exit 1; \
+	fi
+	@echo "Creating release v$(VERSION)..."
+	@echo ""
+	@echo "⚠️  Make sure you have:"
+	@echo "  1. Updated VERSION file to $(VERSION)"
+	@echo "  2. Updated CHANGELOG.md with release notes"
+	@echo "  3. Committed all changes"
+	@echo ""
+	@read -p "Continue with release v$(VERSION)? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ ! $$REPLY =~ ^[Yy]$$ ]]; then \
+		echo "Release cancelled"; \
+		exit 1; \
+	fi
+	@echo "Committing version bump..."
+	@git add VERSION CHANGELOG.md
+	@git commit -m "Bump version to $(VERSION)" || true
+	@echo "Creating git tag v$(VERSION)..."
+	@git tag -a v$(VERSION) -m "Release v$(VERSION)" || (echo "Tag already exists, skipping..."; true)
+	@echo "Pushing to remote..."
+	@git push
+	@git push --tags
+	@echo ""
+	@echo "✓ Release v$(VERSION) created and pushed!"
+	@echo "  GitHub Actions will build and publish the release"
+	@echo "  Check status: gh run list"
+	@echo "  View release: gh release view v$(VERSION)"
