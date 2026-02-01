@@ -507,22 +507,25 @@ func (p *DockerProvider) GeneratePersistentName() string {
 
 // BuildIfNeeded ensures the Docker image is ready
 func (p *DockerProvider) BuildIfNeeded(rebuild bool) error {
+	imageExists := p.ImageExists(p.config.ImageName)
+
 	// Handle --rebuild flag
 	if rebuild {
-		fmt.Printf("Rebuilding %s...\n", p.config.ImageName)
-		if p.ImageExists(p.config.ImageName) {
+		if imageExists {
+			fmt.Printf("Rebuilding %s...\n", p.config.ImageName)
 			fmt.Println("Removing existing image...")
 			cmd := exec.Command("docker", "rmi", p.config.ImageName)
 			cmd.Run()
 		}
-	}
-
-	// Check if image exists
-	if !p.ImageExists(p.config.ImageName) {
 		return p.BuildImage(p.embeddedDockerfile, p.embeddedEntrypoint)
 	}
 
-	// Check if versions match (Claude and Node) using prefix matching
+	// If image doesn't exist, build it
+	if !imageExists {
+		return p.BuildImage(p.embeddedDockerfile, p.embeddedEntrypoint)
+	}
+
+	// Image exists - check if versions match using prefix matching
 	claudeLabel := p.GetImageLabel(p.config.ImageName, "tools.claude.version")
 	nodeLabel := p.GetImageLabel(p.config.ImageName, "tools.node.version")
 
@@ -547,6 +550,7 @@ func (p *DockerProvider) BuildIfNeeded(rebuild bool) error {
 		return p.BuildImage(p.embeddedDockerfile, p.embeddedEntrypoint)
 	}
 
+	// Image exists with correct versions - no build needed
 	return nil
 }
 
