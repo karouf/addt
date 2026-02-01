@@ -1,4 +1,4 @@
-package main
+package update
 
 import (
 	"bufio"
@@ -12,9 +12,9 @@ import (
 )
 
 // UpdateDClaude checks for and handles updates
-func UpdateDClaude() {
+func UpdateDClaude(currentVersion string) {
 	fmt.Println("Checking for updates...")
-	fmt.Printf("Current version: %s\n", Version)
+	fmt.Printf("Current version: %s\n", currentVersion)
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Get("https://raw.githubusercontent.com/jedi4ever/dclaude/main/VERSION")
@@ -33,7 +33,7 @@ func UpdateDClaude() {
 	latestVersion := strings.TrimSpace(string(body))
 	fmt.Printf("Latest version:  %s\n", latestVersion)
 
-	if Version == latestVersion {
+	if currentVersion == latestVersion {
 		fmt.Println("✓ You are already on the latest version")
 		return
 	}

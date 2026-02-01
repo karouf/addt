@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"os"
@@ -23,16 +23,17 @@ type Config struct {
 	ImageName      string
 	Persistent     bool   // Enable persistent container mode
 	Mode           string // container or shell
+	Provider       string // Provider type: docker or daytona
 }
 
 // LoadConfig loads configuration from environment variables
-func LoadConfig() *Config {
+func LoadConfig(defaultNodeVersion string, defaultPortRangeStart int) *Config {
 	cfg := &Config{
 		ClaudeVersion:  getEnvOrDefault("DCLAUDE_CLAUDE_VERSION", "latest"),
-		NodeVersion:    getEnvOrDefault("DCLAUDE_NODE_VERSION", DefaultNodeVersion),
+		NodeVersion:    getEnvOrDefault("DCLAUDE_NODE_VERSION", defaultNodeVersion),
 		EnvVars:        strings.Split(getEnvOrDefault("DCLAUDE_ENV_VARS", "ANTHROPIC_API_KEY,GH_TOKEN"), ","),
 		GitHubDetect:   getEnvOrDefault("DCLAUDE_GITHUB_DETECT", "false") == "true",
-		PortRangeStart: getEnvInt("DCLAUDE_PORT_RANGE_START", DefaultPortRangeStart),
+		PortRangeStart: getEnvInt("DCLAUDE_PORT_RANGE_START", defaultPortRangeStart),
 		SSHForward:     os.Getenv("DCLAUDE_SSH_FORWARD"),
 		GPGForward:     os.Getenv("DCLAUDE_GPG_FORWARD") == "true",
 		DockerForward:  os.Getenv("DCLAUDE_DOCKER_FORWARD"),
@@ -41,6 +42,7 @@ func LoadConfig() *Config {
 		LogFile:        getEnvOrDefault("DCLAUDE_LOG_FILE", "dclaude.log"),
 		Persistent:     os.Getenv("DCLAUDE_PERSISTENT") == "true",
 		Mode:           getEnvOrDefault("DCLAUDE_MODE", "container"),
+		Provider:       getEnvOrDefault("DCLAUDE_PROVIDER", "docker"),
 	}
 
 	// Parse ports

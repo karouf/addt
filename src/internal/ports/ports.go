@@ -1,4 +1,4 @@
-package main
+package ports
 
 import (
 	"fmt"
@@ -27,16 +27,23 @@ func FindAvailablePort(startPort int) int {
 	return port
 }
 
+// Config represents basic configuration needed for port handling
+type Config interface {
+	GetPorts() []string
+	GetPortRangeStart() int
+}
+
 // HandlePortMappings configures port mappings and returns mapping strings for display
-func HandlePortMappings(cfg *Config, dockerArgs *[]string) (string, string) {
-	if len(cfg.Ports) == 0 {
+func HandlePortMappings(cfg Config, dockerArgs *[]string) (string, string) {
+	ports := cfg.GetPorts()
+	if len(ports) == 0 {
 		return "", ""
 	}
 
 	var portMappings []string
-	hostPort := cfg.PortRangeStart
+	hostPort := cfg.GetPortRangeStart()
 
-	for _, containerPort := range cfg.Ports {
+	for _, containerPort := range ports {
 		containerPort = strings.TrimSpace(containerPort)
 		hostPort = FindAvailablePort(hostPort)
 
