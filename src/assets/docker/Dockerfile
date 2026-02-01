@@ -35,7 +35,12 @@ RUN ARCH=$(dpkg --print-architecture) && \
     if [ "$ARCH" = "amd64" ]; then GO_ARCH="amd64"; \
     elif [ "$ARCH" = "arm64" ]; then GO_ARCH="arm64"; \
     else echo "Unsupported architecture: $ARCH" && exit 1; fi && \
-    curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" -o /tmp/go.tar.gz && \
+    if [ "${GO_VERSION}" = "latest" ]; then \
+        ACTUAL_GO_VERSION=$(curl -s 'https://go.dev/VERSION?m=text' | head -1); \
+    else \
+        ACTUAL_GO_VERSION="go${GO_VERSION}"; \
+    fi && \
+    curl -fsSL "https://go.dev/dl/${ACTUAL_GO_VERSION}.linux-${GO_ARCH}.tar.gz" -o /tmp/go.tar.gz && \
     tar -C /usr/local -xzf /tmp/go.tar.gz && \
     rm /tmp/go.tar.gz
 

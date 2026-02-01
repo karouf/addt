@@ -412,7 +412,7 @@ The server will be available at http://localhost:3000
 | **GH_TOKEN** | *(optional)* | GitHub personal access token for gh CLI. Required for private repos, PRs, and write operations. Get yours at [github.com/settings/tokens](https://github.com/settings/tokens) |
 | **DCLAUDE_CLAUDE_VERSION** | `stable` | Claude Code version. Use `stable` for production (recommended), `latest` for newest version, or specific version like `2.1.27`. Automatically checks npm registry and reuses existing images |
 | **DCLAUDE_NODE_VERSION** | `20` | Node.js version for the container. Use major version (`18`, `20`, `22`), `lts`, or `current` |
-| **DCLAUDE_GO_VERSION** | `1.23.5` | Go version for the container. Use full version like `1.23.5`, `1.22.8`, etc. |
+| **DCLAUDE_GO_VERSION** | `latest` | Go version for the container. Use `latest` for newest stable, or specific version like `1.23.5`, `1.25.6`, etc. |
 | **DCLAUDE_UV_VERSION** | `latest` | UV (Python package manager) version. Use `latest` for newest stable, or specific version like `0.5.11`, `0.9.28`, etc. Supports `uv self update` inside containers. |
 | **DCLAUDE_GPG_FORWARD** | `false` | Enable GPG commit signing. Set to `true` to mount `~/.gnupg` |
 | **DCLAUDE_SSH_FORWARD** | `false` | Enable SSH forwarding. Use `agent` or `true` for agent forwarding (recommended - secure), or `keys` to mount entire `~/.ssh` directory (⚠️ exposes all private keys) |

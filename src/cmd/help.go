@@ -27,7 +27,7 @@ Environment Variables:
   DCLAUDE_PROVIDER            Provider type: docker or daytona (default: docker)
   DCLAUDE_CLAUDE_VERSION      Claude Code version (default: stable)
   DCLAUDE_NODE_VERSION        Node.js version (default: 20)
-  DCLAUDE_GO_VERSION          Go version (default: 1.23.5)
+  DCLAUDE_GO_VERSION          Go version (default: latest)
   DCLAUDE_UV_VERSION          UV Python package manager version (default: latest)
   DCLAUDE_ENV_VARS            Comma-separated env vars to pass (default: ANTHROPIC_API_KEY,GH_TOKEN)
   DCLAUDE_GITHUB_DETECT       Auto-detect GitHub token from gh CLI (default: false)
