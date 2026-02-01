@@ -9,8 +9,8 @@ import (
 
 const npmRegistryURL = "https://registry.npmjs.org/@anthropic-ai/claude-code"
 
-// getNpmLatestVersion fetches the latest stable version from npm registry
-func (p *DockerProvider) getNpmLatestVersion() string {
+// getNpmVersionByTag fetches the version for a specific dist-tag (latest, stable, etc.)
+func (p *DockerProvider) getNpmVersionByTag(tag string) string {
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Get(npmRegistryURL)
 	if err != nil {
@@ -29,15 +29,17 @@ func (p *DockerProvider) getNpmLatestVersion() string {
 	}
 
 	if distTags, ok := data["dist-tags"].(map[string]interface{}); ok {
-		if stable, ok := distTags["stable"].(string); ok {
-			return stable
-		}
-		if latest, ok := distTags["latest"].(string); ok {
-			return latest
+		if version, ok := distTags[tag].(string); ok {
+			return version
 		}
 	}
 
 	return ""
+}
+
+// getNpmLatestVersion fetches the latest stable version from npm registry (kept for compatibility)
+func (p *DockerProvider) getNpmLatestVersion() string {
+	return p.getNpmVersionByTag("latest")
 }
 
 // validateNpmVersion checks if a specific version exists in npm registry

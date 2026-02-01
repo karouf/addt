@@ -35,7 +35,7 @@ type Config struct {
 // LoadConfig loads configuration from environment variables
 func LoadConfig(defaultNodeVersion string, defaultGoVersion string, defaultUvVersion string, defaultPortRangeStart int) *Config {
 	cfg := &Config{
-		ClaudeVersion:     getEnvOrDefault("DCLAUDE_CLAUDE_VERSION", "latest"),
+		ClaudeVersion:     getEnvOrDefault("DCLAUDE_CLAUDE_VERSION", "stable"),
 		NodeVersion:       getEnvOrDefault("DCLAUDE_NODE_VERSION", defaultNodeVersion),
 		GoVersion:         getEnvOrDefault("DCLAUDE_GO_VERSION", defaultGoVersion),
 		UvVersion:         getEnvOrDefault("DCLAUDE_UV_VERSION", defaultUvVersion),

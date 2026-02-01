@@ -410,7 +410,7 @@ The server will be available at http://localhost:3000
 |----------|---------|-------------|
 | **ANTHROPIC_API_KEY** | *(optional)* | Your Anthropic API key for authentication. Not needed if you've already run `claude login` locally (uses `~/.claude` config) |
 | **GH_TOKEN** | *(optional)* | GitHub personal access token for gh CLI. Required for private repos, PRs, and write operations. Get yours at [github.com/settings/tokens](https://github.com/settings/tokens) |
-| **DCLAUDE_CLAUDE_VERSION** | `latest` | Pin to a specific Claude Code version. Set to `latest` for newest stable, or specific version like `2.1.27`. Automatically checks npm registry and reuses existing images |
+| **DCLAUDE_CLAUDE_VERSION** | `stable` | Claude Code version. Use `stable` for production (recommended), `latest` for newest version, or specific version like `2.1.27`. Automatically checks npm registry and reuses existing images |
 | **DCLAUDE_NODE_VERSION** | `20` | Node.js version for the container. Use major version (`18`, `20`, `22`), `lts`, or `current` |
 | **DCLAUDE_GO_VERSION** | `1.23.5` | Go version for the container. Use full version like `1.23.5`, `1.22.8`, etc. |
 | **DCLAUDE_UV_VERSION** | `latest` | UV (Python package manager) version. Use `latest` for newest stable, or specific version like `0.5.11`, `0.9.28`, etc. Supports `uv self update` inside containers. |
@@ -553,8 +553,8 @@ dclaude
 export DCLAUDE_NODE_VERSION=18
 dclaude
 
-# Use latest stable (default)
-dclaude  # Automatically uses latest stable version
+# Use stable version (default)
+dclaude  # Automatically uses stable version
 ```
 
 ### Custom Environment Variables
