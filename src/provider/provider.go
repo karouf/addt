@@ -34,6 +34,7 @@ type Config struct {
 	ClaudeVersion     string
 	NodeVersion       string
 	GoVersion         string
+	UvVersion         string
 	EnvVars           []string
 	GitHubDetect      bool
 	Ports             []string

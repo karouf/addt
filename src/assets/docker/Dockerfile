@@ -7,6 +7,7 @@ ARG GROUP_ID=1000
 ARG USERNAME=claude
 ARG CLAUDE_VERSION=latest
 ARG GO_VERSION=1.23
+ARG UV_VERSION=0.5.11
 
 # Install dependencies, GitHub CLI, Docker CLI, and Docker daemon (for DinD)
 RUN apt-get update && apt-get install -y \
@@ -39,6 +40,18 @@ RUN ARCH=$(dpkg --print-architecture) && \
 # Add Go to PATH
 ENV PATH="/usr/local/go/bin:${PATH}"
 
+# Install UV (Python package manager)
+RUN ARCH=$(dpkg --print-architecture) && \
+    if [ "$ARCH" = "amd64" ]; then UV_ARCH="x86_64"; \
+    elif [ "$ARCH" = "arm64" ]; then UV_ARCH="aarch64"; \
+    else echo "Unsupported architecture: $ARCH" && exit 1; fi && \
+    curl -fsSL "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-${UV_ARCH}-unknown-linux-gnu.tar.gz" -o /tmp/uv.tar.gz && \
+    tar -xzf /tmp/uv.tar.gz -C /tmp && \
+    mv /tmp/uv-${UV_ARCH}-unknown-linux-gnu/uv /usr/local/bin/uv && \
+    mv /tmp/uv-${UV_ARCH}-unknown-linux-gnu/uvx /usr/local/bin/uvx && \
+    rm -rf /tmp/uv.tar.gz /tmp/uv-${UV_ARCH}-unknown-linux-gnu && \
+    chmod +x /usr/local/bin/uv /usr/local/bin/uvx
+
 # Install Claude Code globally (specific version or latest)
 RUN if [ "$CLAUDE_VERSION" = "latest" ]; then \
         npm install -g @anthropic-ai/claude-code; \
@@ -52,7 +65,7 @@ RUN (groupadd -g ${GROUP_ID} ${USERNAME} 2>/dev/null || true) \
     && useradd -m -u ${USER_ID} -g ${GROUP_ID} -s /bin/bash ${USERNAME} 2>/dev/null || usermod -u ${USER_ID} ${USERNAME} \
     && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
-# Add Go to user's PATH in bash profile
+# Add Go and UV to user's PATH in bash profile
 RUN echo 'export PATH="/usr/local/go/bin:$PATH"' >> /home/${USERNAME}/.bashrc
 
 # Set working directory
@@ -80,6 +93,7 @@ LABEL tools.gh="installed"
 LABEL tools.ripgrep="installed"
 LABEL tools.node="installed"
 LABEL tools.go="installed"
+LABEL tools.uv="installed"
 
 # Entry point will be our wrapper script (handles DinD mode)
 # Empty CMD means interactive session by default

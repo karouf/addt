@@ -11,7 +11,7 @@ import (
 )
 
 // Execute is the main entry point for the CLI
-func Execute(version, defaultNodeVersion, defaultGoVersion string, defaultPortRangeStart int) {
+func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion string, defaultPortRangeStart int) {
 	// Parse command line arguments
 	args := os.Args[1:]
 
@@ -29,7 +29,7 @@ func Execute(version, defaultNodeVersion, defaultGoVersion string, defaultPortRa
 			return
 		case "containers":
 			// Load config for provider
-			cfg := config.LoadConfig(defaultNodeVersion, defaultGoVersion, defaultPortRangeStart)
+			cfg := config.LoadConfig(defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
 			providerCfg := &provider.Config{
 				Provider: cfg.Provider,
 			}
@@ -44,7 +44,7 @@ func Execute(version, defaultNodeVersion, defaultGoVersion string, defaultPortRa
 	}
 
 	// Load configuration
-	cfg := config.LoadConfig(defaultNodeVersion, defaultGoVersion, defaultPortRangeStart)
+	cfg := config.LoadConfig(defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
 
 	// Check for --rebuild flag
 	rebuildImage := false
@@ -72,6 +72,7 @@ func Execute(version, defaultNodeVersion, defaultGoVersion string, defaultPortRa
 		ClaudeVersion:     cfg.ClaudeVersion,
 		NodeVersion:       cfg.NodeVersion,
 		GoVersion:         cfg.GoVersion,
+		UvVersion:         cfg.UvVersion,
 		EnvVars:           cfg.EnvVars,
 		GitHubDetect:      cfg.GitHubDetect,
 		Ports:             cfg.Ports,

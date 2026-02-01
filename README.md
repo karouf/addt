@@ -44,6 +44,7 @@ claude --model opus dclaude --model opus
 - [x] Claude Code (configurable version)
 - [x] Node.js (configurable version)
 - [x] Go (configurable version)
+- [x] UV - Python package manager (configurable version)
 - [x] Git
 - [x] GitHub CLI (gh)
 - [x] Ripgrep (rg)
@@ -330,6 +331,7 @@ The server will be available at http://localhost:3000
 | **DCLAUDE_CLAUDE_VERSION** | `latest` | Pin to a specific Claude Code version. Set to `latest` for newest stable, or specific version like `2.1.27`. Automatically checks npm registry and reuses existing images |
 | **DCLAUDE_NODE_VERSION** | `20` | Node.js version for the container. Use major version (`18`, `20`, `22`), `lts`, or `current` |
 | **DCLAUDE_GO_VERSION** | `1.23.5` | Go version for the container. Use full version like `1.23.5`, `1.22.8`, etc. |
+| **DCLAUDE_UV_VERSION** | `0.5.11` | UV (Python package manager) version. Use full version like `0.5.11`, `0.4.30`, etc. |
 | **DCLAUDE_GPG_FORWARD** | `false` | Enable GPG commit signing. Set to `true` to mount `~/.gnupg` |
 | **DCLAUDE_SSH_FORWARD** | `false` | Enable SSH forwarding. Use `agent` or `true` for agent forwarding (recommended - secure), or `keys` to mount entire `~/.ssh` directory (⚠️ exposes all private keys) |
 | **DCLAUDE_DOCKER_FORWARD** | `false` | Enable Docker support. Use `isolated` or `true` for isolated environment (recommended), or `host` to access host Docker daemon |
@@ -659,6 +661,7 @@ DClaude is a Go binary that:
 - Claude Code
 - Node.js
 - Go
+- UV (Python package manager)
 - Git
 - GitHub CLI (gh)
 - Ripgrep (rg)
