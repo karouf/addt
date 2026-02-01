@@ -26,7 +26,7 @@ all: build
 # Build for current platform
 build: $(BUILD_DIR)/$(BINARY_NAME)
 
-$(BUILD_DIR)/$(BINARY_NAME): $(GO_FILES) $(ASSET_FILES)
+$(BUILD_DIR)/$(BINARY_NAME): $(GO_FILES) $(ASSET_FILES) VERSION
 	@echo "Building $(BINARY_NAME) v$(VERSION)..."
 	@mkdir -p $(BUILD_DIR)
 	@cd $(SRC_DIR) && go build -ldflags "-X main.Version=$(VERSION)" -o ../$(BUILD_DIR)/$(BINARY_NAME) .
