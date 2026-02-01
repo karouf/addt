@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-02-01
+
+### Fixed
+- Fixed version mismatch false positive when using dist-tags (stable, latest, next)
+- DetermineImageName() now updates config with resolved version before checking for existing images
+- Eliminates unnecessary rebuilds when using 'stable' tag
+- Existing images are now properly reused without rebuild
+
+### Technical
+- Moved ClaudeVersion resolution before existing image check in DetermineImageName()
+- Added 'next' dist-tag to version resolution logic
+
 ## [1.7.0] - 2026-02-01
 
 ### Added
