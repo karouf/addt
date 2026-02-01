@@ -40,6 +40,9 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 			}
 			HandleContainersCommand(prov, args[1:])
 			return
+		case "firewall":
+			HandleFirewallCommand(args[1:])
+			return
 		}
 	}
 
@@ -87,6 +90,8 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 		Persistent:        cfg.Persistent,
 		MountWorkdir:      cfg.MountWorkdir,
 		MountClaudeConfig: cfg.MountClaudeConfig,
+		FirewallEnabled:   cfg.FirewallEnabled,
+		FirewallMode:      cfg.FirewallMode,
 		Mode:              cfg.Mode,
 		Provider:          cfg.Provider,
 	}

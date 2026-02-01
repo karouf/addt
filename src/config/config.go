@@ -26,6 +26,8 @@ type Config struct {
 	Persistent        bool   // Enable persistent container mode
 	MountWorkdir      bool   // Mount present working directory
 	MountClaudeConfig bool   // Mount ~/.claude directory
+	FirewallEnabled   bool   // Enable network firewall
+	FirewallMode      string // Firewall mode: strict, permissive, off
 	Mode              string // container or shell
 	Provider          string // Provider type: docker or daytona
 }
@@ -49,6 +51,8 @@ func LoadConfig(defaultNodeVersion string, defaultGoVersion string, defaultUvVer
 		Persistent:        os.Getenv("DCLAUDE_PERSISTENT") == "true",
 		MountWorkdir:      getEnvOrDefault("DCLAUDE_MOUNT_WORKDIR", "true") != "false",
 		MountClaudeConfig: getEnvOrDefault("DCLAUDE_MOUNT_CLAUDE_CONFIG", "true") != "false",
+		FirewallEnabled:   os.Getenv("DCLAUDE_FIREWALL") == "true",
+		FirewallMode:      getEnvOrDefault("DCLAUDE_FIREWALL_MODE", "strict"),
 		Mode:              getEnvOrDefault("DCLAUDE_MODE", "container"),
 		Provider:          getEnvOrDefault("DCLAUDE_PROVIDER", "docker"),
 	}

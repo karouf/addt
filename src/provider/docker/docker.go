@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -15,19 +16,21 @@ import (
 
 // DockerProvider implements the Provider interface for Docker
 type DockerProvider struct {
-	config             *provider.Config
-	tempDirs           []string
-	embeddedDockerfile []byte
-	embeddedEntrypoint []byte
+	config               *provider.Config
+	tempDirs             []string
+	embeddedDockerfile   []byte
+	embeddedEntrypoint   []byte
+	embeddedInitFirewall []byte
 }
 
 // NewDockerProvider creates a new Docker provider
-func NewDockerProvider(cfg *provider.Config, dockerfile, entrypoint []byte) (provider.Provider, error) {
+func NewDockerProvider(cfg *provider.Config, dockerfile, entrypoint, initFirewall []byte) (provider.Provider, error) {
 	return &DockerProvider{
-		config:             cfg,
-		tempDirs:           []string{},
-		embeddedDockerfile: dockerfile,
-		embeddedEntrypoint: entrypoint,
+		config:               cfg,
+		tempDirs:             []string{},
+		embeddedDockerfile:   dockerfile,
+		embeddedEntrypoint:   entrypoint,
+		embeddedInitFirewall: initFirewall,
 	}, nil
 }
 
@@ -222,6 +225,18 @@ func (p *DockerProvider) Run(spec *provider.RunSpec) error {
 			}
 		}
 
+		// Firewall configuration
+		if p.config.FirewallEnabled {
+			// Requires NET_ADMIN capability for iptables
+			dockerArgs = append(dockerArgs, "--cap-add", "NET_ADMIN")
+
+			// Mount firewall config directory
+			firewallConfigDir := filepath.Join(homeDir, ".dclaude", "firewall")
+			if _, err := os.Stat(firewallConfigDir); err == nil {
+				dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:/home/%s/.dclaude/firewall", firewallConfigDir, username))
+			}
+		}
+
 		// Docker forwarding
 		dockerArgs = append(dockerArgs, p.HandleDockerForwarding(spec.DindMode, spec.Name)...)
 
@@ -349,6 +364,18 @@ func (p *DockerProvider) Shell(spec *provider.RunSpec) error {
 			}
 		}
 
+		// Firewall configuration
+		if p.config.FirewallEnabled {
+			// Requires NET_ADMIN capability for iptables
+			dockerArgs = append(dockerArgs, "--cap-add", "NET_ADMIN")
+
+			// Mount firewall config directory
+			firewallConfigDir := filepath.Join(homeDir, ".dclaude", "firewall")
+			if _, err := os.Stat(firewallConfigDir); err == nil {
+				dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:/home/%s/.dclaude/firewall", firewallConfigDir, username))
+			}
+		}
+
 		// Docker forwarding
 		dockerArgs = append(dockerArgs, p.HandleDockerForwarding(spec.DindMode, spec.Name)...)
 
@@ -370,9 +397,18 @@ func (p *DockerProvider) Shell(spec *provider.RunSpec) error {
 		dockerArgs = append(dockerArgs, spec.Args...)
 	} else {
 		// Override entrypoint to bash for shell mode
-		if spec.DindMode == "isolated" || spec.DindMode == "true" {
-			// DinD mode with shell - start docker daemon then exec bash
+		// Need to handle firewall initialization and DinD initialization
+		needsInit := spec.DindMode == "isolated" || spec.DindMode == "true" || p.config.FirewallEnabled
+
+		if needsInit {
+			// Create initialization script that runs before bash
 			script := `
+# Initialize firewall if enabled
+if [ "${DCLAUDE_FIREWALL_ENABLED}" = "true" ] && [ -f /usr/local/bin/init-firewall.sh ]; then
+    sudo /usr/local/bin/init-firewall.sh
+fi
+
+# Start Docker daemon if in DinD mode
 if [ "$DCLAUDE_DIND" = "true" ]; then
     echo 'Starting Docker daemon in isolated mode...'
     sudo dockerd --host=unix:///var/run/docker.sock >/tmp/docker.log 2>&1 &
@@ -388,6 +424,7 @@ if [ "$DCLAUDE_DIND" = "true" ]; then
         sleep 1
     done
 fi
+
 exec /bin/bash "$@"
 `
 			dockerArgs = append(dockerArgs, "--entrypoint", "/bin/bash", spec.ImageName, "-c", script, "bash")
@@ -463,6 +500,13 @@ func (p *DockerProvider) GetStatus(cfg *provider.Config, envName string) string 
 		status += " | Docker:host"
 	default:
 		status += " | Docker:-"
+	}
+
+	// Firewall status
+	if cfg.FirewallEnabled {
+		status += fmt.Sprintf(" | Firewall:%s", cfg.FirewallMode)
+	} else {
+		status += " | Firewall:-"
 	}
 
 	// Port mappings - will be added by orchestrator

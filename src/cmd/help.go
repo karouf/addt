@@ -13,6 +13,7 @@ Usage: dclaude [options] [prompt]
 Commands:
   shell                       Open bash shell in environment
   containers [list|stop|rm|clean]  Manage persistent environments
+  firewall [list|add|remove|reset] Manage network firewall domains
   --update                    Check for and install updates
   --rebuild                   Rebuild the environment (Docker only)
   --dversion                  Show dclaude version
@@ -41,6 +42,8 @@ Environment Variables:
   DCLAUDE_PERSISTENT          Enable persistent container mode (true/false)
   DCLAUDE_MOUNT_WORKDIR       Mount working directory to /workspace (default: true)
   DCLAUDE_MOUNT_CLAUDE_CONFIG Mount ~/.claude and ~/.claude.json (default: true)
+  DCLAUDE_FIREWALL            Enable network firewall (default: false, requires --cap-add=NET_ADMIN)
+  DCLAUDE_FIREWALL_MODE       Firewall mode: strict, permissive, off (default: strict)
   DCLAUDE_MODE                Execution mode: container or shell (default: container)
 
 Examples:

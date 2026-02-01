@@ -14,6 +14,9 @@ var DockerDockerfile []byte
 //go:embed docker/docker-entrypoint.sh
 var DockerEntrypoint []byte
 
+//go:embed docker/init-firewall.sh
+var DockerInitFirewall []byte
+
 // Daytona provider assets
 //
 //go:embed daytona/Dockerfile

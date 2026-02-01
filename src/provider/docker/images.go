@@ -70,6 +70,12 @@ func (p *DockerProvider) BuildImage(embeddedDockerfile, embeddedEntrypoint []byt
 		return fmt.Errorf("failed to write docker-entrypoint.sh: %w", err)
 	}
 
+	// Write embedded firewall init script
+	initFirewallPath := filepath.Join(buildDir, "init-firewall.sh")
+	if err := os.WriteFile(initFirewallPath, p.embeddedInitFirewall, 0755); err != nil {
+		return fmt.Errorf("failed to write init-firewall.sh: %w", err)
+	}
+
 	scriptDir := buildDir
 
 	// Get current user info

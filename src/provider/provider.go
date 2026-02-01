@@ -49,6 +49,8 @@ type Config struct {
 	Persistent        bool
 	MountWorkdir      bool
 	MountClaudeConfig bool
+	FirewallEnabled   bool
+	FirewallMode      string
 	Mode              string
 	Provider          string
 }

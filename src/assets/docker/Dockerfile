@@ -18,6 +18,8 @@ RUN apt-get update && apt-get install -y \
     ripgrep \
     ca-certificates \
     iptables \
+    ipset \
+    dnsutils \
     supervisor \
     && curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
@@ -77,6 +79,10 @@ RUN chown -R ${USER_ID}:${GROUP_ID} /workspace
 # Copy entrypoint wrapper for DinD support
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Copy firewall initialization script
+COPY init-firewall.sh /usr/local/bin/init-firewall.sh
+RUN chmod +x /usr/local/bin/init-firewall.sh
 
 # Switch to non-root user
 USER ${USERNAME}

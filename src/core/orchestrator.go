@@ -175,6 +175,12 @@ func (o *Orchestrator) buildEnvironment() map[string]string {
 		env["DCLAUDE_PORT_MAP"] = portMapString
 	}
 
+	// Add firewall configuration
+	if o.config.FirewallEnabled {
+		env["DCLAUDE_FIREWALL_ENABLED"] = "true"
+		env["DCLAUDE_FIREWALL_MODE"] = o.config.FirewallMode
+	}
+
 	return env
 }
 

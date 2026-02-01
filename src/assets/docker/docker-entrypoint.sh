@@ -28,6 +28,11 @@ if [ "$DCLAUDE_DIND" = "true" ]; then
     done
 fi
 
+# Initialize firewall if enabled
+if [ "${DCLAUDE_FIREWALL_ENABLED}" = "true" ] && [ -f /usr/local/bin/init-firewall.sh ]; then
+    sudo /usr/local/bin/init-firewall.sh
+fi
+
 # Build system prompt for port mappings
 CLAUDE_ARGS=()
 

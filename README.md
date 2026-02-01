@@ -266,6 +266,63 @@ dclaude containers clean
 
 **Note:** Container management commands only work with persistent containers created using `DCLAUDE_PERSISTENT=true`. Ephemeral containers are automatically removed after each run.
 
+### Network Firewall
+
+Control network access with a whitelist-based firewall. Particularly useful in CI/CD environments:
+
+```bash
+# List allowed domains
+dclaude firewall list
+dclaude firewall ls              # Short form
+
+# Add a domain to the whitelist
+dclaude firewall add example.com
+
+# Remove a domain from the whitelist
+dclaude firewall remove example.com
+dclaude firewall rm example.com  # Short form
+
+# Reset to default allowed domains
+dclaude firewall reset
+
+# Show help
+dclaude firewall help
+```
+
+**Enable the firewall:**
+
+```bash
+# Enable strict mode (blocks all non-whitelisted traffic)
+export DCLAUDE_FIREWALL=true
+export DCLAUDE_FIREWALL_MODE=strict
+dclaude
+
+# Or use permissive mode (logs but allows all traffic - for testing)
+export DCLAUDE_FIREWALL=true
+export DCLAUDE_FIREWALL_MODE=permissive
+dclaude
+```
+
+**⚠️ Important:** The firewall requires additional Docker permissions:
+- Automatically adds `--cap-add=NET_ADMIN` when enabled
+- This is required for iptables configuration
+
+**Configuration file:** `~/.dclaude/firewall/allowed-domains.txt`
+
+**Default allowed domains:**
+- Anthropic API (api.anthropic.com)
+- GitHub (github.com, api.github.com, raw.githubusercontent.com)
+- npm registry (registry.npmjs.org)
+- PyPI (pypi.org, files.pythonhosted.org)
+- Go modules (proxy.golang.org, sum.golang.org)
+- Docker Hub (registry-1.docker.io, auth.docker.io)
+- Common CDNs (cdn.jsdelivr.net, unpkg.com)
+
+**Firewall modes:**
+- `strict` - Block all non-whitelisted traffic (default)
+- `permissive` - Log but allow all traffic (for testing)
+- `off` - Disable firewall
+
 
 
 ### Persistent Mode
@@ -345,6 +402,8 @@ The server will be available at http://localhost:3000
 | **DCLAUDE_PERSISTENT** | `false` | Enable persistent container mode. Set to `true` to keep containers running across sessions. Each directory gets its own persistent container with preserved state, Docker images, and installed packages |
 | **DCLAUDE_MOUNT_WORKDIR** | `true` | Mount working directory to `/workspace` in container. Set to `false` to run without mounting the current directory (useful for isolated tasks) |
 | **DCLAUDE_MOUNT_CLAUDE_CONFIG** | `true` | Mount `~/.claude` directory and `~/.claude.json` file (authentication and session history). Set to `false` to run without Claude config (requires `ANTHROPIC_API_KEY` environment variable) |
+| **DCLAUDE_FIREWALL** | `false` | Enable network firewall (whitelist-based). Set to `true` to restrict outbound network access to allowed domains. **Requires `--cap-add=NET_ADMIN`** (automatically added when enabled). Particularly useful in CI/CD environments |
+| **DCLAUDE_FIREWALL_MODE** | `strict` | Firewall mode: `strict` (block non-whitelisted traffic), `permissive` (log but allow all traffic), or `off` (disable firewall). Default is `strict` when firewall is enabled |
 | **DCLAUDE_MODE** | `container` | Execution mode: `container` (Docker-based, default) or `shell` (direct host execution - not yet implemented) |
 | **DCLAUDE_PROVIDER** | `docker` | Provider type: `docker` (default) or `daytona` (experimental, see [docs/README-daytona.md](docs/README-daytona.md)) |
 
@@ -721,6 +780,10 @@ Contributions are welcome! Please see [docs/README-development.md](docs/README-d
 - Development workflow
 - Testing guidelines
 - Code style guide
+
+## Credits
+
+Network firewall implementation inspired by [claude-clamp](https://github.com/Richargh/claude-clamp) by Richargh. Thank you for pioneering the whitelist-based firewall approach for AI containerization!
 
 ## License
 
