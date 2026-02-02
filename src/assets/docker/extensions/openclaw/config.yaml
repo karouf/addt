@@ -1,6 +1,7 @@
 name: openclaw
 description: OpenClaw - Open source personal AI assistant (formerly Clawdbot)
 entrypoint: openclaw
+default_version: latest
 dependencies:
   - claude
 mounts:

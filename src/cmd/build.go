@@ -30,8 +30,13 @@ func HandleBuildCommand(args []string, defaultNodeVersion, defaultGoVersion, def
 	if ext, ok := buildArgs["DCLAUDE_EXTENSIONS"]; ok {
 		cfg.Extensions = ext
 	}
-	if ver, ok := buildArgs["CLAUDE_VERSION"]; ok {
-		cfg.ClaudeVersion = ver
+	// Support per-extension versions via build args (e.g., CLAUDE_VERSION, CODEX_VERSION)
+	for key, ver := range buildArgs {
+		if strings.HasSuffix(key, "_VERSION") && key != "NODE_VERSION" && key != "GO_VERSION" && key != "UV_VERSION" {
+			extName := strings.TrimSuffix(key, "_VERSION")
+			extName = strings.ToLower(extName)
+			cfg.ExtensionVersions[extName] = ver
+		}
 	}
 	if ver, ok := buildArgs["NODE_VERSION"]; ok {
 		cfg.NodeVersion = ver
@@ -45,12 +50,12 @@ func HandleBuildCommand(args []string, defaultNodeVersion, defaultGoVersion, def
 
 	// Convert to provider config
 	providerCfg := &provider.Config{
-		ClaudeVersion: cfg.ClaudeVersion,
-		NodeVersion:   cfg.NodeVersion,
-		GoVersion:     cfg.GoVersion,
-		UvVersion:     cfg.UvVersion,
-		Provider:      cfg.Provider,
-		Extensions:    cfg.Extensions,
+		ExtensionVersions: cfg.ExtensionVersions,
+		NodeVersion:       cfg.NodeVersion,
+		GoVersion:         cfg.GoVersion,
+		UvVersion:         cfg.UvVersion,
+		Provider:          cfg.Provider,
+		Extensions:        cfg.Extensions,
 	}
 
 	// Create provider

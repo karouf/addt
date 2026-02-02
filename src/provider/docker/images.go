@@ -116,6 +116,13 @@ func (p *DockerProvider) BuildImage(embeddedDockerfile, embeddedEntrypoint []byt
 	gid := currentUser.Gid
 	username := "claude" // Always use "claude" in container, but with host UID/GID
 
+	// Build EXTENSION_VERSIONS string from map (e.g., "claude:stable,codex:latest")
+	var versionPairs []string
+	for extName, version := range p.config.ExtensionVersions {
+		versionPairs = append(versionPairs, fmt.Sprintf("%s:%s", extName, version))
+	}
+	extensionVersions := strings.Join(versionPairs, ",")
+
 	// Build docker command
 	args := []string{
 		"build",
@@ -125,8 +132,8 @@ func (p *DockerProvider) BuildImage(embeddedDockerfile, embeddedEntrypoint []byt
 		"--build-arg", fmt.Sprintf("USER_ID=%s", uid),
 		"--build-arg", fmt.Sprintf("GROUP_ID=%s", gid),
 		"--build-arg", fmt.Sprintf("USERNAME=%s", username),
-		"--build-arg", fmt.Sprintf("CLAUDE_VERSION=%s", p.config.ClaudeVersion),
 		"--build-arg", fmt.Sprintf("DCLAUDE_EXTENSIONS=%s", p.config.Extensions),
+		"--build-arg", fmt.Sprintf("EXTENSION_VERSIONS=%s", extensionVersions),
 		"-t", p.config.ImageName,
 		"-f", dockerfilePath,
 		scriptDir,
@@ -227,7 +234,8 @@ func (p *DockerProvider) addVersionLabels(cfg interface{}, versions map[string]s
 	cmd.Run()
 
 	// Tag as dclaude:latest if this is latest
-	if p.config.ClaudeVersion == "latest" {
+	claudeVersion := p.getExtensionVersion("claude")
+	if claudeVersion == "latest" {
 		exec.Command("docker", "tag", imageName, "dclaude:latest").Run()
 	}
 
@@ -237,9 +245,3 @@ func (p *DockerProvider) addVersionLabels(cfg interface{}, versions map[string]s
 	}
 }
 
-// Config is a local copy to avoid circular import
-type Config struct {
-	ClaudeVersion string
-	NodeVersion   string
-	ImageName     string
-}

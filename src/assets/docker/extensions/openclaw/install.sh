@@ -4,14 +4,18 @@
 
 set -e
 
-echo "Installing OpenClaw..."
+echo "Extension [openclaw]: Installing OpenClaw..."
+
+# Get version from environment (set by main install.sh from config.yaml default or override)
+OPENCLAW_VERSION="${OPENCLAW_VERSION:-latest}"
 
 # Install OpenClaw globally via npm
-sudo npm install -g openclaw@latest
+if [ "$OPENCLAW_VERSION" = "latest" ]; then
+    sudo npm install -g openclaw
+else
+    sudo npm install -g openclaw@$OPENCLAW_VERSION
+fi
 
 # Verify installation
-if command -v openclaw &> /dev/null; then
-    echo "OpenClaw installed successfully: $(openclaw --version 2>/dev/null || echo 'version unknown')"
-else
-    echo "Warning: openclaw command not found after installation"
-fi
+INSTALLED_VERSION=$(openclaw --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
+echo "Extension [openclaw]: Done. Installed OpenClaw v${INSTALLED_VERSION}"

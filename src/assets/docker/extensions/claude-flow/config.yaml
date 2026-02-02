@@ -1,6 +1,7 @@
 name: claude-flow
 description: Claude Flow - Multi-agent orchestration platform for Claude
 entrypoint: claude-flow
+default_version: alpha
 dependencies:
   - claude
 mounts:

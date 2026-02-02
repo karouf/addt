@@ -1,6 +1,7 @@
 name: claude
 description: Claude Code - AI coding assistant by Anthropic
 entrypoint: claude
+default_version: stable
 dependencies: []
 mounts:
   - source: ~/.claude

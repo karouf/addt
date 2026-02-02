@@ -4,14 +4,19 @@
 
 set -e
 
-echo "Installing Claude Flow..."
+echo "Extension [claude-flow]: Installing Claude Flow..."
 
-# Install Claude Flow globally via npm (alpha version for v3 features)
-sudo npm install -g claude-flow@alpha
+# Get version from environment (set by main install.sh from config.yaml default or override)
+# Default is "alpha" for v3 features
+CLAUDE_FLOW_VERSION="${CLAUDE_FLOW_VERSION:-alpha}"
+
+# Install Claude Flow globally via npm
+if [ "$CLAUDE_FLOW_VERSION" = "latest" ]; then
+    sudo npm install -g claude-flow
+else
+    sudo npm install -g claude-flow@$CLAUDE_FLOW_VERSION
+fi
 
 # Verify installation
-if command -v claude-flow &> /dev/null; then
-    echo "Claude Flow installed successfully: $(claude-flow --version 2>/dev/null || echo 'version unknown')"
-else
-    echo "Warning: claude-flow command not found after installation"
-fi
+INSTALLED_VERSION=$(claude-flow --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
+echo "Extension [claude-flow]: Done. Installed Claude Flow v${INSTALLED_VERSION}"

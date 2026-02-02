@@ -1,6 +1,7 @@
 name: amp
 description: Amp - AI coding agent by Sourcegraph
 entrypoint: amp
+default_version: latest
 dependencies: []
 mounts:
   - source: ~/.amp

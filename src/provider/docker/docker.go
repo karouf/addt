@@ -572,9 +572,10 @@ func (p *DockerProvider) BuildIfNeeded(rebuild bool) error {
 
 	needsRebuild := false
 	// Claude version: use prefix matching unless "latest"
-	if p.config.ClaudeVersion != "latest" && claudeLabel != "" {
-		if !strings.HasPrefix(claudeLabel, p.config.ClaudeVersion) {
-			fmt.Printf("Claude version mismatch: image has %s, requested %s\n", claudeLabel, p.config.ClaudeVersion)
+	claudeVersion := p.getExtensionVersion("claude")
+	if claudeVersion != "latest" && claudeLabel != "" {
+		if !strings.HasPrefix(claudeLabel, claudeVersion) {
+			fmt.Printf("Claude version mismatch: image has %s, requested %s\n", claudeLabel, claudeVersion)
 			needsRebuild = true
 		}
 	}
@@ -597,13 +598,15 @@ func (p *DockerProvider) BuildIfNeeded(rebuild bool) error {
 
 // DetermineImageName determines the appropriate Docker image name based on config
 func (p *DockerProvider) DetermineImageName() string {
+	claudeVersion := p.getExtensionVersion("claude")
+
 	// Handle dist-tags (latest, stable, next)
-	if p.config.ClaudeVersion == "latest" || p.config.ClaudeVersion == "stable" || p.config.ClaudeVersion == "next" {
+	if claudeVersion == "latest" || claudeVersion == "stable" || claudeVersion == "next" {
 		// Query npm registry for the version pointed to by this tag
-		npmVersion := p.getNpmVersionByTag(p.config.ClaudeVersion)
+		npmVersion := p.getNpmVersionByTag(claudeVersion)
 		if npmVersion != "" {
 			// Update config with resolved version (needed for BuildIfNeeded checks)
-			p.config.ClaudeVersion = npmVersion
+			p.setExtensionVersion("claude", npmVersion)
 			// Check if we already have an image with this version
 			existingImage := p.FindImageByLabel("tools.claude.version", npmVersion)
 			if existingImage != "" {
@@ -611,20 +614,45 @@ func (p *DockerProvider) DetermineImageName() string {
 			}
 			return fmt.Sprintf("dclaude:claude-%s", npmVersion)
 		}
-		return fmt.Sprintf("dclaude:%s", p.config.ClaudeVersion)
+		return fmt.Sprintf("dclaude:%s", claudeVersion)
 	}
 
 	// Specific version requested - validate it exists
-	if !p.validateNpmVersion(p.config.ClaudeVersion) {
-		fmt.Printf("Error: Claude Code version %s does not exist in npm\n", p.config.ClaudeVersion)
+	if !p.validateNpmVersion(claudeVersion) {
+		fmt.Printf("Error: Claude Code version %s does not exist in npm\n", claudeVersion)
 		fmt.Println("Available versions: https://www.npmjs.com/package/@anthropic-ai/claude-code?activeTab=versions")
 		os.Exit(1)
 	}
 
 	// Check if image exists
-	existingImage := p.FindImageByLabel("tools.claude.version", p.config.ClaudeVersion)
+	existingImage := p.FindImageByLabel("tools.claude.version", claudeVersion)
 	if existingImage != "" {
 		return existingImage
 	}
-	return fmt.Sprintf("dclaude:claude-%s", p.config.ClaudeVersion)
+	return fmt.Sprintf("dclaude:claude-%s", claudeVersion)
+}
+
+// getExtensionVersion returns the version for an extension, defaulting to "stable" for claude
+func (p *DockerProvider) getExtensionVersion(extName string) string {
+	if p.config.ExtensionVersions == nil {
+		if extName == "claude" {
+			return "stable"
+		}
+		return "latest"
+	}
+	if ver, ok := p.config.ExtensionVersions[extName]; ok {
+		return ver
+	}
+	if extName == "claude" {
+		return "stable"
+	}
+	return "latest"
+}
+
+// setExtensionVersion sets the version for an extension
+func (p *DockerProvider) setExtensionVersion(extName, version string) {
+	if p.config.ExtensionVersions == nil {
+		p.config.ExtensionVersions = make(map[string]string)
+	}
+	p.config.ExtensionVersions[extName] = version
 }

@@ -1,6 +1,7 @@
 name: gemini
 description: Gemini CLI - AI coding agent by Google
 entrypoint: gemini
+default_version: latest
 dependencies: []
 mounts:
   - source: ~/.gemini

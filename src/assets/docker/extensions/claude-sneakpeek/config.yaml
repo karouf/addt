@@ -1,6 +1,7 @@
 name: claude-sneakpeek
 description: Claude Sneakpeek - Preview tool for Claude Code
 entrypoint: claudesp
+default_version: latest
 dependencies:
   - claude
 mounts:

@@ -4,7 +4,11 @@
 
 set -e
 
-echo "Installing Cursor CLI..."
+echo "Extension [cursor]: Installing Cursor CLI..."
+
+# Get version from environment (set by main install.sh from config.yaml default or override)
+# Note: The official Cursor installer doesn't support version pinning
+CURSOR_VERSION="${CURSOR_VERSION:-latest}"
 
 # Install Cursor CLI using official installer
 curl https://cursor.com/install -fsSL | bash
@@ -16,7 +20,8 @@ fi
 
 # Verify installation
 if command -v agent &> /dev/null; then
-    echo "Cursor CLI installed successfully: $(agent --version 2>/dev/null || echo 'version unknown')"
+    INSTALLED_VERSION=$(agent --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
+    echo "Extension [cursor]: Done. Installed Cursor CLI v${INSTALLED_VERSION}"
 else
     echo "Warning: agent command not found after installation"
     echo "You may need to add ~/.local/bin to your PATH or install manually from https://cursor.com/cli"

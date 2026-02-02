@@ -25,7 +25,6 @@ Options:
 
 Environment Variables:
   DCLAUDE_PROVIDER            Provider type: docker or daytona (default: docker)
-  DCLAUDE_CLAUDE_VERSION      Claude Code version (default: stable)
   DCLAUDE_NODE_VERSION        Node.js version (default: 22)
   DCLAUDE_GO_VERSION          Go version (default: latest)
   DCLAUDE_UV_VERSION          UV Python package manager version (default: latest)
@@ -41,12 +40,16 @@ Environment Variables:
   DCLAUDE_LOG_FILE            Log file path
   DCLAUDE_PERSISTENT          Enable persistent container mode (true/false)
   DCLAUDE_MOUNT_WORKDIR       Mount working directory to /workspace (default: true)
-  DCLAUDE_MOUNT_CLAUDE_CONFIG Mount ~/.claude and ~/.claude.json (default: true)
   DCLAUDE_FIREWALL            Enable network firewall (default: false, requires --cap-add=NET_ADMIN)
   DCLAUDE_FIREWALL_MODE       Firewall mode: strict, permissive, off (default: strict)
   DCLAUDE_MODE                Execution mode: container or shell (default: container)
-  DCLAUDE_EXTENSIONS          Extensions to install at build time (e.g., gastown,tessl)
-  DCLAUDE_COMMAND             Command to run instead of claude (e.g., gt for gastown)
+  DCLAUDE_EXTENSIONS          Extensions to install at build time (e.g., claude,codex,gemini)
+  DCLAUDE_COMMAND             Command to run instead of claude (e.g., codex, gemini)
+
+Per-Extension Configuration:
+  DCLAUDE_<EXT>_VERSION       Version for extension (e.g., DCLAUDE_CLAUDE_VERSION=1.0.5)
+                              Default versions defined in each extension's config.yaml
+  DCLAUDE_<EXT>_MOUNT_CONFIG  Mount extension config dir (e.g., DCLAUDE_CLAUDE_MOUNT_CONFIG=false)
 
 Build Command:
   dclaude build [--build-arg KEY=VALUE]...

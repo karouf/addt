@@ -1,6 +1,7 @@
 name: codex
 description: OpenAI Codex CLI - AI coding assistant by OpenAI
 entrypoint: codex
+default_version: latest
 dependencies: []
 mounts:
   - source: ~/.codex

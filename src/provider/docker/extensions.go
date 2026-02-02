@@ -27,9 +27,25 @@ type ExtensionsConfig struct {
 	Extensions map[string]ExtensionMetadata `json:"extensions"`
 }
 
+// ExtensionMountWithName includes the extension name for mount filtering
+type ExtensionMountWithName struct {
+	ExtensionMount
+	ExtensionName string
+}
+
 // GetExtensionMounts reads extension metadata from image and returns all mounts
 func (p *DockerProvider) GetExtensionMounts(imageName string) []ExtensionMount {
+	mountsWithNames := p.GetExtensionMountsWithNames(imageName)
 	var mounts []ExtensionMount
+	for _, m := range mountsWithNames {
+		mounts = append(mounts, m.ExtensionMount)
+	}
+	return mounts
+}
+
+// GetExtensionMountsWithNames reads extension metadata and returns mounts with extension names
+func (p *DockerProvider) GetExtensionMountsWithNames(imageName string) []ExtensionMountWithName {
+	var mounts []ExtensionMountWithName
 
 	// Read extensions.json from the image
 	cmd := exec.Command("docker", "run", "--rm", "--entrypoint", "cat", imageName,
@@ -46,9 +62,14 @@ func (p *DockerProvider) GetExtensionMounts(imageName string) []ExtensionMount {
 		return mounts
 	}
 
-	// Collect all mounts from all extensions
-	for _, ext := range config.Extensions {
-		mounts = append(mounts, ext.Mounts...)
+	// Collect all mounts from all extensions, with extension name
+	for extName, ext := range config.Extensions {
+		for _, mount := range ext.Mounts {
+			mounts = append(mounts, ExtensionMountWithName{
+				ExtensionMount: mount,
+				ExtensionName:  extName,
+			})
+		}
 	}
 
 	return mounts
@@ -56,11 +77,12 @@ func (p *DockerProvider) GetExtensionMounts(imageName string) []ExtensionMount {
 
 // AddExtensionMounts adds extension mount volumes to docker args
 func (p *DockerProvider) AddExtensionMounts(dockerArgs []string, imageName, homeDir string) []string {
-	extMounts := p.GetExtensionMounts(imageName)
+	extMounts := p.GetExtensionMountsWithNames(imageName)
 	for _, extMount := range extMounts {
-		// Skip claude config mounts if MountClaudeConfig is disabled
-		if !p.config.MountClaudeConfig {
-			if strings.Contains(extMount.Target, "/.claude") {
+		// Check per-extension mount config (defaults to true if not specified)
+		if p.config.MountExtensionConfig != nil {
+			if mountEnabled, exists := p.config.MountExtensionConfig[extMount.ExtensionName]; exists && !mountEnabled {
+				// Mount explicitly disabled for this extension
 				continue
 			}
 		}

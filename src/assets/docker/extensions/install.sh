@@ -3,14 +3,29 @@
 # Usage: install.sh [extension1,extension2,...]
 #
 # Extensions are directories containing:
-#   - config.yaml  - metadata (name, description, entrypoint, dependencies)
+#   - config.yaml  - metadata (name, description, entrypoint, dependencies, default_version)
 #   - install.sh   - install script
+#
+# Environment variables:
+#   EXTENSION_VERSIONS - Override versions (format: "claude:1.0.5,codex:0.2.0")
+#   Default versions come from each extension's config.yaml default_version field
 
 set -e
 
 EXTENSIONS_DIR="${EXTENSIONS_DIR:-/usr/local/share/dclaude/extensions}"
 METADATA_FILE="${METADATA_FILE:-/home/claude/.dclaude/extensions.json}"
 EXTENSIONS="${1:-$DCLAUDE_EXTENSIONS}"
+
+# Parse EXTENSION_VERSIONS into associative array
+declare -A VERSION_OVERRIDES
+if [ -n "$EXTENSION_VERSIONS" ]; then
+    IFS=',' read -ra VERSION_PAIRS <<< "$EXTENSION_VERSIONS"
+    for pair in "${VERSION_PAIRS[@]}"; do
+        ext_name="${pair%%:*}"
+        ext_version="${pair#*:}"
+        VERSION_OVERRIDES["$ext_name"]="$ext_version"
+    done
+fi
 
 # Ensure metadata directory exists
 mkdir -p "$(dirname "$METADATA_FILE")"
@@ -26,6 +41,28 @@ yaml_get() {
     local file="$1"
     local key="$2"
     grep "^${key}:" "$file" 2>/dev/null | sed "s/^${key}:[[:space:]]*//" | tr -d '"' || echo ""
+}
+
+# Get version for an extension (override > default from yaml > "latest")
+get_extension_version() {
+    local ext="$1"
+    local config="$2"
+
+    # Check for override first
+    if [ -n "${VERSION_OVERRIDES[$ext]}" ]; then
+        echo "${VERSION_OVERRIDES[$ext]}"
+        return
+    fi
+
+    # Read default_version from config.yaml
+    local default_ver=$(yaml_get "$config" "default_version")
+    if [ -n "$default_ver" ]; then
+        echo "$default_ver"
+        return
+    fi
+
+    # Fallback to latest
+    echo "latest"
 }
 
 # Parse list items from YAML (handles both [] and list format)
@@ -177,13 +214,23 @@ for ext in "${install_order[@]}"; do
 
     description=$(yaml_get "$config" "description")
 
+    # Get version for this extension (override > yaml default > "latest")
+    ext_version=$(get_extension_version "$ext" "$config")
+
+    # Convert extension name to uppercase env var name (e.g., claude -> CLAUDE_VERSION)
+    # Handle hyphens by converting to underscores (e.g., claude-flow -> CLAUDE_FLOW_VERSION)
+    ext_env_name=$(echo "$ext" | tr '[:lower:]-' '[:upper:]_')
+    version_env_var="${ext_env_name}_VERSION"
+
     echo "=========================================="
-    echo "Extensions: Installing '$ext'"
+    echo "Extensions: Installing '$ext' (version: $ext_version)"
     [ -n "$description" ] && echo "  $description"
     echo "=========================================="
 
     # Run install.sh if it exists (optional)
+    # Export version as <EXT>_VERSION environment variable
     if [ -f "$script" ]; then
+        export "$version_env_var=$ext_version"
         bash "$script"
     else
         echo "  (no install.sh - metadata only)"

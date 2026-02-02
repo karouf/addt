@@ -17,7 +17,14 @@ fi
 
 echo "Extension [gastown]: Installing Gastown (gt)..."
 
-# Install via Go
-/usr/local/go/bin/go install github.com/steveyegge/gastown/cmd/gt@latest
+# Get version from environment (set by main install.sh from config.yaml default or override)
+# For Go, "latest" uses @latest, otherwise use @vX.Y.Z format
+GASTOWN_VERSION="${GASTOWN_VERSION:-latest}"
+
+if [ "$GASTOWN_VERSION" = "latest" ]; then
+    /usr/local/go/bin/go install github.com/steveyegge/gastown/cmd/gt@latest
+else
+    /usr/local/go/bin/go install github.com/steveyegge/gastown/cmd/gt@v$GASTOWN_VERSION
+fi
 
 echo "Extension [gastown]: Done. Installed gt at ~/go/bin/gt"

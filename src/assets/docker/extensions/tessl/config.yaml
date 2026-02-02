@@ -1,6 +1,7 @@
 name: tessl
 description: Agent enablement platform - package manager for AI agent skills
 entrypoint: tessl
+default_version: latest
 dependencies:
   - claude
 mounts:
