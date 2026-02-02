@@ -113,7 +113,21 @@ yaml_get_mounts_json() {
 
     echo -n "["
 
-    while IFS= read -r line; do
+    # Helper to output current mount
+    output_mount() {
+        if [ -n "$current_source" ] && [ -n "$current_target" ]; then
+            if [ "$first" = true ]; then
+                first=false
+            else
+                echo -n ","
+            fi
+            printf '{"source":"%s","target":"%s"}' "$current_source" "$current_target"
+        fi
+        current_source=""
+        current_target=""
+    }
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
         if [[ "$line" =~ ^mounts: ]]; then
             if [[ "$line" =~ \[\] ]]; then
                 echo -n "]"
@@ -125,27 +139,26 @@ yaml_get_mounts_json() {
         if $in_mounts; then
             # Stop if we hit another top-level key
             if [[ "$line" =~ ^[a-z] ]] && [[ ! "$line" =~ ^[[:space:]] ]]; then
+                output_mount
                 break
             fi
-            # Parse source
-            if [[ "$line" =~ ^[[:space:]]*-?[[:space:]]*source:[[:space:]]*(.+) ]]; then
+            # New mount entry starts with "- source:"
+            if [[ "$line" =~ ^[[:space:]]*-[[:space:]]*source:[[:space:]]*(.+) ]]; then
+                output_mount
+                current_source="${BASH_REMATCH[1]}"
+            # Source without dash (continuation)
+            elif [[ "$line" =~ ^[[:space:]]+source:[[:space:]]*(.+) ]]; then
                 current_source="${BASH_REMATCH[1]}"
             fi
             # Parse target
             if [[ "$line" =~ ^[[:space:]]*target:[[:space:]]*(.+) ]]; then
                 current_target="${BASH_REMATCH[1]}"
-                # Output the mount entry
-                if [ "$first" = true ]; then
-                    first=false
-                else
-                    echo -n ","
-                fi
-                printf '{"source":"%s","target":"%s"}' "$current_source" "$current_target"
-                current_source=""
-                current_target=""
             fi
         fi
     done < "$file"
+
+    # Output last mount if any
+    output_mount
 
     echo -n "]"
 }
@@ -160,7 +173,7 @@ yaml_get_flags_json() {
 
     echo -n "["
 
-    while IFS= read -r line; do
+    while IFS= read -r line || [[ -n "$line" ]]; do
         if [[ "$line" =~ ^flags: ]]; then
             if [[ "$line" =~ \[\] ]]; then
                 echo -n "]"
@@ -297,12 +310,19 @@ echo "Extensions: Writing metadata to $METADATA_FILE"
         name=$(yaml_get "$config" "name")
         description=$(yaml_get "$config" "description")
         entrypoint=$(yaml_get "$config" "entrypoint")
+        auto_mount=$(yaml_get "$config" "auto_mount")
         mounts=$(yaml_get_mounts_json "$config")
         flags=$(yaml_get_flags_json "$config")
 
         [ "$first" = true ] && first=false || echo ","
-        printf '"%s":{"name":"%s","description":"%s","entrypoint":"%s","mounts":%s,"flags":%s}' \
-            "$ext" "$name" "$description" "$entrypoint" "$mounts" "$flags"
+        # Build JSON with optional auto_mount field
+        if [ -n "$auto_mount" ]; then
+            printf '"%s":{"name":"%s","description":"%s","entrypoint":"%s","auto_mount":%s,"mounts":%s,"flags":%s}' \
+                "$ext" "$name" "$description" "$entrypoint" "$auto_mount" "$mounts" "$flags"
+        else
+            printf '"%s":{"name":"%s","description":"%s","entrypoint":"%s","mounts":%s,"flags":%s}' \
+                "$ext" "$name" "$description" "$entrypoint" "$mounts" "$flags"
+        fi
     done
     echo '}}'
 } > "$METADATA_FILE"

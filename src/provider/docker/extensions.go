@@ -25,6 +25,7 @@ type ExtensionMetadata struct {
 	Name        string           `json:"name"`
 	Description string           `json:"description"`
 	Entrypoint  string           `json:"entrypoint"`
+	AutoMount   *bool            `json:"auto_mount,omitempty"` // nil or true = auto mount, false = only if explicitly enabled
 	Mounts      []ExtensionMount `json:"mounts"`
 	Flags       []ExtensionFlag  `json:"flags"`
 }
@@ -36,8 +37,10 @@ type ExtensionsConfig struct {
 
 // ExtensionMountWithName includes the extension name for mount filtering
 type ExtensionMountWithName struct {
-	ExtensionMount
+	Source        string
+	Target        string
 	ExtensionName string
+	AutoMount     *bool // from extension level, not mount level
 }
 
 // GetExtensionMounts reads extension metadata from image and returns all mounts
@@ -45,7 +48,10 @@ func (p *DockerProvider) GetExtensionMounts(imageName string) []ExtensionMount {
 	mountsWithNames := p.GetExtensionMountsWithNames(imageName)
 	var mounts []ExtensionMount
 	for _, m := range mountsWithNames {
-		mounts = append(mounts, m.ExtensionMount)
+		mounts = append(mounts, ExtensionMount{
+			Source: m.Source,
+			Target: m.Target,
+		})
 	}
 	return mounts
 }
@@ -69,12 +75,14 @@ func (p *DockerProvider) GetExtensionMountsWithNames(imageName string) []Extensi
 		return mounts
 	}
 
-	// Collect all mounts from all extensions, with extension name
+	// Collect all mounts from all extensions, with extension name and auto_mount
 	for extName, ext := range config.Extensions {
 		for _, mount := range ext.Mounts {
 			mounts = append(mounts, ExtensionMountWithName{
-				ExtensionMount: mount,
-				ExtensionName:  extName,
+				Source:        mount.Source,
+				Target:        mount.Target,
+				ExtensionName: extName,
+				AutoMount:     ext.AutoMount, // from extension level
 			})
 		}
 	}
@@ -86,12 +94,23 @@ func (p *DockerProvider) GetExtensionMountsWithNames(imageName string) []Extensi
 func (p *DockerProvider) AddExtensionMounts(dockerArgs []string, imageName, homeDir string) []string {
 	extMounts := p.GetExtensionMountsWithNames(imageName)
 	for _, extMount := range extMounts {
-		// Check per-extension mount config (defaults to true if not specified)
+		// Determine if mount should be enabled based on auto_mount and explicit config
+		autoMount := extMount.AutoMount == nil || *extMount.AutoMount // default to true
+
 		if p.config.MountExtensionConfig != nil {
-			if mountEnabled, exists := p.config.MountExtensionConfig[extMount.ExtensionName]; exists && !mountEnabled {
-				// Mount explicitly disabled for this extension
+			if mountEnabled, exists := p.config.MountExtensionConfig[extMount.ExtensionName]; exists {
+				if !mountEnabled {
+					// Mount explicitly disabled
+					continue
+				}
+				// Mount explicitly enabled - proceed even if auto_mount is false
+			} else if !autoMount {
+				// No explicit config and auto_mount is false - skip
 				continue
 			}
+		} else if !autoMount {
+			// No config map and auto_mount is false - skip
+			continue
 		}
 
 		// Expand ~ to home directory

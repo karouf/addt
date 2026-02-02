@@ -2,6 +2,7 @@ name: claude
 description: Claude Code - AI coding assistant by Anthropic
 entrypoint: claude
 default_version: stable
+auto_mount: true
 dependencies: []
 mounts:
   - source: ~/.claude
@@ -11,11 +12,3 @@ mounts:
 flags:
   - flag: "--yolo"
     description: "Bypass permission checks"
-  - flag: "--model <name>"
-    description: "Select model (opus, sonnet, haiku)"
-  - flag: "--allowedTools <tools>"
-    description: "Comma-separated list of allowed tools"
-  - flag: "--print"
-    description: "Print response to stdout"
-  - flag: "--verbose"
-    description: "Enable verbose output"
