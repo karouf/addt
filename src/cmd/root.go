@@ -27,6 +27,9 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 		case "--dhelp":
 			PrintHelp(version)
 			return
+		case "build":
+			HandleBuildCommand(args[1:], defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
+			return
 		case "containers":
 			// Load config for provider
 			cfg := config.LoadConfig(defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
@@ -94,6 +97,7 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 		FirewallMode:      cfg.FirewallMode,
 		Mode:              cfg.Mode,
 		Provider:          cfg.Provider,
+		Extensions:        cfg.Extensions,
 	}
 
 	// Create provider

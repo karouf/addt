@@ -2,6 +2,7 @@ package docker
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"os/user"
@@ -76,6 +77,37 @@ func (p *DockerProvider) BuildImage(embeddedDockerfile, embeddedEntrypoint []byt
 		return fmt.Errorf("failed to write init-firewall.sh: %w", err)
 	}
 
+	// Write embedded extensions (preserving directory structure)
+	extensionsDir := filepath.Join(buildDir, "extensions")
+	if err := os.MkdirAll(extensionsDir, 0755); err != nil {
+		return fmt.Errorf("failed to create extensions directory: %w", err)
+	}
+	err = fs.WalkDir(p.embeddedExtensions, "docker/extensions", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		// Get relative path from docker/extensions
+		relPath := strings.TrimPrefix(path, "docker/extensions")
+		relPath = strings.TrimPrefix(relPath, "/")
+		if relPath == "" {
+			return nil
+		}
+		destPath := filepath.Join(extensionsDir, relPath)
+
+		if d.IsDir() {
+			return os.MkdirAll(destPath, 0755)
+		}
+
+		content, err := p.embeddedExtensions.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(destPath, content, 0755)
+	})
+	if err != nil {
+		return fmt.Errorf("failed to write extensions: %w", err)
+	}
+
 	scriptDir := buildDir
 
 	// Get current user info
@@ -94,6 +126,7 @@ func (p *DockerProvider) BuildImage(embeddedDockerfile, embeddedEntrypoint []byt
 		"--build-arg", fmt.Sprintf("GROUP_ID=%s", gid),
 		"--build-arg", fmt.Sprintf("USERNAME=%s", username),
 		"--build-arg", fmt.Sprintf("CLAUDE_VERSION=%s", p.config.ClaudeVersion),
+		"--build-arg", fmt.Sprintf("DCLAUDE_EXTENSIONS=%s", p.config.Extensions),
 		"-t", p.config.ImageName,
 		"-f", dockerfilePath,
 		scriptDir,

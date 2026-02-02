@@ -53,6 +53,7 @@ type Config struct {
 	FirewallMode      string
 	Mode              string
 	Provider          string
+	Extensions        string
 }
 
 // RunSpec specifies how to run a container/workspace

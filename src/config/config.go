@@ -30,6 +30,7 @@ type Config struct {
 	FirewallMode      string // Firewall mode: strict, permissive, off
 	Mode              string // container or shell
 	Provider          string // Provider type: docker or daytona
+	Extensions        string // Comma-separated list of extensions to install (e.g., "gastown,beads")
 }
 
 // LoadConfig loads configuration from environment variables
@@ -55,6 +56,7 @@ func LoadConfig(defaultNodeVersion string, defaultGoVersion string, defaultUvVer
 		FirewallMode:      getEnvOrDefault("DCLAUDE_FIREWALL_MODE", "strict"),
 		Mode:              getEnvOrDefault("DCLAUDE_MODE", "container"),
 		Provider:          getEnvOrDefault("DCLAUDE_PROVIDER", "docker"),
+		Extensions:        getEnvOrDefault("DCLAUDE_EXTENSIONS", "none"),
 	}
 
 	// Parse ports

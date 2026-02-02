@@ -2,6 +2,7 @@ package docker
 
 import (
 	"crypto/md5"
+	"embed"
 	"fmt"
 	"os"
 	"os/exec"
@@ -21,16 +22,18 @@ type DockerProvider struct {
 	embeddedDockerfile   []byte
 	embeddedEntrypoint   []byte
 	embeddedInitFirewall []byte
+	embeddedExtensions   embed.FS
 }
 
 // NewDockerProvider creates a new Docker provider
-func NewDockerProvider(cfg *provider.Config, dockerfile, entrypoint, initFirewall []byte) (provider.Provider, error) {
+func NewDockerProvider(cfg *provider.Config, dockerfile, entrypoint, initFirewall []byte, extensions embed.FS) (provider.Provider, error) {
 	return &DockerProvider{
 		config:               cfg,
 		tempDirs:             []string{},
 		embeddedDockerfile:   dockerfile,
 		embeddedEntrypoint:   entrypoint,
 		embeddedInitFirewall: initFirewall,
+		embeddedExtensions:   extensions,
 	}, nil
 }
 

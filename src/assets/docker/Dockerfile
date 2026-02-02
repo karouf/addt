@@ -8,6 +8,7 @@ ARG USERNAME=claude
 ARG CLAUDE_VERSION=latest
 ARG GO_VERSION=1.23
 ARG UV_VERSION=0.5.11
+ARG DCLAUDE_EXTENSIONS=none
 
 # Install dependencies, GitHub CLI, Docker CLI, and Docker daemon (for DinD)
 RUN apt-get update && apt-get install -y \
@@ -69,13 +70,19 @@ RUN if [ "${UV_VERSION}" = "latest" ]; then \
         curl -LsSf https://astral.sh/uv/${UV_VERSION}/install.sh | sh; \
     fi
 
-# Install Gastown (multi-agent orchestration for Claude Code)
-RUN /usr/local/go/bin/go install github.com/steveyegge/gastown/cmd/gt@latest
-
 USER root
 
-# Add Go, UV, and Gastown to PATH environment and bash profile
-# UV installs to ~/.local/bin, Gastown installs to ~/go/bin by default
+# Copy extensions and make scripts executable
+COPY extensions/ /usr/local/share/dclaude/extensions/
+RUN chmod +x /usr/local/share/dclaude/extensions/install.sh && \
+    find /usr/local/share/dclaude/extensions -name "*.sh" -exec chmod +x {} \;
+
+# Install requested extensions (as claude user for go installs)
+USER ${USERNAME}
+RUN /usr/local/share/dclaude/extensions/install.sh "${DCLAUDE_EXTENSIONS}"
+
+# Add Go, UV, and extensions to PATH environment and bash profile
+# UV installs to ~/.local/bin, Go tools install to ~/go/bin by default
 ENV PATH="/home/${USERNAME}/go/bin:/home/${USERNAME}/.local/bin:/usr/local/go/bin:${PATH}"
 RUN echo 'export PATH="/home/${USERNAME}/go/bin:/home/${USERNAME}/.local/bin:/usr/local/go/bin:$PATH"' >> /home/${USERNAME}/.bashrc
 
@@ -83,6 +90,7 @@ RUN echo 'export PATH="/home/${USERNAME}/go/bin:/home/${USERNAME}/.local/bin:/us
 WORKDIR /workspace
 
 # Change ownership of workspace (use numeric IDs to avoid group name issues)
+USER root
 RUN chown -R ${USER_ID}:${GROUP_ID} /workspace
 
 # Copy entrypoint wrapper for DinD support
