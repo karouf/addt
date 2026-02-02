@@ -28,36 +28,89 @@ yaml_get() {
     grep "^${key}:" "$file" 2>/dev/null | sed "s/^${key}:[[:space:]]*//" | tr -d '"' || echo ""
 }
 
-# Parse dependencies from YAML (handles both [] and list format)
-yaml_get_deps() {
+# Parse list items from YAML (handles both [] and list format)
+yaml_get_list() {
     local file="$1"
-    local in_deps=false
-    local deps=""
+    local key="$2"
+    local in_section=false
+    local items=""
 
     while IFS= read -r line; do
-        if [[ "$line" =~ ^dependencies: ]]; then
+        if [[ "$line" =~ ^${key}: ]]; then
             # Check for inline empty array
             if [[ "$line" =~ \[\] ]]; then
                 echo ""
                 return
             fi
-            in_deps=true
+            in_section=true
             continue
         fi
-        if $in_deps; then
+        if $in_section; then
             # Stop if we hit another top-level key
             if [[ "$line" =~ ^[a-z] ]] && [[ ! "$line" =~ ^[[:space:]] ]]; then
                 break
             fi
-            # Extract dependency name (- item format)
+            # Extract item (- item format)
             if [[ "$line" =~ ^[[:space:]]*-[[:space:]]*(.+) ]]; then
-                dep="${BASH_REMATCH[1]}"
-                deps="$deps $dep"
+                item="${BASH_REMATCH[1]}"
+                items="$items $item"
             fi
         fi
     done < "$file"
 
-    echo "$deps" | xargs
+    echo "$items" | xargs
+}
+
+# Parse dependencies from YAML
+yaml_get_deps() {
+    yaml_get_list "$1" "dependencies"
+}
+
+# Parse mounts from YAML (returns JSON array of {source, target} objects)
+yaml_get_mounts_json() {
+    local file="$1"
+    local in_mounts=false
+    local current_source=""
+    local current_target=""
+    local first=true
+
+    echo -n "["
+
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^mounts: ]]; then
+            if [[ "$line" =~ \[\] ]]; then
+                echo -n "]"
+                return
+            fi
+            in_mounts=true
+            continue
+        fi
+        if $in_mounts; then
+            # Stop if we hit another top-level key
+            if [[ "$line" =~ ^[a-z] ]] && [[ ! "$line" =~ ^[[:space:]] ]]; then
+                break
+            fi
+            # Parse source
+            if [[ "$line" =~ ^[[:space:]]*-?[[:space:]]*source:[[:space:]]*(.+) ]]; then
+                current_source="${BASH_REMATCH[1]}"
+            fi
+            # Parse target
+            if [[ "$line" =~ ^[[:space:]]*target:[[:space:]]*(.+) ]]; then
+                current_target="${BASH_REMATCH[1]}"
+                # Output the mount entry
+                if [ "$first" = true ]; then
+                    first=false
+                else
+                    echo -n ","
+                fi
+                printf '{"source":"%s","target":"%s"}' "$current_source" "$current_target"
+                current_source=""
+                current_target=""
+            fi
+        fi
+    done < "$file"
+
+    echo -n "]"
 }
 
 # Build installation order with dependencies
@@ -144,10 +197,11 @@ echo "Extensions: Writing metadata to $METADATA_FILE"
         name=$(yaml_get "$config" "name")
         description=$(yaml_get "$config" "description")
         entrypoint=$(yaml_get "$config" "entrypoint")
+        mounts=$(yaml_get_mounts_json "$config")
 
         [ "$first" = true ] && first=false || echo ","
-        printf '"%s":{"name":"%s","description":"%s","entrypoint":"%s"}' \
-            "$ext" "$name" "$description" "$entrypoint"
+        printf '"%s":{"name":"%s","description":"%s","entrypoint":"%s","mounts":%s}' \
+            "$ext" "$name" "$description" "$entrypoint" "$mounts"
     done
     echo '}}'
 } > "$METADATA_FILE"

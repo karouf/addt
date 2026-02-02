@@ -58,13 +58,33 @@ func (p *DockerProvider) GetExtensionMounts(imageName string) []ExtensionMount {
 func (p *DockerProvider) AddExtensionMounts(dockerArgs []string, imageName, homeDir string) []string {
 	extMounts := p.GetExtensionMounts(imageName)
 	for _, extMount := range extMounts {
+		// Skip claude config mounts if MountClaudeConfig is disabled
+		if !p.config.MountClaudeConfig {
+			if strings.Contains(extMount.Target, "/.claude") {
+				continue
+			}
+		}
+
 		// Expand ~ to home directory
 		source := extMount.Source
 		if strings.HasPrefix(source, "~/") {
 			source = filepath.Join(homeDir, source[2:])
 		}
-		// Create directory if it doesn't exist
-		if err := os.MkdirAll(source, 0755); err == nil {
+
+		// Check if source exists, create if it's a directory path
+		if info, err := os.Stat(source); err == nil {
+			// Source exists (file or directory)
+			dockerArgs = append(dockerArgs, "-v", source+":"+extMount.Target)
+		} else if os.IsNotExist(err) {
+			// Source doesn't exist - create directory if path doesn't look like a file
+			if !strings.Contains(filepath.Base(source), ".") {
+				// Looks like a directory (no extension)
+				if err := os.MkdirAll(source, 0755); err == nil {
+					dockerArgs = append(dockerArgs, "-v", source+":"+extMount.Target)
+				}
+			}
+			// Skip files that don't exist (e.g., ~/.claude.json on fresh install)
+		} else if info != nil {
 			dockerArgs = append(dockerArgs, "-v", source+":"+extMount.Target)
 		}
 	}

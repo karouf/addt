@@ -57,7 +57,7 @@ func LoadConfig(defaultNodeVersion string, defaultGoVersion string, defaultUvVer
 		FirewallMode:      getEnvOrDefault("DCLAUDE_FIREWALL_MODE", "strict"),
 		Mode:              getEnvOrDefault("DCLAUDE_MODE", "container"),
 		Provider:          getEnvOrDefault("DCLAUDE_PROVIDER", "docker"),
-		Extensions:        getEnvOrDefault("DCLAUDE_EXTENSIONS", "none"),
+		Extensions:        getEnvOrDefault("DCLAUDE_EXTENSIONS", "claude"),
 		Command:           os.Getenv("DCLAUDE_COMMAND"), // Empty means use default "claude"
 	}
 

@@ -8,7 +8,7 @@ ARG USERNAME=claude
 ARG CLAUDE_VERSION=latest
 ARG GO_VERSION=1.23
 ARG UV_VERSION=0.5.11
-ARG DCLAUDE_EXTENSIONS=none
+ARG DCLAUDE_EXTENSIONS=claude
 
 # Install dependencies, GitHub CLI, Docker CLI, and Docker daemon (for DinD)
 RUN apt-get update && apt-get install -y \
@@ -48,13 +48,6 @@ RUN ARCH=$(dpkg --print-architecture) && \
 # Add Go to PATH
 ENV PATH="/usr/local/go/bin:${PATH}"
 
-# Install Claude Code globally (specific version or latest)
-RUN if [ "$CLAUDE_VERSION" = "latest" ]; then \
-        npm install -g @anthropic-ai/claude-code; \
-    else \
-        npm install -g @anthropic-ai/claude-code@$CLAUDE_VERSION; \
-    fi
-
 # Create user with matching UID/GID from host
 # Note: GID 20 may already exist (staff/dialout group), so we just add user to that group
 RUN (groupadd -g ${GROUP_ID} ${USERNAME} 2>/dev/null || true) \
@@ -78,8 +71,9 @@ RUN chmod +x /usr/local/share/dclaude/extensions/install.sh && \
     find /usr/local/share/dclaude/extensions -name "*.sh" -exec chmod +x {} \;
 
 # Install requested extensions (as claude user for go installs)
+# Pass CLAUDE_VERSION so the claude extension can use it
 USER ${USERNAME}
-RUN /usr/local/share/dclaude/extensions/install.sh "${DCLAUDE_EXTENSIONS}"
+RUN CLAUDE_VERSION="${CLAUDE_VERSION}" /usr/local/share/dclaude/extensions/install.sh "${DCLAUDE_EXTENSIONS}"
 
 # Add Go, UV, and extensions to PATH environment and bash profile
 # UV installs to ~/.local/bin, Go tools install to ~/go/bin by default
@@ -106,11 +100,10 @@ USER ${USERNAME}
 
 # Add version labels for tracking
 LABEL org.opencontainers.image.title="dclaude"
-LABEL org.opencontainers.image.description="Claude Code with Git, GitHub CLI, and Ripgrep"
+LABEL org.opencontainers.image.description="Containerized environment for AI coding agents"
 LABEL org.opencontainers.image.authors="https://github.com/anthropics/claude-code"
 
 # Tool version labels (populated at build time)
-LABEL tools.claude="installed"
 LABEL tools.git="installed"
 LABEL tools.gh="installed"
 LABEL tools.ripgrep="installed"

@@ -1,14 +1,17 @@
 # DClaude Extensions
 
-Extensions allow you to add additional tools and capabilities to your DClaude container image.
+Extensions allow you to add tools and AI agents to your DClaude container image. The base image provides infrastructure (Node.js, Go, Python/UV, Git, GitHub CLI), and extensions add the actual tools.
 
 ## Available Extensions
 
-| Extension | Description | Entrypoint |
-|-----------|-------------|------------|
-| `beads` | Git-backed issue tracker for AI agents | `bd` |
-| `gastown` | Multi-agent orchestration for Claude Code | `gt` |
-| `tessl` | Agent enablement platform - package manager for AI agent skills | `tessl` |
+| Extension | Description | Entrypoint | Dependencies |
+|-----------|-------------|------------|--------------|
+| `claude` | Claude Code - AI coding assistant by Anthropic | `claude` | - |
+| `beads` | Git-backed issue tracker for AI agents | `bd` | - |
+| `gastown` | Multi-agent orchestration for Claude Code | `gt` | claude, beads |
+| `tessl` | Agent enablement platform - package manager for AI agent skills | `tessl` | - |
+
+**Note:** The `claude` extension is installed by default. When you build with other extensions like `gastown`, their dependencies (including `claude`) are automatically installed.
 
 ## Using Extensions
 
@@ -17,11 +20,17 @@ Extensions allow you to add additional tools and capabilities to your DClaude co
 Use the `build` command with `--build-arg` to include extensions:
 
 ```bash
-# Single extension
+# Default build (installs claude extension)
+dclaude build
+
+# Build with gastown (automatically includes claude and beads dependencies)
 dclaude build --build-arg DCLAUDE_EXTENSIONS=gastown
 
-# Multiple extensions (comma-separated)
-dclaude build --build-arg DCLAUDE_EXTENSIONS=beads,tessl
+# Build with multiple extensions
+dclaude build --build-arg DCLAUDE_EXTENSIONS=claude,tessl
+
+# Build minimal image with only tessl (no claude)
+dclaude build --build-arg DCLAUDE_EXTENSIONS=tessl
 
 # Via environment variable
 DCLAUDE_EXTENSIONS=gastown dclaude build

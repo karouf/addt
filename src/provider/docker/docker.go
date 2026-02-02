@@ -200,20 +200,9 @@ func (p *DockerProvider) Run(spec *provider.RunSpec) error {
 			dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:/home/%s/.gitconfig:ro", gitconfigPath, username))
 		}
 
-		// Mount Claude configuration (if enabled)
-		// This includes both ~/.claude directory and ~/.claude.json file
-		if p.config.MountClaudeConfig {
-			claudeDir := fmt.Sprintf("%s/.claude", homeDir)
-			if _, err := os.Stat(claudeDir); err == nil {
-				dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:/home/%s/.claude", claudeDir, username))
-			}
-
-			// Mount .claude.json
-			claudeJson := fmt.Sprintf("%s/.claude.json", homeDir)
-			if _, err := os.Stat(claudeJson); err == nil {
-				dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:/home/%s/.claude.json", claudeJson, username))
-			}
-		}
+		// Note: Claude config mounts (~/.claude, ~/.claude.json) are now handled
+		// by the claude extension via AddExtensionMounts above.
+		// Use DCLAUDE_MOUNT_CLAUDE_CONFIG=false to disable them.
 
 		// Add env file if exists
 		if spec.Env["DCLAUDE_ENV_FILE"] != "" {
@@ -342,20 +331,9 @@ func (p *DockerProvider) Shell(spec *provider.RunSpec) error {
 			dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:/home/%s/.gitconfig:ro", gitconfigPath, username))
 		}
 
-		// Mount Claude configuration (if enabled)
-		// This includes both ~/.claude directory and ~/.claude.json file
-		if p.config.MountClaudeConfig {
-			claudeDir := fmt.Sprintf("%s/.claude", homeDir)
-			if _, err := os.Stat(claudeDir); err == nil {
-				dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:/home/%s/.claude", claudeDir, username))
-			}
-
-			// Mount .claude.json
-			claudeJson := fmt.Sprintf("%s/.claude.json", homeDir)
-			if _, err := os.Stat(claudeJson); err == nil {
-				dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:/home/%s/.claude.json", claudeJson, username))
-			}
-		}
+		// Note: Claude config mounts (~/.claude, ~/.claude.json) are now handled
+		// by the claude extension via AddExtensionMounts above.
+		// Use DCLAUDE_MOUNT_CLAUDE_CONFIG=false to disable them.
 
 		// Add env file if exists
 		if spec.Env["DCLAUDE_ENV_FILE"] != "" {
