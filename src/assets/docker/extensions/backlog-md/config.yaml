@@ -1,0 +1,7 @@
+name: backlog-md
+description: Backlog.md - Markdown-based backlog management for AI agents
+entrypoint: backlog
+dependencies: []
+mounts:
+  - source: ~/.backlog-md
+    target: /home/claude/.backlog-md
