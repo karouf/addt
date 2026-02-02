@@ -1,0 +1,7 @@
+name: kiro
+description: Kiro CLI - AI-powered development agent by AWS
+entrypoint: kiro-cli
+dependencies: []
+mounts:
+  - source: ~/.kiro
+    target: /home/claude/.kiro
