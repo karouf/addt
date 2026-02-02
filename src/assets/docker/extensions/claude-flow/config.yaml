@@ -1,0 +1,8 @@
+name: claude-flow
+description: Claude Flow - Multi-agent orchestration platform for Claude
+entrypoint: claude-flow
+dependencies:
+  - claude
+mounts:
+  - source: ~/.claude-flow
+    target: /home/claude/.claude-flow
