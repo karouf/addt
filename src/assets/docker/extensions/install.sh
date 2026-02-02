@@ -139,10 +139,7 @@ resolve_extension() {
         return
     fi
 
-    if [ ! -f "$script" ]; then
-        echo "Extensions: Warning - extension '$ext' has no install.sh, skipping"
-        return
-    fi
+    # install.sh is optional - extension can be metadata-only
 
     # Process dependencies first
     local deps=$(yaml_get_deps "$config")
@@ -184,7 +181,13 @@ for ext in "${install_order[@]}"; do
     echo "Extensions: Installing '$ext'"
     [ -n "$description" ] && echo "  $description"
     echo "=========================================="
-    bash "$script"
+
+    # Run install.sh if it exists (optional)
+    if [ -f "$script" ]; then
+        bash "$script"
+    else
+        echo "  (no install.sh - metadata only)"
+    fi
 done
 
 # Write metadata JSON
