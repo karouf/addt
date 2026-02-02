@@ -4,9 +4,21 @@ Extensions allow you to add tools and AI agents to your DClaude container image.
 
 ## Available Extensions
 
+### AI Coding Agents
+
+| Extension | Description | Entrypoint | Provider |
+|-----------|-------------|------------|----------|
+| `claude` | Claude Code - AI coding assistant | `claude` | Anthropic |
+| `codex` | OpenAI Codex CLI - AI coding assistant | `codex` | OpenAI |
+| `cursor` | Cursor CLI Agent - AI-powered code editor agent | `cursor` / `agent` | Cursor |
+| `amp` | Amp - AI coding agent | `amp` | Sourcegraph |
+| `gemini` | Gemini CLI - AI coding agent | `gemini` | Google |
+| `copilot` | GitHub Copilot CLI - AI coding assistant | `copilot` | GitHub |
+
+### Utility Extensions
+
 | Extension | Description | Entrypoint | Dependencies |
 |-----------|-------------|------------|--------------|
-| `claude` | Claude Code - AI coding assistant by Anthropic | `claude` | - |
 | `beads` | Git-backed issue tracker for AI agents | `bd` | - |
 | `gastown` | Multi-agent orchestration for Claude Code | `gt` | claude, beads |
 | `tessl` | Agent enablement platform - package manager for AI agent skills | `tessl` | - |
@@ -67,9 +79,12 @@ Extensions are stored in `src/assets/docker/extensions/` as directories containi
 ```
 extensions/
 └── myextension/
-    ├── config.yaml    # Extension metadata
-    └── install.sh     # Installation script
+    ├── config.yaml    # Extension metadata (required)
+    ├── install.sh     # Installation script (optional, runs at build time)
+    └── setup.sh       # Setup script (optional, runs at container startup)
 ```
+
+**Note:** Only `config.yaml` is required. Extensions can be metadata-only (no install.sh or setup.sh) if they just need to define mounts or dependencies.
 
 ### config.yaml
 
@@ -95,6 +110,14 @@ mounts:
 | `entrypoint` | Yes | Main command provided by extension |
 | `dependencies` | No | List of other extensions required |
 | `mounts` | No | Directories to mount from host to container |
+
+### Extension Files
+
+| File | Required | When it runs | Description |
+|------|----------|--------------|-------------|
+| `config.yaml` | Yes | Build time | Extension metadata and configuration |
+| `install.sh` | No | Build time | Installs packages and tools into the image |
+| `setup.sh` | No | Runtime | Runs at container startup for initialization |
 
 ### Mounts
 
@@ -143,6 +166,29 @@ uv pip install some-package
 echo "Extension [myextension]: Done."
 ```
 
+### setup.sh (Optional)
+
+The setup script runs at container startup (runtime), not during image build. Use it for:
+
+- Initializing runtime state
+- Displaying welcome messages
+- Checking for required environment variables
+- Setting up runtime configuration
+
+Example setup script:
+
+```bash
+#!/bin/bash
+echo "Setup [myextension]: Initializing environment"
+
+# Check for required API key
+if [ -z "$MY_API_KEY" ]; then
+    echo "Warning: MY_API_KEY not set"
+fi
+```
+
+Setup scripts run once per container session. In persistent mode, they only run on the first start (a marker file prevents re-running).
+
 ### Testing Your Extension
 
 1. Create the extension directory and files
@@ -182,6 +228,47 @@ This metadata is used at runtime to:
 - Discover available extensions and their entrypoints
 
 ## Examples
+
+### AI Coding Agents
+
+You can build images with different AI coding agents and switch between them:
+
+```bash
+# Build with multiple AI agents
+dclaude build --build-arg DCLAUDE_EXTENSIONS=claude,codex,gemini,copilot
+
+# Run Claude (default)
+dclaude
+
+# Run OpenAI Codex
+DCLAUDE_COMMAND=codex dclaude
+
+# Run Google Gemini
+DCLAUDE_COMMAND=gemini dclaude
+
+# Run GitHub Copilot
+DCLAUDE_COMMAND=copilot dclaude
+
+# Run Sourcegraph Amp
+DCLAUDE_COMMAND=amp dclaude
+
+# Run Cursor Agent
+DCLAUDE_COMMAND=cursor dclaude
+```
+
+### Cursor Extension
+
+Cursor CLI provides an AI-powered code editor agent:
+
+```bash
+# Build with cursor only
+dclaude build --build-arg DCLAUDE_EXTENSIONS=cursor
+
+# Run cursor agent
+DCLAUDE_COMMAND=cursor dclaude
+# or
+DCLAUDE_COMMAND=agent dclaude
+```
 
 ### Gastown Extension
 
@@ -226,5 +313,5 @@ If you see permission errors during installation:
 
 If an extension is not recognized:
 - Ensure the directory name matches the extension name in `config.yaml`
-- Check that both `config.yaml` and `install.sh` exist
+- Check that `config.yaml` exists (install.sh and setup.sh are optional)
 - Rebuild dclaude with `make build` to embed the new extension
