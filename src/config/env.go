@@ -8,7 +8,7 @@ import (
 )
 
 // LoadEnvFile loads environment variables from a .env file
-func LoadEnvFile(envFile string) {
+func LoadEnvFile(envFile string) error {
 	specifiedByUser := envFile != ""
 	if envFile == "" {
 		envFile = ".env"
@@ -20,7 +20,7 @@ func LoadEnvFile(envFile string) {
 		if specifiedByUser {
 			fmt.Printf("Warning: Specified env file not found: %s\n", envFile)
 		}
-		return
+		return nil
 	}
 	defer file.Close()
 
@@ -38,4 +38,8 @@ func LoadEnvFile(envFile string) {
 			os.Setenv(key, value)
 		}
 	}
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("error reading env file: %w", err)
+	}
+	return nil
 }

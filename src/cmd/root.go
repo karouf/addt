@@ -163,7 +163,10 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 	}
 
 	// Load env file if exists
-	config.LoadEnvFile(cfg.EnvFile)
+	if err := config.LoadEnvFile(cfg.EnvFile); err != nil {
+		fmt.Printf("Error loading env file: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Run via orchestrator
 	if err := orch.RunClaude(args, openShell); err != nil {

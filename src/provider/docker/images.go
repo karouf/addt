@@ -115,7 +115,10 @@ func (p *DockerProvider) BuildImage(embeddedDockerfile, embeddedEntrypoint []byt
 	scriptDir := buildDir
 
 	// Get current user info
-	currentUser, _ := user.Current()
+	currentUser, err := user.Current()
+	if err != nil {
+		return fmt.Errorf("failed to get current user: %w", err)
+	}
 	uid := currentUser.Uid
 	gid := currentUser.Gid
 	username := "claude" // Always use "claude" in container, but with host UID/GID
@@ -235,16 +238,22 @@ func (p *DockerProvider) addVersionLabels(cfg interface{}, versions map[string]s
 
 	// Build with labels
 	cmd := exec.Command("docker", "build", "-f", tmpFile.Name(), "-t", imageName, ".")
-	cmd.Run()
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("Warning: failed to add version labels: %v\n", err)
+	}
 
 	// Tag as dclaude:latest if this is latest
 	claudeVersion := p.getExtensionVersion("claude")
 	if claudeVersion == "latest" {
-		exec.Command("docker", "tag", imageName, "dclaude:latest").Run()
+		if err := exec.Command("docker", "tag", imageName, "dclaude:latest").Run(); err != nil {
+			fmt.Printf("Warning: failed to tag as dclaude:latest: %v\n", err)
+		}
 	}
 
 	// Tag with claude version
 	if v, ok := versions["claude"]; ok && v != "" {
-		exec.Command("docker", "tag", imageName, fmt.Sprintf("dclaude:claude-%s", v)).Run()
+		if err := exec.Command("docker", "tag", imageName, fmt.Sprintf("dclaude:claude-%s", v)).Run(); err != nil {
+			fmt.Printf("Warning: failed to tag with claude version: %v\n", err)
+		}
 	}
 }

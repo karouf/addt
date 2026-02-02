@@ -66,7 +66,8 @@ func (p *DockerProvider) GetExtensionMountsWithNames(imageName string) []Extensi
 		"/home/claude/.dclaude/extensions.json")
 	output, err := cmd.Output()
 	if err != nil {
-		// No extensions metadata or file doesn't exist
+		// Extension metadata not available - this is normal for images without extensions
+		// or when the extensions.json file doesn't exist yet. Not an error condition.
 		return mounts
 	}
 
@@ -147,6 +148,8 @@ func (p *DockerProvider) GetExtensionMetadata(imageName string) map[string]Exten
 		"/home/claude/.dclaude/extensions.json")
 	output, err := cmd.Output()
 	if err != nil {
+		// Extension metadata not available - this is normal for images without extensions
+		// or when the extensions.json file doesn't exist yet. Not an error condition.
 		return nil
 	}
 

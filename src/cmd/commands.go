@@ -58,9 +58,18 @@ func HandleContainersCommand(prov provider.Provider, cfg *provider.Config, args 
 			return
 		}
 		fmt.Println("Removing all persistent environments...")
+		var failed []string
 		for _, env := range envs {
-			fmt.Println(env.Name)
-			prov.Remove(env.Name)
+			if err := prov.Remove(env.Name); err != nil {
+				failed = append(failed, env.Name)
+				fmt.Printf("Failed to remove: %s (%v)\n", env.Name, err)
+			} else {
+				fmt.Printf("Removed: %s\n", env.Name)
+			}
+		}
+		if len(failed) > 0 {
+			fmt.Printf("Failed to remove %d container(s)\n", len(failed))
+			os.Exit(1)
 		}
 		fmt.Println("✓ Cleaned")
 	default:
