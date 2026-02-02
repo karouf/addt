@@ -447,9 +447,14 @@ func (p *DockerProvider) GetStatus(cfg *provider.Config, envName string) string 
 
 // GenerateContainerName generates a persistent container name based on working directory and extensions
 func (p *DockerProvider) GenerateContainerName() string {
-	workdir, err := os.Getwd()
-	if err != nil {
-		workdir = "/tmp"
+	// Use configured workdir or fall back to current directory
+	workdir := p.config.Workdir
+	if workdir == "" {
+		var err error
+		workdir, err = os.Getwd()
+		if err != nil {
+			workdir = "/tmp"
+		}
 	}
 
 	// Get directory name

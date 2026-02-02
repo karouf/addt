@@ -51,7 +51,11 @@ func (o *Orchestrator) RunClaude(args []string, openShell bool) error {
 
 // buildRunSpec builds a RunSpec from the current configuration
 func (o *Orchestrator) buildRunSpec(name string, args []string, openShell bool) *provider.RunSpec {
-	cwd, _ := os.Getwd()
+	// Use configured workdir or fall back to current directory
+	cwd := o.config.Workdir
+	if cwd == "" {
+		cwd, _ = os.Getwd()
+	}
 
 	spec := &provider.RunSpec{
 		Name:        name,
@@ -103,7 +107,7 @@ func (o *Orchestrator) buildVolumes(cwd string) []provider.VolumeMount {
 	var volumes []provider.VolumeMount
 
 	// Only mount working directory if enabled (default: true)
-	if o.config.MountWorkdir {
+	if o.config.WorkdirAutomount {
 		volumes = append(volumes, provider.VolumeMount{
 			Source:   cwd,
 			Target:   "/workspace",

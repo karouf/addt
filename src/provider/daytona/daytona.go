@@ -408,9 +408,14 @@ func (p *DaytonaProvider) GetStatus(cfg *provider.Config, envName string) string
 
 // GeneratePersistentName generates a sandbox name for persistent mode
 func (p *DaytonaProvider) GeneratePersistentName() string {
-	workdir, err := os.Getwd()
-	if err != nil {
-		return "dclaude-sandbox"
+	// Use configured workdir or fall back to current directory
+	workdir := p.config.Workdir
+	if workdir == "" {
+		var err error
+		workdir, err = os.Getwd()
+		if err != nil {
+			return "dclaude-sandbox"
+		}
 	}
 
 	// Get directory name

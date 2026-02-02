@@ -8,57 +8,59 @@ import (
 
 // Config holds all configuration options
 type Config struct {
-	NodeVersion          string
-	GoVersion            string
-	UvVersion            string
-	EnvVars              []string
-	GitHubDetect         bool
-	Ports                []string
-	PortRangeStart       int
-	SSHForward           string
-	GPGForward           bool
-	DindMode             string
-	EnvFile              string
-	LogEnabled           bool
-	LogFile              string
-	ImageName            string
-	Persistent           bool              // Enable persistent container mode
-	MountWorkdir         bool              // Mount present working directory
-	FirewallEnabled      bool              // Enable network firewall
-	FirewallMode         string            // Firewall mode: strict, permissive, off
-	Mode                 string            // container or shell
-	Provider             string            // Provider type: docker or daytona
-	Extensions           string            // Comma-separated list of extensions to install (e.g., "gastown,beads")
-	Command              string            // Command to run instead of claude (e.g., "gt" for gastown)
-	ExtensionVersions    map[string]string // Per-extension versions (e.g., {"claude": "1.0.5", "codex": "latest"})
-	MountExtensionConfig map[string]bool   // Per-extension mount control (e.g., {"claude": true, "codex": false})
+	NodeVersion        string
+	GoVersion          string
+	UvVersion          string
+	EnvVars            []string
+	GitHubDetect       bool
+	Ports              []string
+	PortRangeStart     int
+	SSHForward         string
+	GPGForward         bool
+	DindMode           string
+	EnvFile            string
+	LogEnabled         bool
+	LogFile            string
+	ImageName          string
+	Persistent         bool              // Enable persistent container mode
+	WorkdirAutomount   bool              // Auto-mount working directory
+	Workdir            string            // Override working directory (default: current directory)
+	FirewallEnabled    bool              // Enable network firewall
+	FirewallMode       string            // Firewall mode: strict, permissive, off
+	Mode               string            // container or shell
+	Provider           string            // Provider type: docker or daytona
+	Extensions         string            // Comma-separated list of extensions to install (e.g., "gastown,beads")
+	Command            string            // Command to run instead of claude (e.g., "gt" for gastown)
+	ExtensionVersions  map[string]string // Per-extension versions (e.g., {"claude": "1.0.5", "codex": "latest"})
+	ExtensionAutomount map[string]bool   // Per-extension automount control (e.g., {"claude": true, "codex": false})
 }
 
 // LoadConfig loads configuration from environment variables
 func LoadConfig(defaultNodeVersion string, defaultGoVersion string, defaultUvVersion string, defaultPortRangeStart int) *Config {
 	cfg := &Config{
-		NodeVersion:          getEnvOrDefault("DCLAUDE_NODE_VERSION", defaultNodeVersion),
-		GoVersion:            getEnvOrDefault("DCLAUDE_GO_VERSION", defaultGoVersion),
-		UvVersion:            getEnvOrDefault("DCLAUDE_UV_VERSION", defaultUvVersion),
-		EnvVars:              strings.Split(getEnvOrDefault("DCLAUDE_ENV_VARS", "ANTHROPIC_API_KEY,GH_TOKEN"), ","),
-		GitHubDetect:         getEnvOrDefault("DCLAUDE_GITHUB_DETECT", "false") == "true",
-		PortRangeStart:       getEnvInt("DCLAUDE_PORT_RANGE_START", defaultPortRangeStart),
-		SSHForward:           os.Getenv("DCLAUDE_SSH_FORWARD"),
-		GPGForward:           os.Getenv("DCLAUDE_GPG_FORWARD") == "true",
-		DindMode:             os.Getenv("DCLAUDE_DIND_MODE"),
-		EnvFile:              os.Getenv("DCLAUDE_ENV_FILE"), // Empty means use default .env
-		LogEnabled:           os.Getenv("DCLAUDE_LOG") == "true",
-		LogFile:              getEnvOrDefault("DCLAUDE_LOG_FILE", "dclaude.log"),
-		Persistent:           os.Getenv("DCLAUDE_PERSISTENT") == "true",
-		MountWorkdir:         getEnvOrDefault("DCLAUDE_MOUNT_WORKDIR", "true") != "false",
-		FirewallEnabled:      os.Getenv("DCLAUDE_FIREWALL") == "true",
-		FirewallMode:         getEnvOrDefault("DCLAUDE_FIREWALL_MODE", "strict"),
-		Mode:                 getEnvOrDefault("DCLAUDE_MODE", "container"),
-		Provider:             getEnvOrDefault("DCLAUDE_PROVIDER", "docker"),
-		Extensions:           getEnvOrDefault("DCLAUDE_EXTENSIONS", "claude"),
-		Command:              os.Getenv("DCLAUDE_COMMAND"), // Empty means use default "claude"
-		ExtensionVersions:    make(map[string]string),
-		MountExtensionConfig: make(map[string]bool),
+		NodeVersion:        getEnvOrDefault("DCLAUDE_NODE_VERSION", defaultNodeVersion),
+		GoVersion:          getEnvOrDefault("DCLAUDE_GO_VERSION", defaultGoVersion),
+		UvVersion:          getEnvOrDefault("DCLAUDE_UV_VERSION", defaultUvVersion),
+		EnvVars:            strings.Split(getEnvOrDefault("DCLAUDE_ENV_VARS", "ANTHROPIC_API_KEY,GH_TOKEN"), ","),
+		GitHubDetect:       getEnvOrDefault("DCLAUDE_GITHUB_DETECT", "false") == "true",
+		PortRangeStart:     getEnvInt("DCLAUDE_PORT_RANGE_START", defaultPortRangeStart),
+		SSHForward:         os.Getenv("DCLAUDE_SSH_FORWARD"),
+		GPGForward:         os.Getenv("DCLAUDE_GPG_FORWARD") == "true",
+		DindMode:           os.Getenv("DCLAUDE_DIND_MODE"),
+		EnvFile:            os.Getenv("DCLAUDE_ENV_FILE"), // Empty means use default .env
+		LogEnabled:         os.Getenv("DCLAUDE_LOG") == "true",
+		LogFile:            getEnvOrDefault("DCLAUDE_LOG_FILE", "dclaude.log"),
+		Persistent:         os.Getenv("DCLAUDE_PERSISTENT") == "true",
+		WorkdirAutomount:   getEnvOrDefault("DCLAUDE_WORKDIR_AUTOMOUNT", "true") != "false",
+		Workdir:            os.Getenv("DCLAUDE_WORKDIR"),
+		FirewallEnabled:    os.Getenv("DCLAUDE_FIREWALL") == "true",
+		FirewallMode:       getEnvOrDefault("DCLAUDE_FIREWALL_MODE", "strict"),
+		Mode:               getEnvOrDefault("DCLAUDE_MODE", "container"),
+		Provider:           getEnvOrDefault("DCLAUDE_PROVIDER", "docker"),
+		Extensions:         getEnvOrDefault("DCLAUDE_EXTENSIONS", "claude"),
+		Command:            os.Getenv("DCLAUDE_COMMAND"), // Empty means use default "claude"
+		ExtensionVersions:  make(map[string]string),
+		ExtensionAutomount: make(map[string]bool),
 	}
 
 	// Load per-extension versions and mount configs from environment
@@ -82,13 +84,13 @@ func LoadConfig(defaultNodeVersion string, defaultGoVersion string, defaultUvVer
 			}
 		}
 
-		// Check for DCLAUDE_<EXT>_MOUNT_CONFIG pattern
-		if strings.HasPrefix(key, "DCLAUDE_") && strings.HasSuffix(key, "_MOUNT_CONFIG") {
-			// Extract extension name (e.g., "DCLAUDE_CLAUDE_MOUNT_CONFIG" -> "claude")
+		// Check for DCLAUDE_<EXT>_AUTOMOUNT pattern
+		if strings.HasPrefix(key, "DCLAUDE_") && strings.HasSuffix(key, "_AUTOMOUNT") {
+			// Extract extension name (e.g., "DCLAUDE_CLAUDE_AUTOMOUNT" -> "claude")
 			extName := strings.TrimPrefix(key, "DCLAUDE_")
-			extName = strings.TrimSuffix(extName, "_MOUNT_CONFIG")
+			extName = strings.TrimSuffix(extName, "_AUTOMOUNT")
 			extName = strings.ToLower(extName)
-			cfg.MountExtensionConfig[extName] = value != "false"
+			cfg.ExtensionAutomount[extName] = value != "false"
 		}
 	}
 

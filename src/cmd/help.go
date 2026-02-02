@@ -59,7 +59,8 @@ Environment Variables:
   DCLAUDE_LOG                 Enable command logging (default: false)
   DCLAUDE_LOG_FILE            Log file path
   DCLAUDE_PERSISTENT          Enable persistent container mode (true/false)
-  DCLAUDE_MOUNT_WORKDIR       Mount working directory to /workspace (default: true)
+  DCLAUDE_WORKDIR             Override working directory (default: current directory)
+  DCLAUDE_WORKDIR_AUTOMOUNT   Auto-mount working directory to /workspace (default: true)
   DCLAUDE_FIREWALL            Enable network firewall (default: false, requires --cap-add=NET_ADMIN)
   DCLAUDE_FIREWALL_MODE       Firewall mode: strict, permissive, off (default: strict)
   DCLAUDE_MODE                Execution mode: container or shell (default: container)
@@ -69,7 +70,7 @@ Environment Variables:
 Per-Extension Configuration:
   DCLAUDE_<EXT>_VERSION       Version for extension (e.g., DCLAUDE_CLAUDE_VERSION=1.0.5)
                               Default versions defined in each extension's config.yaml
-  DCLAUDE_<EXT>_MOUNT_CONFIG  Mount extension config dir (e.g., DCLAUDE_CLAUDE_MOUNT_CONFIG=false)
+  DCLAUDE_<EXT>_AUTOMOUNT     Auto-mount extension config (e.g., DCLAUDE_CLAUDE_AUTOMOUNT=false)
 
 Build Command:
   dclaude containers build [--build-arg KEY=VALUE]...
