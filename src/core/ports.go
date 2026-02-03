@@ -1,0 +1,74 @@
+package core
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/jedi4ever/addt/internal/ports"
+	"github.com/jedi4ever/addt/provider"
+)
+
+// BuildPorts creates port mappings from the configuration
+// It finds available host ports starting from PortRangeStart
+func BuildPorts(cfg *provider.Config) []provider.PortMapping {
+	var portsList []provider.PortMapping
+	hostPort := cfg.PortRangeStart
+
+	for _, containerPort := range cfg.Ports {
+		containerPort = strings.TrimSpace(containerPort)
+		hostPort = ports.FindAvailablePort(hostPort)
+
+		// Parse container port as int
+		var containerPortInt int
+		fmt.Sscanf(containerPort, "%d", &containerPortInt)
+
+		portsList = append(portsList, provider.PortMapping{
+			Container: containerPortInt,
+			Host:      hostPort,
+		})
+		hostPort++
+	}
+
+	return portsList
+}
+
+// BuildPortMapString creates a comma-separated port map string
+// Format: "containerPort:hostPort,containerPort:hostPort"
+// This is used for the ADDT_PORT_MAP environment variable
+func BuildPortMapString(cfg *provider.Config) string {
+	if len(cfg.Ports) == 0 {
+		return ""
+	}
+
+	var mappings []string
+	hostPort := cfg.PortRangeStart
+
+	for _, containerPort := range cfg.Ports {
+		containerPort = strings.TrimSpace(containerPort)
+		hostPort = ports.FindAvailablePort(hostPort)
+		mappings = append(mappings, fmt.Sprintf("%s:%d", containerPort, hostPort))
+		hostPort++
+	}
+
+	return strings.Join(mappings, ",")
+}
+
+// BuildPortDisplayString creates a display-friendly port mapping string
+// Format: "containerPort→hostPort,containerPort→hostPort"
+func BuildPortDisplayString(cfg *provider.Config) string {
+	if len(cfg.Ports) == 0 {
+		return ""
+	}
+
+	var mappings []string
+	hostPort := cfg.PortRangeStart
+
+	for _, containerPort := range cfg.Ports {
+		containerPort = strings.TrimSpace(containerPort)
+		hostPort = ports.FindAvailablePort(hostPort)
+		mappings = append(mappings, fmt.Sprintf("%s→%d", containerPort, hostPort))
+		hostPort++
+	}
+
+	return strings.Join(mappings, ",")
+}

@@ -91,9 +91,9 @@ func HandleShellCommand(args []string, defaultNodeVersion, defaultGoVersion, def
 		os.Exit(1)
 	}
 
-	// Run shell via orchestrator
-	orch := core.NewOrchestrator(prov, providerCfg)
-	if err := orch.RunClaude(shellArgs, true); err != nil {
+	// Run shell via runner
+	runner := core.NewRunner(prov, providerCfg)
+	if err := runner.Shell(shellArgs); err != nil {
 		prov.Cleanup()
 		os.Exit(1)
 	}

@@ -398,8 +398,8 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 		os.Exit(1)
 	}
 
-	// Create orchestrator
-	orch := core.NewOrchestrator(prov, providerCfg)
+	// Create runner
+	runner := core.NewRunner(prov, providerCfg)
 
 	// Auto-detect GitHub token if enabled
 	if cfg.GitHubDetect && os.Getenv("GH_TOKEN") == "" {
@@ -414,8 +414,8 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 		os.Exit(1)
 	}
 
-	// Run via orchestrator
-	if err := orch.RunClaude(args, false); err != nil {
+	// Run via runner
+	if err := runner.Run(args); err != nil {
 		os.Exit(1)
 	}
 
