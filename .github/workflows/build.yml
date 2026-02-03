@@ -42,3 +42,6 @@ jobs:
             gofmt -s -l .
             exit 1
           fi
+
+      - name: Test container image build
+        run: ./dist/addt build
