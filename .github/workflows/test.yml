@@ -1,4 +1,4 @@
-name: Test
+name: Test & Build
 
 on:
   push:
@@ -20,6 +20,15 @@ jobs:
           go-version: '1.23'
           cache-dependency-path: src/go.sum
 
+      - name: Check code formatting
+        working-directory: src
+        run: |
+          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+            echo "Code is not formatted. Run 'go fmt ./...'"
+            gofmt -s -l .
+            exit 1
+          fi
+
       - name: Run unit tests
         working-directory: src
         run: go test -v -race ./...
@@ -29,9 +38,12 @@ jobs:
         run: go test -v -tags=integration -timeout 15m ./...
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     # Only run on PRs from the same repo (not forks) to prevent unauthorized code execution
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
 
     steps:
       - name: Checkout code
@@ -44,9 +56,7 @@ jobs:
           cache-dependency-path: src/go.sum
 
       - name: Build binary
-        working-directory: src
-        run: go build -o addt ./main.go
+        run: make build
 
       - name: Verify binary runs
-        working-directory: src
-        run: ./addt version
+        run: ./dist/addt --addt-version
