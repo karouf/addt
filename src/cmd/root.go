@@ -27,6 +27,11 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 		if os.Getenv("ADDT_COMMAND") == "" {
 			os.Setenv("ADDT_COMMAND", binaryName)
 		}
+	} else if os.Getenv("ADDT_EXTENSIONS") != "" && os.Getenv("ADDT_COMMAND") == "" {
+		// If ADDT_EXTENSIONS is set but ADDT_COMMAND is not, use first extension as command
+		extensions := os.Getenv("ADDT_EXTENSIONS")
+		firstExt := strings.Split(extensions, ",")[0]
+		os.Setenv("ADDT_COMMAND", firstExt)
 	}
 
 	// Parse command line arguments

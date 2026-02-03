@@ -84,8 +84,16 @@ fi
 # Ensure ~/.local/bin and ~/go/bin are in PATH (for extensions installed there)
 export PATH="$HOME/.local/bin:$HOME/go/bin:$PATH"
 
-# Determine which command to run (default: claude)
-ADDT_CMD="${ADDT_COMMAND:-claude}"
+# Determine which command to run
+if [ -n "$ADDT_COMMAND" ]; then
+    ADDT_CMD="$ADDT_COMMAND"
+elif [ -f "$EXTENSIONS_JSON" ]; then
+    # Auto-detect from first installed extension
+    ADDT_CMD=$(grep -oE '"entrypoint":[[:space:]]*"[^"]+' "$EXTENSIONS_JSON" | head -1 | sed 's/.*"entrypoint":[[:space:]]*"//' | tr -d '"')
+fi
+
+# Fallback to claude if still not set
+ADDT_CMD="${ADDT_CMD:-claude}"
 
 # Find the extension directory for args.sh
 EXTENSIONS_DIR="/usr/local/share/addt/extensions"
