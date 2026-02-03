@@ -4,7 +4,7 @@
 
 **Run AI coding agents in Docker containers.** Your agent can read, write, and execute code in complete isolation - no surprises on your host machine.
 
-Supports **Claude Code**, **Codex**, **Gemini CLI**, and more via extensions.
+The binary name determines which agent runs. Symlink `nddt` to an extension name (e.g., `claude`, `codex`, `gemini`) and it auto-detects which agent to use. Run `nddt --nddt-list-extensions` to see all available extensions.
 
 ## Quick Start
 
