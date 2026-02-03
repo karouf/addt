@@ -1,5 +1,7 @@
 # nddt - Nope, Don't Do That
 
+> **Note:** This project was formerly known as "dclaude". It has been renamed to "nddt" to reflect its support for multiple AI agents beyond Claude.
+
 **Run AI coding agents in Docker containers.** Your agent can read, write, and execute code in complete isolation - no surprises on your host machine.
 
 Supports **Claude Code**, **Codex**, **Gemini CLI**, and more via extensions.
