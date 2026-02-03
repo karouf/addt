@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.5] - 2025-02-03
+
+### Added
+- Support for `addt-<extension>` symlink naming (e.g., `addt-claude`, `addt-codex`)
+
 ## [0.0.4] - 2025-02-03
 
 ### Added
