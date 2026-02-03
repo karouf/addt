@@ -8,4 +8,4 @@ env_vars:
   - GOOGLE_API_KEY
 mounts:
   - source: ~/.gemini
-    target: /home/nddt/.gemini
+    target: /home/addt/.gemini

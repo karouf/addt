@@ -38,33 +38,33 @@ type Config struct {
 // LoadConfig loads configuration from environment variables
 func LoadConfig(defaultNodeVersion string, defaultGoVersion string, defaultUvVersion string, defaultPortRangeStart int) *Config {
 	cfg := &Config{
-		NodeVersion:        getEnvOrDefault("NDDT_NODE_VERSION", defaultNodeVersion),
-		GoVersion:          getEnvOrDefault("NDDT_GO_VERSION", defaultGoVersion),
-		UvVersion:          getEnvOrDefault("NDDT_UV_VERSION", defaultUvVersion),
-		EnvVars:            strings.Split(getEnvOrDefault("NDDT_ENV_VARS", "ANTHROPIC_API_KEY,GH_TOKEN"), ","),
-		GitHubDetect:       getEnvOrDefault("NDDT_GITHUB_DETECT", "false") == "true",
-		PortRangeStart:     getEnvInt("NDDT_PORT_RANGE_START", defaultPortRangeStart),
-		SSHForward:         os.Getenv("NDDT_SSH_FORWARD"),
-		GPGForward:         os.Getenv("NDDT_GPG_FORWARD") == "true",
-		DindMode:           os.Getenv("NDDT_DIND_MODE"),
-		EnvFile:            os.Getenv("NDDT_ENV_FILE"), // Empty means use default .env
-		LogEnabled:         os.Getenv("NDDT_LOG") == "true",
-		LogFile:            getEnvOrDefault("NDDT_LOG_FILE", "nddt.log"),
-		Persistent:         os.Getenv("NDDT_PERSISTENT") == "true",
-		WorkdirAutomount:   getEnvOrDefault("NDDT_WORKDIR_AUTOMOUNT", "true") != "false",
-		Workdir:            os.Getenv("NDDT_WORKDIR"),
-		FirewallEnabled:    os.Getenv("NDDT_FIREWALL") == "true",
-		FirewallMode:       getEnvOrDefault("NDDT_FIREWALL_MODE", "strict"),
-		Mode:               getEnvOrDefault("NDDT_MODE", "container"),
-		Provider:           getEnvOrDefault("NDDT_PROVIDER", "docker"),
-		Extensions:         getEnvOrDefault("NDDT_EXTENSIONS", "claude"),
-		Command:            os.Getenv("NDDT_COMMAND"), // Empty means use default "claude"
+		NodeVersion:        getEnvOrDefault("ADDT_NODE_VERSION", defaultNodeVersion),
+		GoVersion:          getEnvOrDefault("ADDT_GO_VERSION", defaultGoVersion),
+		UvVersion:          getEnvOrDefault("ADDT_UV_VERSION", defaultUvVersion),
+		EnvVars:            strings.Split(getEnvOrDefault("ADDT_ENV_VARS", "ANTHROPIC_API_KEY,GH_TOKEN"), ","),
+		GitHubDetect:       getEnvOrDefault("ADDT_GITHUB_DETECT", "false") == "true",
+		PortRangeStart:     getEnvInt("ADDT_PORT_RANGE_START", defaultPortRangeStart),
+		SSHForward:         os.Getenv("ADDT_SSH_FORWARD"),
+		GPGForward:         os.Getenv("ADDT_GPG_FORWARD") == "true",
+		DindMode:           os.Getenv("ADDT_DIND_MODE"),
+		EnvFile:            os.Getenv("ADDT_ENV_FILE"), // Empty means use default .env
+		LogEnabled:         os.Getenv("ADDT_LOG") == "true",
+		LogFile:            getEnvOrDefault("ADDT_LOG_FILE", "addt.log"),
+		Persistent:         os.Getenv("ADDT_PERSISTENT") == "true",
+		WorkdirAutomount:   getEnvOrDefault("ADDT_WORKDIR_AUTOMOUNT", "true") != "false",
+		Workdir:            os.Getenv("ADDT_WORKDIR"),
+		FirewallEnabled:    os.Getenv("ADDT_FIREWALL") == "true",
+		FirewallMode:       getEnvOrDefault("ADDT_FIREWALL_MODE", "strict"),
+		Mode:               getEnvOrDefault("ADDT_MODE", "container"),
+		Provider:           getEnvOrDefault("ADDT_PROVIDER", "docker"),
+		Extensions:         getEnvOrDefault("ADDT_EXTENSIONS", "claude"),
+		Command:            os.Getenv("ADDT_COMMAND"), // Empty means use default "claude"
 		ExtensionVersions:  make(map[string]string),
 		ExtensionAutomount: make(map[string]bool),
 	}
 
 	// Load per-extension versions and mount configs from environment
-	// Pattern: NDDT_<EXT>_VERSION and NDDT_MOUNT_<EXT>_CONFIG
+	// Pattern: ADDT_<EXT>_VERSION and ADDT_MOUNT_<EXT>_CONFIG
 	for _, env := range os.Environ() {
 		parts := strings.SplitN(env, "=", 2)
 		if len(parts) != 2 {
@@ -72,10 +72,10 @@ func LoadConfig(defaultNodeVersion string, defaultGoVersion string, defaultUvVer
 		}
 		key, value := parts[0], parts[1]
 
-		// Check for NDDT_<EXT>_VERSION pattern
-		if strings.HasPrefix(key, "NDDT_") && strings.HasSuffix(key, "_VERSION") {
-			// Extract extension name (e.g., "NDDT_CLAUDE_VERSION" -> "claude")
-			extName := strings.TrimPrefix(key, "NDDT_")
+		// Check for ADDT_<EXT>_VERSION pattern
+		if strings.HasPrefix(key, "ADDT_") && strings.HasSuffix(key, "_VERSION") {
+			// Extract extension name (e.g., "ADDT_CLAUDE_VERSION" -> "claude")
+			extName := strings.TrimPrefix(key, "ADDT_")
 			extName = strings.TrimSuffix(extName, "_VERSION")
 			extName = strings.ToLower(extName)
 			// Skip non-extension versions (node, go, uv)
@@ -84,10 +84,10 @@ func LoadConfig(defaultNodeVersion string, defaultGoVersion string, defaultUvVer
 			}
 		}
 
-		// Check for NDDT_<EXT>_AUTOMOUNT pattern
-		if strings.HasPrefix(key, "NDDT_") && strings.HasSuffix(key, "_AUTOMOUNT") {
-			// Extract extension name (e.g., "NDDT_CLAUDE_AUTOMOUNT" -> "claude")
-			extName := strings.TrimPrefix(key, "NDDT_")
+		// Check for ADDT_<EXT>_AUTOMOUNT pattern
+		if strings.HasPrefix(key, "ADDT_") && strings.HasSuffix(key, "_AUTOMOUNT") {
+			// Extract extension name (e.g., "ADDT_CLAUDE_AUTOMOUNT" -> "claude")
+			extName := strings.TrimPrefix(key, "ADDT_")
 			extName = strings.TrimSuffix(extName, "_AUTOMOUNT")
 			extName = strings.ToLower(extName)
 			cfg.ExtensionAutomount[extName] = value != "false"
@@ -100,7 +100,7 @@ func LoadConfig(defaultNodeVersion string, defaultGoVersion string, defaultUvVer
 	}
 
 	// Parse ports
-	if ports := os.Getenv("NDDT_PORTS"); ports != "" {
+	if ports := os.Getenv("ADDT_PORTS"); ports != "" {
 		cfg.Ports = strings.Split(ports, ",")
 		for i := range cfg.Ports {
 			cfg.Ports[i] = strings.TrimSpace(cfg.Ports[i])

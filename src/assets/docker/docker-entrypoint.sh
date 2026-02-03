@@ -2,7 +2,7 @@
 set -e
 
 # Start Docker daemon if in DinD mode
-if [ "$NDDT_DIND" = "true" ]; then
+if [ "$ADDT_DIND" = "true" ]; then
     echo "Starting Docker daemon in isolated mode..."
 
     # Start dockerd in the background
@@ -29,14 +29,14 @@ if [ "$NDDT_DIND" = "true" ]; then
 fi
 
 # Initialize firewall if enabled
-if [ "${NDDT_FIREWALL_ENABLED}" = "true" ] && [ -f /usr/local/bin/init-firewall.sh ]; then
+if [ "${ADDT_FIREWALL_ENABLED}" = "true" ] && [ -f /usr/local/bin/init-firewall.sh ]; then
     sudo /usr/local/bin/init-firewall.sh
 fi
 
 # Run extension setup scripts (if not already run in this session)
-EXTENSIONS_DIR="/usr/local/share/nddt/extensions"
-EXTENSIONS_JSON="$HOME/.nddt/extensions.json"
-SETUP_MARKER="$HOME/.nddt/.setup-done"
+EXTENSIONS_DIR="/usr/local/share/addt/extensions"
+EXTENSIONS_JSON="$HOME/.addt/extensions.json"
+SETUP_MARKER="$HOME/.addt/.setup-done"
 
 if [ -f "$EXTENSIONS_JSON" ] && [ ! -f "$SETUP_MARKER" ]; then
     # Extract extension names from JSON
@@ -55,26 +55,26 @@ if [ -f "$EXTENSIONS_JSON" ] && [ ! -f "$SETUP_MARKER" ]; then
 fi
 
 # Build system prompt for port mappings (exported for args.sh to use)
-export NDDT_SYSTEM_PROMPT=""
+export ADDT_SYSTEM_PROMPT=""
 
-if [ -n "$NDDT_PORT_MAP" ]; then
+if [ -n "$ADDT_PORT_MAP" ]; then
     # Parse port mappings (format: "3000:30000,8080:30001")
-    NDDT_SYSTEM_PROMPT="# Port Mapping Information
+    ADDT_SYSTEM_PROMPT="# Port Mapping Information
 
 When you start a service inside this container on certain ports, tell the user the correct HOST port to access it from their browser.
 
 Port mappings (container→host):
 "
-    IFS=',' read -ra MAPPINGS <<< "$NDDT_PORT_MAP"
+    IFS=',' read -ra MAPPINGS <<< "$ADDT_PORT_MAP"
     for mapping in "${MAPPINGS[@]}"; do
         IFS=':' read -ra PORTS <<< "$mapping"
         CONTAINER_PORT="${PORTS[0]}"
         HOST_PORT="${PORTS[1]}"
-        NDDT_SYSTEM_PROMPT+="- Container port $CONTAINER_PORT → Host port $HOST_PORT (user accesses: http://localhost:$HOST_PORT)
+        ADDT_SYSTEM_PROMPT+="- Container port $CONTAINER_PORT → Host port $HOST_PORT (user accesses: http://localhost:$HOST_PORT)
 "
     done
 
-    NDDT_SYSTEM_PROMPT+="
+    ADDT_SYSTEM_PROMPT+="
 IMPORTANT:
 - When testing/starting services inside the container, use the container ports (e.g., http://localhost:3000)
 - When telling the USER where to access services in their browser, use the HOST ports (e.g., http://localhost:30000)
@@ -85,17 +85,17 @@ fi
 export PATH="$HOME/.local/bin:$HOME/go/bin:$PATH"
 
 # Determine which command to run (default: claude)
-NDDT_CMD="${NDDT_COMMAND:-claude}"
+ADDT_CMD="${ADDT_COMMAND:-claude}"
 
 # Find the extension directory for args.sh
-EXTENSIONS_DIR="/usr/local/share/nddt/extensions"
+EXTENSIONS_DIR="/usr/local/share/addt/extensions"
 ARGS_SCRIPT=""
 
 # Look for args.sh in the extension matching the command
 for ext_dir in "$EXTENSIONS_DIR"/*/; do
     if [ -f "$ext_dir/config.yaml" ]; then
         entrypoint=$(grep "^entrypoint:" "$ext_dir/config.yaml" 2>/dev/null | sed 's/^entrypoint:[[:space:]]*//' | tr -d '"')
-        if [ "$entrypoint" = "$NDDT_CMD" ] && [ -f "$ext_dir/args.sh" ]; then
+        if [ "$entrypoint" = "$ADDT_CMD" ] && [ -f "$ext_dir/args.sh" ]; then
             ARGS_SCRIPT="$ext_dir/args.sh"
             break
         fi
@@ -106,8 +106,8 @@ done
 if [ -n "$ARGS_SCRIPT" ] && [ -f "$ARGS_SCRIPT" ]; then
     # Run args.sh and read transformed args (one per line)
     mapfile -t TRANSFORMED_ARGS < <(bash "$ARGS_SCRIPT" "$@")
-    exec "$NDDT_CMD" "${TRANSFORMED_ARGS[@]}"
+    exec "$ADDT_CMD" "${TRANSFORMED_ARGS[@]}"
 else
     # No args.sh - pass args directly
-    exec "$NDDT_CMD" "$@"
+    exec "$ADDT_CMD" "$@"
 fi

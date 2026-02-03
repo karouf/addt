@@ -30,7 +30,7 @@ jobs:
       - name: Create checksums
         run: |
           cd dist
-          sha256sum nddt-* > checksums.txt
+          sha256sum addt-* > checksums.txt
           cat checksums.txt
 
       - name: Update latest tag
@@ -51,7 +51,7 @@ jobs:
           draft: false
           prerelease: false
           body: |
-            ## nddt ${{ steps.version.outputs.VERSION }}
+            ## addt ${{ steps.version.outputs.VERSION }}
 
             ### Installation
 
@@ -59,31 +59,31 @@ jobs:
 
             ```bash
             # macOS Apple Silicon (M1/M2/M3)
-            curl -fsSL https://github.com/${{ github.repository }}/releases/latest/download/nddt-darwin-arm64 -o dclaude
+            curl -fsSL https://github.com/${{ github.repository }}/releases/latest/download/addt-darwin-arm64 -o dclaude
             chmod +x dclaude
             xattr -c dclaude && codesign --sign - --force dclaude
             sudo mv dclaude /usr/local/bin/
 
             # macOS Intel
-            curl -fsSL https://github.com/${{ github.repository }}/releases/latest/download/nddt-darwin-amd64 -o dclaude
+            curl -fsSL https://github.com/${{ github.repository }}/releases/latest/download/addt-darwin-amd64 -o dclaude
             chmod +x dclaude
             xattr -c dclaude && codesign --sign - --force dclaude
             sudo mv dclaude /usr/local/bin/
 
             # Linux x86_64
-            curl -fsSL https://github.com/${{ github.repository }}/releases/latest/download/nddt-linux-amd64 -o dclaude
+            curl -fsSL https://github.com/${{ github.repository }}/releases/latest/download/addt-linux-amd64 -o dclaude
             chmod +x dclaude
             sudo mv dclaude /usr/local/bin/
 
             # Linux ARM64
-            curl -fsSL https://github.com/${{ github.repository }}/releases/latest/download/nddt-linux-arm64 -o dclaude
+            curl -fsSL https://github.com/${{ github.repository }}/releases/latest/download/addt-linux-arm64 -o dclaude
             chmod +x dclaude
             sudo mv dclaude /usr/local/bin/
             ```
 
             **Specific version:**
             ```bash
-            curl -fsSL https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/nddt-darwin-arm64 -o dclaude
+            curl -fsSL https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/addt-darwin-arm64 -o dclaude
             chmod +x dclaude
             xattr -c dclaude && codesign --sign - --force dclaude  # macOS only
             sudo mv dclaude /usr/local/bin/
@@ -99,8 +99,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/nddt-darwin-arm64
-          asset_name: nddt-darwin-arm64
+          asset_path: ./dist/addt-darwin-arm64
+          asset_name: addt-darwin-arm64
           asset_content_type: application/octet-stream
 
       - name: Upload macOS AMD64 Binary
@@ -109,8 +109,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/nddt-darwin-amd64
-          asset_name: nddt-darwin-amd64
+          asset_path: ./dist/addt-darwin-amd64
+          asset_name: addt-darwin-amd64
           asset_content_type: application/octet-stream
 
       - name: Upload Linux AMD64 Binary
@@ -119,8 +119,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/nddt-linux-amd64
-          asset_name: nddt-linux-amd64
+          asset_path: ./dist/addt-linux-amd64
+          asset_name: addt-linux-amd64
           asset_content_type: application/octet-stream
 
       - name: Upload Linux ARM64 Binary
@@ -129,8 +129,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/nddt-linux-arm64
-          asset_name: nddt-linux-arm64
+          asset_path: ./dist/addt-linux-arm64
+          asset_name: addt-linux-arm64
           asset_content_type: application/octet-stream
 
       - name: Upload Checksums

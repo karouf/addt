@@ -6,6 +6,6 @@ dependencies:
   - claude
 mounts:
   - source: ~/.tessl
-    target: /home/nddt/.tessl
+    target: /home/addt/.tessl
   - source: ~/.config/tessl
-    target: /home/nddt/.config/tessl
+    target: /home/addt/.config/tessl

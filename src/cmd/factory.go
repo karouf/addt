@@ -3,11 +3,11 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/jedi4ever/nddt/assets"
-	"github.com/jedi4ever/nddt/extensions"
-	"github.com/jedi4ever/nddt/provider"
-	"github.com/jedi4ever/nddt/provider/daytona"
-	"github.com/jedi4ever/nddt/provider/docker"
+	"github.com/jedi4ever/addt/assets"
+	"github.com/jedi4ever/addt/extensions"
+	"github.com/jedi4ever/addt/provider"
+	"github.com/jedi4ever/addt/provider/daytona"
+	"github.com/jedi4ever/addt/provider/docker"
 )
 
 // NewProvider creates a new provider based on the specified type

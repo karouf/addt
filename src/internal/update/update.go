@@ -11,13 +11,13 @@ import (
 	"time"
 )
 
-// UpdateNddt checks for and handles updates
-func UpdateNddt(currentVersion string) {
+// UpdateAddt checks for and handles updates
+func UpdateAddt(currentVersion string) {
 	fmt.Println("Checking for updates...")
 	fmt.Printf("Current version: %s\n", currentVersion)
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get("https://raw.githubusercontent.com/jedi4ever/nddt/main/VERSION")
+	resp, err := client.Get("https://raw.githubusercontent.com/jedi4ever/addt/main/VERSION")
 	if err != nil {
 		fmt.Println("Error: Could not check for updates (network issue or repository unavailable)")
 		os.Exit(1)
@@ -64,8 +64,8 @@ func UpdateNddt(currentVersion string) {
 	// For now, show message about how to update
 	fmt.Println()
 	fmt.Println("To update the Go binary, please rebuild from source:")
-	fmt.Printf("  cd %s && go build -o nddt\n", filepath.Dir(execPath))
+	fmt.Printf("  cd %s && go build -o addt\n", filepath.Dir(execPath))
 	fmt.Println()
 	fmt.Println("Or download the latest release from:")
-	fmt.Println("  https://github.com/jedi4ever/nddt/releases")
+	fmt.Println("  https://github.com/jedi4ever/addt/releases")
 }

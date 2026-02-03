@@ -11,4 +11,4 @@ env_vars:
   - AWS_DEFAULT_REGION
 mounts:
   - source: ~/.kiro
-    target: /home/nddt/.kiro
+    target: /home/addt/.kiro

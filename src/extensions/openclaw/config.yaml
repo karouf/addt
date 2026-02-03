@@ -6,4 +6,4 @@ dependencies:
   - claude
 mounts:
   - source: ~/.openclaw
-    target: /home/nddt/.openclaw
+    target: /home/addt/.openclaw

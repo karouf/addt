@@ -1,4 +1,4 @@
-# nddt with Daytona Provider (Experimental)
+# addt with Daytona Provider (Experimental)
 
 ⚠️ **Experimental Feature** - The Daytona provider is under active development with limited features compared to Docker.
 
@@ -26,7 +26,7 @@ The Daytona provider allows you to run Claude Code in cloud-based Daytona sandbo
 - ⚠️ **Image caching** - Limited/experimental support
 
 **What Works:**
-- ✅ Environment variables (`NDDT_ENV_VARS`)
+- ✅ Environment variables (`ADDT_ENV_VARS`)
 - ✅ Persistent sandboxes
 - ✅ Interactive and print modes
 - ✅ All Claude Code features (model selection, continue, etc.)
@@ -39,21 +39,21 @@ The Daytona provider allows you to run Claude Code in cloud-based Daytona sandbo
 
 ## Installation
 
-Same as main nddt installation - no additional setup needed. See [main README](README.md#installation).
+Same as main addt installation - no additional setup needed. See [main README](README.md#installation).
 
 ## Quick Start
 
 ```bash
 # Set up Daytona provider
-export NDDT_PROVIDER=daytona
+export ADDT_PROVIDER=daytona
 export DAYTONA_API_KEY='your-daytona-api-key'
 export ANTHROPIC_API_KEY='your-anthropic-api-key'
 
-# Run nddt (creates cloud sandbox on first run)
-nddt "Explain how dependency injection works in Go"
+# Run addt (creates cloud sandbox on first run)
+addt "Explain how dependency injection works in Go"
 
 # Subsequent runs reuse the sandbox (faster)
-nddt "Write a Python function to calculate Fibonacci"
+addt "Write a Python function to calculate Fibonacci"
 ```
 
 ## Configuration
@@ -62,7 +62,7 @@ nddt "Write a Python function to calculate Fibonacci"
 
 | Variable | Description |
 |----------|-------------|
-| `NDDT_PROVIDER` | Set to `daytona` to use Daytona provider |
+| `ADDT_PROVIDER` | Set to `daytona` to use Daytona provider |
 | `DAYTONA_API_KEY` | Your Daytona API key (get from daytona.io) |
 | `ANTHROPIC_API_KEY` | Your Anthropic API key (required, no `claude login` support) |
 
@@ -72,15 +72,15 @@ nddt "Write a Python function to calculate Fibonacci"
 |----------|---------|-------------|
 | `DAYTONA_API_URL` | `https://app.daytona.io/api` | Daytona API endpoint |
 | `DAYTONA_REGION` | *(org default)* | Daytona region (e.g., `us`, `eu`) |
-| `NDDT_ENV_VARS` | `ANTHROPIC_API_KEY,GH_TOKEN` | Environment variables to pass to sandbox |
+| `ADDT_ENV_VARS` | `ANTHROPIC_API_KEY,GH_TOKEN` | Environment variables to pass to sandbox |
 
 ### Docker Variables That Don't Work
 
 These Docker provider variables are **ignored** by Daytona:
-- ❌ `NDDT_PORTS` - Port forwarding not supported
-- ❌ `NDDT_GPG_FORWARD` - GPG forwarding not supported
-- ❌ `NDDT_SSH_FORWARD` - SSH key forwarding not supported
-- ❌ `NDDT_DOCKER_FORWARD` - Docker-in-Docker not supported
+- ❌ `ADDT_PORTS` - Port forwarding not supported
+- ❌ `ADDT_GPG_FORWARD` - GPG forwarding not supported
+- ❌ `ADDT_SSH_FORWARD` - SSH key forwarding not supported
+- ❌ `ADDT_DOCKER_FORWARD` - Docker-in-Docker not supported
 
 ## Usage Examples
 
@@ -88,19 +88,19 @@ These Docker provider variables are **ignored** by Daytona:
 
 **Code Analysis:**
 ```bash
-export NDDT_PROVIDER=daytona
-nddt "Explain the difference between interfaces and abstract classes in Java"
+export ADDT_PROVIDER=daytona
+addt "Explain the difference between interfaces and abstract classes in Java"
 ```
 
 **Learning & Experimentation:**
 ```bash
-nddt "Write a React component that fetches data from an API"
-nddt "Show me how to use goroutines in Go"
+addt "Write a React component that fetches data from an API"
+addt "Show me how to use goroutines in Go"
 ```
 
 **Algorithm Development:**
 ```bash
-nddt "Implement a binary search tree in Python with insert and search methods"
+addt "Implement a binary search tree in Python with insert and search methods"
 ```
 
 ### Not Suitable For
@@ -108,20 +108,20 @@ nddt "Implement a binary search tree in Python with insert and search methods"
 **Local Project Development:**
 ```bash
 # ❌ Won't work - can't access local files
-nddt "Analyze my project structure"
-nddt "Fix the bug in ./src/app.js"
+addt "Analyze my project structure"
+addt "Fix the bug in ./src/app.js"
 ```
 
 **Web Development:**
 ```bash
 # ❌ Won't work - no port forwarding
-nddt "Create an Express server and let me test it"
+addt "Create an Express server and let me test it"
 ```
 
 **Git Operations:**
 ```bash
 # ❌ Won't work - no SSH/GPG keys
-nddt "Create a signed commit and push to GitHub"
+addt "Create a signed commit and push to GitHub"
 ```
 
 ## How It Works
@@ -138,8 +138,8 @@ nddt "Create a signed commit and push to GitHub"
 
 ```bash
 # First run (slow - builds snapshot)
-$ NDDT_PROVIDER=daytona nddt "Hello"
-Creating Daytona sandbox: nddt-20260201-080432-88940
+$ ADDT_PROVIDER=daytona addt "Hello"
+Creating Daytona sandbox: addt-20260201-080432-88940
 Building custom Daytona sandbox with Claude Code installed...
 This will take a few minutes on first build...
 [Building... 2-3 minutes]
@@ -148,8 +148,8 @@ Creating Daytona API client...
 Connecting via SSH...
 
 # Second run (fast - reuses sandbox)
-$ NDDT_PROVIDER=daytona nddt "Continue"
-Using existing Daytona sandbox: nddt-20260201-080432-88940
+$ ADDT_PROVIDER=daytona addt "Continue"
+Using existing Daytona sandbox: addt-20260201-080432-88940
 Creating Daytona API client...
 Connecting via SSH...
 [Instant connection]
@@ -158,14 +158,14 @@ Connecting via SSH...
 ### Naming Convention
 
 **Ephemeral Mode (default):**
-- Format: `nddt-YYYYMMDD-HHMMSS-PID`
-- Example: `nddt-20260201-080432-88940`
+- Format: `addt-YYYYMMDD-HHMMSS-PID`
+- Example: `addt-20260201-080432-88940`
 - Removed after exit
 
 **Persistent Mode:**
 ```bash
-export NDDT_PERSISTENT=true
-# Format: nddt-workspace (or custom name)
+export ADDT_PERSISTENT=true
+# Format: addt-workspace (or custom name)
 ```
 
 ## Troubleshooting
@@ -200,8 +200,8 @@ daytona profile list
 daytona sandbox list
 
 # Create a new sandbox (removes old naming)
-unset NDDT_PERSISTENT
-NDDT_PROVIDER=daytona nddt
+unset ADDT_PERSISTENT
+ADDT_PROVIDER=daytona addt
 ```
 
 ### Slow First Build
@@ -283,7 +283,7 @@ The Daytona provider is experimental. Contributions welcome! See [README-develop
 
 ## Support
 
-- **Docker Provider Issues:** Use the main [issue tracker](https://github.com/jedi4ever/nddt/issues)
+- **Docker Provider Issues:** Use the main [issue tracker](https://github.com/jedi4ever/addt/issues)
 - **Daytona Provider Issues:** Label issues with `provider:daytona`
 - **Daytona Platform Issues:** Contact [Daytona support](https://daytona.io)
 

@@ -63,7 +63,7 @@ func (p *DockerProvider) GetExtensionMountsWithNames(imageName string) []Extensi
 
 	// Read extensions.json from the image
 	cmd := exec.Command("docker", "run", "--rm", "--entrypoint", "cat", imageName,
-		"/home/nddt/.nddt/extensions.json")
+		"/home/addt/.addt/extensions.json")
 	output, err := cmd.Output()
 	if err != nil {
 		// Extension metadata not available - this is normal for images without extensions
@@ -145,7 +145,7 @@ func (p *DockerProvider) AddExtensionMounts(dockerArgs []string, imageName, home
 func (p *DockerProvider) GetExtensionMetadata(imageName string) map[string]ExtensionMetadata {
 	// Read extensions.json from the image
 	cmd := exec.Command("docker", "run", "--rm", "--entrypoint", "cat", imageName,
-		"/home/nddt/.nddt/extensions.json")
+		"/home/addt/.addt/extensions.json")
 	output, err := cmd.Output()
 	if err != nil {
 		// Extension metadata not available - this is normal for images without extensions

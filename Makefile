@@ -1,7 +1,7 @@
 .PHONY: all build clean test help install dist fmt release
 
 # Variables
-BINARY_NAME=nddt
+BINARY_NAME=addt
 BUILD_DIR=dist
 SRC_DIR=src
 VERSION=$(shell cat VERSION 2>/dev/null || echo "dev")

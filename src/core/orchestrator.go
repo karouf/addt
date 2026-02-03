@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/jedi4ever/nddt/internal/ports"
-	"github.com/jedi4ever/nddt/internal/terminal"
-	"github.com/jedi4ever/nddt/internal/util"
-	"github.com/jedi4ever/nddt/provider"
+	"github.com/jedi4ever/addt/internal/ports"
+	"github.com/jedi4ever/addt/internal/terminal"
+	"github.com/jedi4ever/addt/internal/util"
+	"github.com/jedi4ever/addt/provider"
 )
 
 // Orchestrator coordinates provider operations with business logic
@@ -96,7 +96,7 @@ func (o *Orchestrator) buildRunSpec(name string, args []string, openShell bool) 
 		envFilePath = filepath.Join(cwd, envFilePath)
 	}
 	if info, err := os.Stat(envFilePath); err == nil && !info.IsDir() {
-		spec.Env["NDDT_ENV_FILE"] = envFilePath
+		spec.Env["ADDT_ENV_FILE"] = envFilePath
 	}
 
 	return spec
@@ -184,18 +184,18 @@ func (o *Orchestrator) buildEnvironment() map[string]string {
 			hostPort++
 		}
 		portMapString := strings.Join(portMappings, ",")
-		env["NDDT_PORT_MAP"] = portMapString
+		env["ADDT_PORT_MAP"] = portMapString
 	}
 
 	// Add firewall configuration
 	if o.config.FirewallEnabled {
-		env["NDDT_FIREWALL_ENABLED"] = "true"
-		env["NDDT_FIREWALL_MODE"] = o.config.FirewallMode
+		env["ADDT_FIREWALL_ENABLED"] = "true"
+		env["ADDT_FIREWALL_MODE"] = o.config.FirewallMode
 	}
 
 	// Add command override if specified
 	if o.config.Command != "" {
-		env["NDDT_COMMAND"] = o.config.Command
+		env["ADDT_COMMAND"] = o.config.Command
 	}
 
 	return env
@@ -225,7 +225,7 @@ func (o *Orchestrator) displayStatus(envName string) {
 		extension = "claude"
 	}
 
-	fmt.Printf("⚠ nddt:%s is experimental - things are not perfect yet\n", extension)
+	fmt.Printf("⚠ addt:%s is experimental - things are not perfect yet\n", extension)
 	fmt.Printf("✓ %s\n", status)
 }
 

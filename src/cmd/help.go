@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jedi4ever/nddt/provider/docker"
+	"github.com/jedi4ever/addt/provider/docker"
 )
 
 // PrintHelp displays usage information
@@ -14,24 +14,24 @@ func PrintHelp(version string) {
 
 // PrintHelpWithFlags displays usage information with extension-specific flags
 func PrintHelpWithFlags(version, imageName, command string) {
-	fmt.Printf(`nddt - Run AI coding agents in containerized environments
+	fmt.Printf(`addt - Run AI coding agents in containerized environments
 
 Version: %s
 
-Usage: nddt [options] [prompt]
+Usage: addt [options] [prompt]
 
-nddt subcommands (container management):
-  nddt build [--build-arg ...]       Build the container image
-  nddt shell                         Open bash shell in container
-  nddt containers [list|stop|rm]     Manage persistent containers
-  nddt firewall [list|add|rm|reset]  Manage network firewall
+addt subcommands (container management):
+  addt build [--build-arg ...]       Build the container image
+  addt shell                         Open bash shell in container
+  addt containers [list|stop|rm]     Manage persistent containers
+  addt firewall [list|add|rm|reset]  Manage network firewall
 
 Flags:
-  --nddt-version                     Show nddt version
-  --nddt-list-extensions             List available extensions
-  --nddt-update                      Check for and install updates
-  --nddt-rebuild                     Rebuild the container image
-  --nddt-help                        Show this help
+  --addt-version                     Show addt version
+  --addt-list-extensions             List available extensions
+  --addt-update                      Check for and install updates
+  --addt-rebuild                     Rebuild the container image
+  --addt-help                        Show this help
 
 `, version)
 
@@ -47,52 +47,52 @@ Flags:
 
 	fmt.Print(`
 Environment Variables:
-  NDDT_PROVIDER            Provider type: docker or daytona (default: docker)
-  NDDT_NODE_VERSION        Node.js version (default: 22)
-  NDDT_GO_VERSION          Go version (default: latest)
-  NDDT_UV_VERSION          UV Python package manager version (default: latest)
-  NDDT_ENV_VARS            Comma-separated env vars to pass (default: ANTHROPIC_API_KEY,GH_TOKEN)
-  NDDT_GITHUB_DETECT       Auto-detect GitHub token from gh CLI (default: false)
-  NDDT_PORTS               Comma-separated container ports to expose
-  NDDT_PORT_RANGE_START    Starting port for auto allocation (default: 30000)
-  NDDT_SSH_FORWARD         SSH forwarding mode: agent, keys, or empty
-  NDDT_GPG_FORWARD         Enable GPG forwarding (true/false)
-  NDDT_DIND_MODE           Docker-in-Docker mode: host, isolated (default: none)
-  NDDT_ENV_FILE            Path to .env file (default: .env)
-  NDDT_LOG                 Enable command logging (default: false)
-  NDDT_LOG_FILE            Log file path
-  NDDT_PERSISTENT          Enable persistent container mode (true/false)
-  NDDT_WORKDIR             Override working directory (default: current directory)
-  NDDT_WORKDIR_AUTOMOUNT   Auto-mount working directory to /workspace (default: true)
-  NDDT_FIREWALL            Enable network firewall (default: false, requires --cap-add=NET_ADMIN)
-  NDDT_FIREWALL_MODE       Firewall mode: strict, permissive, off (default: strict)
-  NDDT_MODE                Execution mode: container or shell (default: container)
-  NDDT_EXTENSIONS          Extensions to install at build time (e.g., claude,codex,gemini)
-  NDDT_COMMAND             Command to run instead of claude (e.g., codex, gemini)
+  ADDT_PROVIDER            Provider type: docker or daytona (default: docker)
+  ADDT_NODE_VERSION        Node.js version (default: 22)
+  ADDT_GO_VERSION          Go version (default: latest)
+  ADDT_UV_VERSION          UV Python package manager version (default: latest)
+  ADDT_ENV_VARS            Comma-separated env vars to pass (default: ANTHROPIC_API_KEY,GH_TOKEN)
+  ADDT_GITHUB_DETECT       Auto-detect GitHub token from gh CLI (default: false)
+  ADDT_PORTS               Comma-separated container ports to expose
+  ADDT_PORT_RANGE_START    Starting port for auto allocation (default: 30000)
+  ADDT_SSH_FORWARD         SSH forwarding mode: agent, keys, or empty
+  ADDT_GPG_FORWARD         Enable GPG forwarding (true/false)
+  ADDT_DIND_MODE           Docker-in-Docker mode: host, isolated (default: none)
+  ADDT_ENV_FILE            Path to .env file (default: .env)
+  ADDT_LOG                 Enable command logging (default: false)
+  ADDT_LOG_FILE            Log file path
+  ADDT_PERSISTENT          Enable persistent container mode (true/false)
+  ADDT_WORKDIR             Override working directory (default: current directory)
+  ADDT_WORKDIR_AUTOMOUNT   Auto-mount working directory to /workspace (default: true)
+  ADDT_FIREWALL            Enable network firewall (default: false, requires --cap-add=NET_ADMIN)
+  ADDT_FIREWALL_MODE       Firewall mode: strict, permissive, off (default: strict)
+  ADDT_MODE                Execution mode: container or shell (default: container)
+  ADDT_EXTENSIONS          Extensions to install at build time (e.g., claude,codex,gemini)
+  ADDT_COMMAND             Command to run instead of claude (e.g., codex, gemini)
 
 Per-Extension Configuration:
-  NDDT_<EXT>_VERSION       Version for extension (e.g., NDDT_CLAUDE_VERSION=1.0.5)
+  ADDT_<EXT>_VERSION       Version for extension (e.g., ADDT_CLAUDE_VERSION=1.0.5)
                               Default versions defined in each extension's config.yaml
-  NDDT_<EXT>_AUTOMOUNT     Auto-mount extension config (e.g., NDDT_CLAUDE_AUTOMOUNT=false)
+  ADDT_<EXT>_AUTOMOUNT     Auto-mount extension config (e.g., ADDT_CLAUDE_AUTOMOUNT=false)
 
 Build Command:
-  nddt containers build [--build-arg KEY=VALUE]...
+  addt containers build [--build-arg KEY=VALUE]...
                               Build the container image with optional build args
-                              Example: nddt containers build --build-arg NDDT_EXTENSIONS=gastown
+                              Example: addt containers build --build-arg ADDT_EXTENSIONS=gastown
 
 Examples:
   claude "Fix the bug in app.js"
   claude --yolo "Refactor this entire codebase"
   claude --help                    # Shows agent's help
-  claude --nddt-help               # Shows nddt help
-  claude --nddt-list-extensions    # List available extensions
-  claude nddt build                # Build container image
-  claude nddt shell                # Open shell in container
+  claude --addt-help               # Shows addt help
+  claude --addt-list-extensions    # List available extensions
+  claude addt build                # Build container image
+  claude addt shell                # Open shell in container
 
-Multiple agents (symlink nddt in ~/bin to avoid overriding real installs):
-  mkdir -p ~/bin && ln -s /usr/local/bin/nddt ~/bin/claude
-  ln -s /usr/local/bin/nddt ~/bin/codex
-  ln -s /usr/local/bin/nddt ~/bin/gemini
+Multiple agents (symlink addt in ~/bin to avoid overriding real installs):
+  mkdir -p ~/bin && ln -s /usr/local/bin/addt ~/bin/claude
+  ln -s /usr/local/bin/addt ~/bin/codex
+  ln -s /usr/local/bin/addt ~/bin/gemini
 `)
 }
 
@@ -117,7 +117,7 @@ func printExtensionFlags(imageName, command string) {
 
 // GetActiveCommand returns the active command from env or default
 func GetActiveCommand() string {
-	if cmd := os.Getenv("NDDT_COMMAND"); cmd != "" {
+	if cmd := os.Getenv("ADDT_COMMAND"); cmd != "" {
 		return cmd
 	}
 	return "claude"

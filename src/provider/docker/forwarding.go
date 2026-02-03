@@ -9,7 +9,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/jedi4ever/nddt/internal/util"
+	"github.com/jedi4ever/addt/internal/util"
 )
 
 // HandleSSHForwarding configures SSH forwarding based on config
@@ -23,7 +23,7 @@ func (p *DockerProvider) HandleSSHForwarding(sshForward, homeDir, username strin
 			if _, err := os.Stat(sshAuthSock); err == nil {
 				// Check for macOS launchd sockets (won't work)
 				if strings.Contains(sshAuthSock, "com.apple.launchd") || strings.Contains(sshAuthSock, "/var/folders/") {
-					fmt.Println("Warning: SSH agent forwarding not supported on macOS (use NDDT_SSH_FORWARD=keys)")
+					fmt.Println("Warning: SSH agent forwarding not supported on macOS (use ADDT_SSH_FORWARD=keys)")
 				} else {
 					args = append(args, "-v", fmt.Sprintf("%s:/ssh-agent", sshAuthSock))
 					args = append(args, "-e", "SSH_AUTH_SOCK=/ssh-agent")
@@ -85,12 +85,12 @@ func (p *DockerProvider) HandleDockerForwarding(dindMode, containerName string) 
 				args = append(args, "--group-add", "102", "--group-add", "999")
 			}
 		} else {
-			fmt.Println("Warning: NDDT_DIND_MODE=host but /var/run/docker.sock not found")
+			fmt.Println("Warning: ADDT_DIND_MODE=host but /var/run/docker.sock not found")
 		}
 	} else if dindMode == "isolated" || dindMode == "true" {
 		args = append(args, "--privileged")
-		args = append(args, "-v", fmt.Sprintf("nddt-docker-%s:/var/lib/docker", containerName))
-		args = append(args, "-e", "NDDT_DIND=true")
+		args = append(args, "-v", fmt.Sprintf("addt-docker-%s:/var/lib/docker", containerName))
+		args = append(args, "-e", "ADDT_DIND=true")
 	}
 
 	return args

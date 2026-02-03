@@ -1,13 +1,13 @@
 #!/bin/bash
 set -e
 
-# Network firewall initialization for nddt
+# Network firewall initialization for addt
 # Implements a whitelist-based firewall to restrict outbound network access
 
-ALLOWED_DOMAINS_FILE="${FIREWALL_CONFIG_FILE:-/home/nddt/.nddt/firewall/allowed-domains.txt}"
+ALLOWED_DOMAINS_FILE="${FIREWALL_CONFIG_FILE:-/home/addt/.addt/firewall/allowed-domains.txt}"
 
 # Check if firewall is disabled
-if [ "${NDDT_FIREWALL_MODE}" = "off" ] || [ "${NDDT_FIREWALL_MODE}" = "disabled" ]; then
+if [ "${ADDT_FIREWALL_MODE}" = "off" ] || [ "${ADDT_FIREWALL_MODE}" = "disabled" ]; then
     echo "Firewall: Disabled by configuration"
     exit 0
 fi
@@ -61,7 +61,7 @@ else
 
     # Create default allowed domains
     cat > "$ALLOWED_DOMAINS_FILE" << 'EOF'
-# Default allowed domains for nddt
+# Default allowed domains for addt
 # Lines starting with # are comments
 
 # Anthropic API
@@ -94,7 +94,7 @@ cdn.jsdelivr.net
 unpkg.com
 EOF
 
-    chown nddt:$(id -gn nddt) "$ALLOWED_DOMAINS_FILE"
+    chown addt:$(id -gn addt) "$ALLOWED_DOMAINS_FILE"
 
     echo "Firewall: Default configuration created"
     echo "Firewall: Edit $ALLOWED_DOMAINS_FILE to customize allowed domains"
@@ -120,11 +120,11 @@ iptables -A OUTPUT -p tcp --dport 53 -j ACCEPT
 iptables -A OUTPUT -m set --match-set allowed_ips dst -j ACCEPT
 
 # Log and drop everything else
-if [ "${NDDT_FIREWALL_MODE}" = "strict" ] || [ "${NDDT_FIREWALL_MODE}" = "enabled" ]; then
+if [ "${ADDT_FIREWALL_MODE}" = "strict" ] || [ "${ADDT_FIREWALL_MODE}" = "enabled" ]; then
     iptables -A OUTPUT -j LOG --log-prefix "DCLAUDE-FIREWALL-BLOCKED: " --log-level 4
     iptables -A OUTPUT -j DROP
     echo "Firewall: Strict mode enabled - blocking all non-whitelisted traffic"
-elif [ "${NDDT_FIREWALL_MODE}" = "permissive" ]; then
+elif [ "${ADDT_FIREWALL_MODE}" = "permissive" ]; then
     iptables -A OUTPUT -j LOG --log-prefix "DCLAUDE-FIREWALL-WOULD-BLOCK: " --log-level 4
     iptables -A OUTPUT -j ACCEPT
     echo "Firewall: Permissive mode enabled - logging but allowing all traffic"
@@ -138,4 +138,4 @@ fi
 # Show summary
 IP_COUNT=$(ipset list allowed_ips | grep -c "^[0-9]" || echo "0")
 echo "Firewall: Initialized with $IP_COUNT whitelisted IPs"
-echo "Firewall: Mode: ${NDDT_FIREWALL_MODE:-strict}"
+echo "Firewall: Mode: ${ADDT_FIREWALL_MODE:-strict}"

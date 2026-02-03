@@ -1,5 +1,5 @@
 #!/bin/bash
-# Extension installer for nddt
+# Extension installer for addt
 # Usage: install.sh [extension1,extension2,...]
 #
 # Extensions are directories containing:
@@ -12,9 +12,9 @@
 
 set -e
 
-EXTENSIONS_DIR="${EXTENSIONS_DIR:-/usr/local/share/nddt/extensions}"
-METADATA_FILE="${METADATA_FILE:-/home/nddt/.nddt/extensions.json}"
-EXTENSIONS="${1:-$NDDT_EXTENSIONS}"
+EXTENSIONS_DIR="${EXTENSIONS_DIR:-/usr/local/share/addt/extensions}"
+METADATA_FILE="${METADATA_FILE:-/home/addt/.addt/extensions.json}"
+EXTENSIONS="${1:-$ADDT_EXTENSIONS}"
 
 # Parse EXTENSION_VERSIONS into associative array
 declare -A VERSION_OVERRIDES

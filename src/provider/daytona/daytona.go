@@ -13,7 +13,7 @@ import (
 	"time"
 
 	apiclient "github.com/daytonaio/daytona/libs/api-client-go"
-	"github.com/jedi4ever/nddt/provider"
+	"github.com/jedi4ever/addt/provider"
 )
 
 // DaytonaProvider implements the Provider interface for Daytona
@@ -99,7 +99,7 @@ func (p *DaytonaProvider) Remove(name string) error {
 	return cmd.Run()
 }
 
-// List lists all nddt workspaces
+// List lists all addt workspaces
 func (p *DaytonaProvider) List() ([]provider.Environment, error) {
 	cmd := exec.Command("daytona", "list", "--format", "table")
 	output, err := cmd.Output()
@@ -117,7 +117,7 @@ func (p *DaytonaProvider) List() ([]provider.Environment, error) {
 		// Parse table output - this is a simple implementation
 		// In production, use JSON format and proper parsing
 		parts := strings.Fields(line)
-		if len(parts) > 0 && strings.HasPrefix(parts[0], "nddt-") {
+		if len(parts) > 0 && strings.HasPrefix(parts[0], "addt-") {
 			envs = append(envs, provider.Environment{
 				Name:      parts[0],
 				Status:    "running",
@@ -179,13 +179,13 @@ func (p *DaytonaProvider) Run(spec *provider.RunSpec) error {
 		// TODO: Consider uploading files via other means or using Daytona volumes
 
 		// Add environment variables from env file if specified
-		if envFile := spec.Env["NDDT_ENV_FILE"]; envFile != "" {
+		if envFile := spec.Env["ADDT_ENV_FILE"]; envFile != "" {
 			createArgs = append(createArgs, p.loadEnvFile(envFile)...)
 		}
 
 		// Add environment variables
 		for k, v := range spec.Env {
-			if k != "NDDT_ENV_FILE" { // Skip the env file path itself
+			if k != "ADDT_ENV_FILE" { // Skip the env file path itself
 				createArgs = append(createArgs, "--env", fmt.Sprintf("%s=%s", k, v))
 			}
 		}
@@ -295,13 +295,13 @@ func (p *DaytonaProvider) Shell(spec *provider.RunSpec) error {
 		// TODO: Consider uploading files via other means or using Daytona volumes
 
 		// Add environment variables from env file if specified
-		if envFile := spec.Env["NDDT_ENV_FILE"]; envFile != "" {
+		if envFile := spec.Env["ADDT_ENV_FILE"]; envFile != "" {
 			createArgs = append(createArgs, p.loadEnvFile(envFile)...)
 		}
 
 		// Add environment variables
 		for k, v := range spec.Env {
-			if k != "NDDT_ENV_FILE" { // Skip the env file path itself
+			if k != "ADDT_ENV_FILE" { // Skip the env file path itself
 				createArgs = append(createArgs, "--env", fmt.Sprintf("%s=%s", k, v))
 			}
 		}
@@ -414,7 +414,7 @@ func (p *DaytonaProvider) GeneratePersistentName() string {
 		var err error
 		workdir, err = os.Getwd()
 		if err != nil {
-			return "nddt-sandbox"
+			return "addt-sandbox"
 		}
 	}
 
@@ -434,12 +434,12 @@ func (p *DaytonaProvider) GeneratePersistentName() string {
 	hash := md5.Sum([]byte(workdir))
 	hashStr := fmt.Sprintf("%x", hash)[:8]
 
-	return fmt.Sprintf("nddt-sandbox-%s-%s", dirname, hashStr)
+	return fmt.Sprintf("addt-sandbox-%s-%s", dirname, hashStr)
 }
 
 // GenerateEphemeralName generates a unique sandbox name for ephemeral mode
 func (p *DaytonaProvider) GenerateEphemeralName() string {
-	return fmt.Sprintf("nddt-%s-%d", time.Now().Format("20060102-150405"), os.Getpid())
+	return fmt.Sprintf("addt-%s-%d", time.Now().Format("20060102-150405"), os.Getpid())
 }
 
 // BuildIfNeeded is a no-op for Daytona (no image building needed)

@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/jedi4ever/nddt/extensions"
+	"github.com/jedi4ever/addt/extensions"
 	"gopkg.in/yaml.v3"
 )
 
@@ -21,9 +21,9 @@ type ExtensionConfig struct {
 	Dependencies   []string `yaml:"dependencies"`
 }
 
-// PrintVersion prints nddt version and loaded extension version
+// PrintVersion prints addt version and loaded extension version
 func PrintVersion(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion string) {
-	fmt.Printf("nddt %s\n", version)
+	fmt.Printf("addt %s\n", version)
 	fmt.Println()
 
 	// Default tool versions
@@ -34,9 +34,9 @@ func PrintVersion(version, defaultNodeVersion, defaultGoVersion, defaultUvVersio
 	fmt.Println()
 
 	// Get loaded extension (from env or binary name)
-	extName := os.Getenv("NDDT_EXTENSIONS")
+	extName := os.Getenv("ADDT_EXTENSIONS")
 	if extName == "" {
-		extName = os.Getenv("NDDT_COMMAND")
+		extName = os.Getenv("ADDT_COMMAND")
 	}
 	if extName == "" {
 		extName = "claude" // default
@@ -47,7 +47,7 @@ func PrintVersion(version, defaultNodeVersion, defaultGoVersion, defaultUvVersio
 	}
 
 	// Get version for this extension
-	extVersion := os.Getenv("NDDT_" + strings.ToUpper(extName) + "_VERSION")
+	extVersion := os.Getenv("ADDT_" + strings.ToUpper(extName) + "_VERSION")
 	if extVersion == "" {
 		// Look up default version from config
 		exts, err := getExtensions()
@@ -110,7 +110,7 @@ func ListExtensions() {
 	}
 
 	fmt.Println()
-	fmt.Println("Usage: ln -s /usr/local/bin/nddt ~/bin/<entrypoint>")
+	fmt.Println("Usage: ln -s /usr/local/bin/addt ~/bin/<entrypoint>")
 }
 
 // getExtensions reads all extension configs from embedded filesystem

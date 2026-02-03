@@ -53,7 +53,7 @@ func (p *DockerProvider) BuildImage(embeddedDockerfile, embeddedEntrypoint []byt
 	fmt.Printf("Building %s...\n", p.config.ImageName)
 
 	// Create temp directory for build context with embedded files
-	buildDir, err := os.MkdirTemp("", "nddt-build-*")
+	buildDir, err := os.MkdirTemp("", "addt-build-*")
 	if err != nil {
 		return fmt.Errorf("failed to create temp build directory: %w", err)
 	}
@@ -121,7 +121,7 @@ func (p *DockerProvider) BuildImage(embeddedDockerfile, embeddedEntrypoint []byt
 	}
 	uid := currentUser.Uid
 	gid := currentUser.Gid
-	username := "nddt" // Always use "nddt" in container, but with host UID/GID
+	username := "addt" // Always use "addt" in container, but with host UID/GID
 
 	// Build EXTENSION_VERSIONS string from map (e.g., "claude:stable,codex:latest")
 	var versionPairs []string
@@ -139,7 +139,7 @@ func (p *DockerProvider) BuildImage(embeddedDockerfile, embeddedEntrypoint []byt
 		"--build-arg", fmt.Sprintf("USER_ID=%s", uid),
 		"--build-arg", fmt.Sprintf("GROUP_ID=%s", gid),
 		"--build-arg", fmt.Sprintf("USERNAME=%s", username),
-		"--build-arg", fmt.Sprintf("NDDT_EXTENSIONS=%s", p.config.Extensions),
+		"--build-arg", fmt.Sprintf("ADDT_EXTENSIONS=%s", p.config.Extensions),
 		"--build-arg", fmt.Sprintf("EXTENSION_VERSIONS=%s", extensionVersions),
 		"-t", p.config.ImageName,
 		"-f", dockerfilePath,
@@ -242,17 +242,17 @@ func (p *DockerProvider) addVersionLabels(cfg interface{}, versions map[string]s
 		fmt.Printf("Warning: failed to add version labels: %v\n", err)
 	}
 
-	// Tag as nddt:latest if this is latest
+	// Tag as addt:latest if this is latest
 	claudeVersion := p.getExtensionVersion("claude")
 	if claudeVersion == "latest" {
-		if err := exec.Command("docker", "tag", imageName, "nddt:latest").Run(); err != nil {
-			fmt.Printf("Warning: failed to tag as nddt:latest: %v\n", err)
+		if err := exec.Command("docker", "tag", imageName, "addt:latest").Run(); err != nil {
+			fmt.Printf("Warning: failed to tag as addt:latest: %v\n", err)
 		}
 	}
 
 	// Tag with claude version
 	if v, ok := versions["claude"]; ok && v != "" {
-		if err := exec.Command("docker", "tag", imageName, fmt.Sprintf("nddt:claude-%s", v)).Run(); err != nil {
+		if err := exec.Command("docker", "tag", imageName, fmt.Sprintf("addt:claude-%s", v)).Run(); err != nil {
 			fmt.Printf("Warning: failed to tag with claude version: %v\n", err)
 		}
 	}

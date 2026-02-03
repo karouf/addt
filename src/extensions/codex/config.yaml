@@ -7,5 +7,5 @@ env_vars:
   - OPENAI_API_KEY
 mounts:
   - source: ~/.codex
-    target: /home/nddt/.codex
+    target: /home/addt/.codex
 

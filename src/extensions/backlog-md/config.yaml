@@ -5,4 +5,4 @@ default_version: latest
 dependencies: []
 mounts:
   - source: ~/.backlog-md
-    target: /home/nddt/.backlog-md
+    target: /home/addt/.backlog-md

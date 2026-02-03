@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jedi4ever/nddt/provider"
+	"github.com/jedi4ever/addt/provider"
 )
 
 // DockerProvider implements the Provider interface for Docker
@@ -110,9 +110,9 @@ func (p *DockerProvider) Remove(name string) error {
 	return cmd.Run()
 }
 
-// List lists all persistent nddt containers
+// List lists all persistent addt containers
 func (p *DockerProvider) List() ([]provider.Environment, error) {
-	cmd := exec.Command("docker", "ps", "-a", "--filter", "name=^nddt-persistent-",
+	cmd := exec.Command("docker", "ps", "-a", "--filter", "name=^addt-persistent-",
 		"--format", "{{.Names}}\t{{.Status}}\t{{.CreatedAt}}")
 	output, err := cmd.Output()
 	if err != nil {
@@ -153,7 +153,7 @@ func (p *DockerProvider) setupContainerContext(spec *provider.RunSpec) (*contain
 
 	ctx := &containerContext{
 		homeDir:              currentUser.HomeDir,
-		username:             "nddt", // Always use "nddt" in container, but with host UID/GID
+		username:             "addt", // Always use "addt" in container, but with host UID/GID
 		useExistingContainer: false,
 	}
 
@@ -224,11 +224,11 @@ func (p *DockerProvider) addContainerVolumesAndEnv(dockerArgs []string, spec *pr
 
 	// Note: Claude config mounts (~/.claude, ~/.claude.json) are now handled
 	// by the claude extension via AddExtensionMounts above.
-	// Use NDDT_MOUNT_CLAUDE_CONFIG=false to disable them.
+	// Use ADDT_MOUNT_CLAUDE_CONFIG=false to disable them.
 
 	// Add env file if exists
-	if spec.Env["NDDT_ENV_FILE"] != "" {
-		dockerArgs = append(dockerArgs, "--env-file", spec.Env["NDDT_ENV_FILE"])
+	if spec.Env["ADDT_ENV_FILE"] != "" {
+		dockerArgs = append(dockerArgs, "--env-file", spec.Env["ADDT_ENV_FILE"])
 	}
 
 	// SSH forwarding
@@ -249,9 +249,9 @@ func (p *DockerProvider) addContainerVolumesAndEnv(dockerArgs []string, spec *pr
 		dockerArgs = append(dockerArgs, "--cap-add", "NET_ADMIN")
 
 		// Mount firewall config directory
-		firewallConfigDir := filepath.Join(ctx.homeDir, ".nddt", "firewall")
+		firewallConfigDir := filepath.Join(ctx.homeDir, ".addt", "firewall")
 		if _, err := os.Stat(firewallConfigDir); err == nil {
-			dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:/home/%s/.nddt/firewall", firewallConfigDir, ctx.username))
+			dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:/home/%s/.addt/firewall", firewallConfigDir, ctx.username))
 		}
 	}
 
@@ -336,12 +336,12 @@ func (p *DockerProvider) Shell(spec *provider.RunSpec) error {
 			// Create initialization script that runs before bash
 			script := `
 # Initialize firewall if enabled
-if [ "${NDDT_FIREWALL_ENABLED}" = "true" ] && [ -f /usr/local/bin/init-firewall.sh ]; then
+if [ "${ADDT_FIREWALL_ENABLED}" = "true" ] && [ -f /usr/local/bin/init-firewall.sh ]; then
     sudo /usr/local/bin/init-firewall.sh
 fi
 
 # Start Docker daemon if in DinD mode
-if [ "$NDDT_DIND" = "true" ]; then
+if [ "$ADDT_DIND" = "true" ]; then
     echo 'Starting Docker daemon in isolated mode...'
     sudo dockerd --host=unix:///var/run/docker.sock >/tmp/docker.log 2>&1 &
     echo 'Waiting for Docker daemon...'
@@ -484,12 +484,12 @@ func (p *DockerProvider) GenerateContainerName() string {
 	hash := md5.Sum([]byte(hashInput))
 	hashStr := fmt.Sprintf("%x", hash)[:8]
 
-	return fmt.Sprintf("nddt-persistent-%s-%s", dirname, hashStr)
+	return fmt.Sprintf("addt-persistent-%s-%s", dirname, hashStr)
 }
 
 // GenerateEphemeralName generates a unique ephemeral container name
 func (p *DockerProvider) GenerateEphemeralName() string {
-	return fmt.Sprintf("nddt-%s-%d", time.Now().Format("20060102-150405"), os.Getpid())
+	return fmt.Sprintf("addt-%s-%d", time.Now().Format("20060102-150405"), os.Getpid())
 }
 
 // GeneratePersistentName is an alias for GenerateContainerName to implement Provider interface
@@ -501,7 +501,7 @@ func (p *DockerProvider) GeneratePersistentName() string {
 func (p *DockerProvider) BuildIfNeeded(rebuild bool) error {
 	imageExists := p.ImageExists(p.config.ImageName)
 
-	// Handle --nddt-rebuild flag
+	// Handle --addt-rebuild flag
 	if rebuild {
 		if imageExists {
 			fmt.Printf("Rebuilding %s...\n", p.config.ImageName)
@@ -552,7 +552,7 @@ func (p *DockerProvider) DetermineImageName() string {
 	}
 
 	// Check if image already exists with this exact tag
-	imageName := fmt.Sprintf("nddt:%s", tag)
+	imageName := fmt.Sprintf("addt:%s", tag)
 	if p.ImageExists(imageName) {
 		return imageName
 	}

@@ -1,6 +1,6 @@
-# nddt Extensions
+# addtExtensions
 
-Extensions allow you to add tools and AI agents to your nddt container image. The base image provides infrastructure (Node.js, Go, Python/UV, Git, GitHub CLI), and extensions add the actual tools.
+Extensions allow you to add tools and AI agents to your addtcontainer image. The base image provides infrastructure (Node.js, Go, Python/UV, Git, GitHub CLI), and extensions add the actual tools.
 
 ## Available Extensions
 
@@ -33,19 +33,19 @@ Use the `containers build` command with `--build-arg` to include extensions:
 
 ```bash
 # Default build (installs claude extension)
-nddt containers build
+addtcontainers build
 
 # Build with gastown (automatically includes claude and beads dependencies)
-nddt containers build --build-arg NDDT_EXTENSIONS=gastown
+addtcontainers build --build-arg ADDT_EXTENSIONS=gastown
 
 # Build with multiple extensions
-nddt containers build --build-arg NDDT_EXTENSIONS=claude,tessl
+addtcontainers build --build-arg ADDT_EXTENSIONS=claude,tessl
 
 # Build minimal image with only tessl (no claude)
-nddt containers build --build-arg NDDT_EXTENSIONS=tessl
+addtcontainers build --build-arg ADDT_EXTENSIONS=tessl
 
 # Via environment variable
-NDDT_EXTENSIONS=gastown nddt containers build
+ADDT_EXTENSIONS=gastown addtcontainers build
 ```
 
 ### Image Naming Convention
@@ -54,13 +54,13 @@ Docker images are automatically named based on the installed extensions and thei
 
 ```bash
 # Single extension
-nddt:claude-2.1.17
+addt:claude-2.1.17
 
 # Multiple extensions (sorted alphabetically)
-nddt:claude-2.1.17_codex-latest
+addt:claude-2.1.17_codex-latest
 
 # Different combination = different image
-nddt:gemini-latest_tessl-latest
+addt:gemini-latest_tessl-latest
 ```
 
 This ensures that different extension combinations always get their own isolated images.
@@ -72,7 +72,7 @@ Extensions can depend on other extensions. Dependencies are automatically resolv
 For example, `gastown` depends on `beads`, so running:
 
 ```bash
-nddt build --build-arg NDDT_EXTENSIONS=gastown
+addtbuild --build-arg ADDT_EXTENSIONS=gastown
 ```
 
 Will automatically install both `beads` and `gastown`.
@@ -83,39 +83,39 @@ After building, you can verify installed extensions:
 
 ```bash
 # Check extension metadata
-nddt shell -c "cat ~/.nddt/extensions.json"
+addtshell -c "cat ~/.addt/extensions.json"
 
 # Check specific tools
-nddt shell -c "which gt bd tessl"
+addtshell -c "which gt bd tessl"
 ```
 
 ### Symlink-Based Extension Selection
 
-You can create symlinks to the `nddt` binary with names matching your extensions. When invoked via a symlink, nddt automatically uses that extension:
+You can create symlinks to the `addt` binary with names matching your extensions. When invoked via a symlink, addtautomatically uses that extension:
 
 ```bash
 # Create symlinks
-ln -s nddt codex
-ln -s nddt gemini
-ln -s nddt claude-flow
+ln -s addtcodex
+ln -s addtgemini
+ln -s addtclaude-flow
 
 # Now these are equivalent:
 ./codex "help me with this code"           # Uses codex extension
-NDDT_EXTENSIONS=codex nddt "..."     # Same result
+ADDT_EXTENSIONS=codex addt"..."     # Same result
 
 ./gemini "explain this function"           # Uses gemini extension
-NDDT_EXTENSIONS=gemini nddt "..."    # Same result
+ADDT_EXTENSIONS=gemini addt"..."    # Same result
 ```
 
 **How it works:**
 - Detects the binary name from how it was invoked
-- If not "nddt", sets `NDDT_EXTENSIONS` and `NDDT_COMMAND` to match the binary name
+- If not "addt", sets `ADDT_EXTENSIONS` and `ADDT_COMMAND` to match the binary name
 - Environment variables can still override this behavior
 
 This is useful for:
 - Creating dedicated commands for different AI agents
 - Simplifying workflows when you frequently use a specific agent
-- Installing multiple "binaries" from a single nddt installation
+- Installing multiple "binaries" from a single addtinstallation
 
 ### Per-Extension Configuration
 
@@ -123,27 +123,27 @@ Each extension can be configured individually via environment variables:
 
 ```bash
 # Set version for a specific extension
-NDDT_CLAUDE_VERSION=2.0.0 nddt containers build
-NDDT_CODEX_VERSION=0.1.0 nddt containers build
+ADDT_CLAUDE_VERSION=2.0.0 addtcontainers build
+ADDT_CODEX_VERSION=0.1.0 addtcontainers build
 
 # Disable config directory mounting for an extension
-NDDT_CLAUDE_MOUNT_CONFIG=false nddt
+ADDT_CLAUDE_MOUNT_CONFIG=false addt
 
 # Multiple extensions with specific versions
-NDDT_EXTENSIONS=claude,codex \
-  NDDT_CLAUDE_VERSION=2.1.0 \
-  NDDT_CODEX_VERSION=latest \
-  nddt containers build
+ADDT_EXTENSIONS=claude,codex \
+  ADDT_CLAUDE_VERSION=2.1.0 \
+  ADDT_CODEX_VERSION=latest \
+  addtcontainers build
 ```
 
 | Variable Pattern | Description |
 |-----------------|-------------|
-| `NDDT_<EXT>_VERSION` | Version to install (e.g., `2.1.0`, `latest`, `stable`) |
-| `NDDT_<EXT>_MOUNT_CONFIG` | Mount extension config dirs (`true`/`false`) |
+| `ADDT_<EXT>_VERSION` | Version to install (e.g., `2.1.0`, `latest`, `stable`) |
+| `ADDT_<EXT>_MOUNT_CONFIG` | Mount extension config dirs (`true`/`false`) |
 
 ### Automatic Environment Variable Forwarding
 
-Extensions can declare which environment variables they need in their `config.yaml`. When running nddt, these variables are automatically forwarded from your host to the container - no need to specify them manually.
+Extensions can declare which environment variables they need in their `config.yaml`. When running addt, these variables are automatically forwarded from your host to the container - no need to specify them manually.
 
 **Example extension configs:**
 
@@ -164,8 +164,8 @@ env_vars:
 
 **How it works:**
 
-1. When you build an image, each extension's `env_vars` are collected into `~/.nddt/extensions.json`
-2. At runtime, nddt reads this metadata and automatically forwards listed variables from host to container
+1. When you build an image, each extension's `env_vars` are collected into `~/.addt/extensions.json`
+2. At runtime, addtreads this metadata and automatically forwards listed variables from host to container
 3. Variables are only forwarded if they're set on the host (empty values are skipped)
 
 **Benefits:**
@@ -173,7 +173,7 @@ env_vars:
 - No need to remember which API keys each tool needs
 - Just set the variable on your host once, it's automatically available in containers
 - Different extensions in the same image can have different env vars
-- Users can still add additional variables via `NDDT_FORWARD_ENV`
+- Users can still add additional variables via `ADDT_FORWARD_ENV`
 
 **Example:**
 
@@ -183,11 +183,11 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 export OPENAI_API_KEY="sk-..."
 
 # Build with both extensions
-nddt containers build --build-arg NDDT_EXTENSIONS=claude,codex
+addtcontainers build --build-arg ADDT_EXTENSIONS=claude,codex
 
 # Run - both API keys are automatically forwarded
-nddt "help me with this code"        # Uses ANTHROPIC_API_KEY
-NDDT_COMMAND=codex nddt "..."     # Uses OPENAI_API_KEY
+addt"help me with this code"        # Uses ANTHROPIC_API_KEY
+ADDT_COMMAND=codex addt"..."     # Uses OPENAI_API_KEY
 ```
 
 ## Creating Extensions
@@ -314,13 +314,13 @@ Setup scripts run once per container session. In persistent mode, they only run 
 ### Testing Your Extension
 
 1. Create the extension directory and files
-2. Build nddt: `make build`
-3. Build image with extension: `./dist/nddt containers build --build-arg NDDT_EXTENSIONS=myextension`
-4. Verify: `./dist/nddt shell -c "which mycommand"`
+2. Build addt: `make build`
+3. Build image with extension: `./dist/addtcontainers build --build-arg ADDT_EXTENSIONS=myextension`
+4. Verify: `./dist/addtshell -c "which mycommand"`
 
 ## Extension Metadata
 
-When extensions are installed, metadata is written to `~/.nddt/extensions.json`:
+When extensions are installed, metadata is written to `~/.addt/extensions.json`:
 
 ```json
 {
@@ -364,35 +364,35 @@ You can build images with different AI coding agents and switch between them:
 
 ```bash
 # Build with multiple AI agents
-nddt containers build --build-arg NDDT_EXTENSIONS=claude,codex,gemini,copilot
+addtcontainers build --build-arg ADDT_EXTENSIONS=claude,codex,gemini,copilot
 
 # Run Claude (default)
-nddt
+addt
 
 # Run OpenAI Codex
-NDDT_COMMAND=codex nddt
+ADDT_COMMAND=codex addt
 
 # Run Google Gemini
-NDDT_COMMAND=gemini nddt
+ADDT_COMMAND=gemini addt
 
 # Run GitHub Copilot
-NDDT_COMMAND=copilot nddt
+ADDT_COMMAND=copilot addt
 
 # Run Sourcegraph Amp
-NDDT_COMMAND=amp nddt
+ADDT_COMMAND=amp addt
 
 # Run Cursor Agent
-NDDT_COMMAND=cursor nddt
+ADDT_COMMAND=cursor addt
 ```
 
 **Using symlinks for dedicated agent commands:**
 
 ```bash
 # Create symlinks for each agent
-cd /usr/local/bin  # or wherever nddt is installed
-ln -s nddt codex
-ln -s nddt gemini
-ln -s nddt copilot
+cd /usr/local/bin  # or wherever addtis installed
+ln -s addtcodex
+ln -s addtgemini
+ln -s addtcopilot
 
 # Build images for each (first run will auto-build)
 codex containers build
@@ -403,7 +403,7 @@ codex "refactor this function"
 gemini "explain this code"
 ```
 
-Each symlink automatically builds and uses its own isolated image (`nddt:codex-latest`, `nddt:gemini-latest`, etc.).
+Each symlink automatically builds and uses its own isolated image (`addt:codex-latest`, `addt:gemini-latest`, etc.).
 
 ### Cursor Extension
 
@@ -411,15 +411,15 @@ Cursor CLI provides an AI-powered code editor agent:
 
 ```bash
 # Build with cursor only
-nddt containers build --build-arg NDDT_EXTENSIONS=cursor
+addtcontainers build --build-arg ADDT_EXTENSIONS=cursor
 
 # Run cursor agent
-NDDT_COMMAND=cursor nddt
+ADDT_COMMAND=cursor addt
 # or
-NDDT_COMMAND=agent nddt
+ADDT_COMMAND=agent addt
 
 # Or use symlink
-ln -s nddt cursor
+ln -s addtcursor
 ./cursor "help me with this code"
 ```
 
@@ -429,13 +429,13 @@ Gastown provides multi-agent orchestration for Claude Code:
 
 ```bash
 # Build with gastown
-nddt containers build --build-arg NDDT_EXTENSIONS=gastown
+addtcontainers build --build-arg ADDT_EXTENSIONS=gastown
 
 # Run gastown instead of claude
-NDDT_COMMAND=gt nddt
+ADDT_COMMAND=gt addt
 
 # Or use shell mode
-nddt shell
+addtshell
 gt --help
 ```
 
@@ -445,10 +445,10 @@ Tessl is an agent enablement platform with a skills package manager:
 
 ```bash
 # Build with tessl
-nddt containers build --build-arg NDDT_EXTENSIONS=tessl
+addtcontainers build --build-arg ADDT_EXTENSIONS=tessl
 
 # Use tessl
-nddt shell
+addtshell
 tessl init           # Authenticate
 tessl skill search   # Find skills
 tessl mcp            # Start MCP server
@@ -467,4 +467,4 @@ If you see permission errors during installation:
 If an extension is not recognized:
 - Ensure the directory name matches the extension name in `config.yaml`
 - Check that `config.yaml` exists (install.sh and setup.sh are optional)
-- Rebuild nddt with `make build` to embed the new extension
+- Rebuild addtwith `make build` to embed the new extension

@@ -6,4 +6,4 @@ dependencies:
   - claude
 mounts:
   - source: ~/.claude-sneakpeek
-    target: /home/nddt/.claude-sneakpeek
+    target: /home/addt/.claude-sneakpeek

@@ -5,4 +5,4 @@ default_version: latest
 dependencies: []
 mounts:
   - source: ~/.beads
-    target: /home/nddt/.beads
+    target: /home/addt/.beads

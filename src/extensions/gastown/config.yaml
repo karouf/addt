@@ -9,4 +9,4 @@ env_vars:
   - ANTHROPIC_API_KEY
 mounts:
   - source: ~/.gastown
-    target: /home/nddt/.gastown
+    target: /home/addt/.gastown

@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jedi4ever/nddt/provider"
+	"github.com/jedi4ever/addt/provider"
 )
 
 // HandleContainersCommand handles the containers subcommand using a provider
@@ -17,7 +17,7 @@ func HandleContainersCommand(prov provider.Provider, cfg *provider.Config, args 
 	action := args[0]
 	switch action {
 	case "build":
-		// Redirect to nddt build for backwards compatibility
+		// Redirect to addt build for backwards compatibility
 		HandleBuildCommand(prov, cfg, args[1:])
 	case "list", "ls":
 		envs, err := prov.List()
@@ -32,7 +32,7 @@ func HandleContainersCommand(prov provider.Provider, cfg *provider.Config, args 
 		}
 	case "stop":
 		if len(args) < 2 {
-			fmt.Println("Usage: nddt containers stop <name>")
+			fmt.Println("Usage: addt containers stop <name>")
 			os.Exit(1)
 		}
 		if err := prov.Stop(args[1]); err != nil {
@@ -41,7 +41,7 @@ func HandleContainersCommand(prov provider.Provider, cfg *provider.Config, args 
 		}
 	case "remove", "rm":
 		if len(args) < 2 {
-			fmt.Println("Usage: nddt containers remove <name>")
+			fmt.Println("Usage: addt containers remove <name>")
 			os.Exit(1)
 		}
 		if err := prov.Remove(args[1]); err != nil {
@@ -74,7 +74,7 @@ func HandleContainersCommand(prov provider.Provider, cfg *provider.Config, args 
 		}
 		fmt.Println("✓ Cleaned")
 	default:
-		fmt.Println(`Usage: <agent> nddt containers [list|stop|rm|clean]
+		fmt.Println(`Usage: <agent> addt containers [list|stop|rm|clean]
 
 Commands:
   list, ls      - List all persistent containers
@@ -94,7 +94,7 @@ func HandleBuildCommand(prov provider.Provider, cfg *provider.Config, args []str
 			if len(parts) == 2 {
 				key, val := parts[0], parts[1]
 				switch {
-				case key == "NDDT_EXTENSIONS":
+				case key == "ADDT_EXTENSIONS":
 					cfg.Extensions = val
 				case key == "NODE_VERSION":
 					cfg.NodeVersion = val

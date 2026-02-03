@@ -5,4 +5,4 @@ default_version: latest
 dependencies: []
 mounts:
   - source: ~/.cursor
-    target: /home/nddt/.cursor
+    target: /home/addt/.cursor

@@ -4,10 +4,10 @@ FROM node:${NODE_VERSION}-slim
 # Build arguments for user ID and group ID
 ARG USER_ID=1000
 ARG GROUP_ID=1000
-ARG USERNAME=nddt
+ARG USERNAME=addt
 ARG GO_VERSION=1.23
 ARG UV_VERSION=0.5.11
-ARG NDDT_EXTENSIONS=claude
+ARG ADDT_EXTENSIONS=claude
 
 # Extension version overrides (format: "claude:1.0.5,codex:0.2.0")
 # Default versions are defined in each extension's config.yaml
@@ -69,16 +69,16 @@ RUN if [ "${UV_VERSION}" = "latest" ]; then \
 USER root
 
 # Copy install script and extensions
-COPY install.sh /usr/local/share/nddt/install.sh
-COPY extensions/ /usr/local/share/nddt/extensions/
-RUN chmod +x /usr/local/share/nddt/install.sh && \
-    find /usr/local/share/nddt/extensions -name "*.sh" -exec chmod +x {} \;
+COPY install.sh /usr/local/share/addt/install.sh
+COPY extensions/ /usr/local/share/addt/extensions/
+RUN chmod +x /usr/local/share/addt/install.sh && \
+    find /usr/local/share/addt/extensions -name "*.sh" -exec chmod +x {} \;
 
-# Install requested extensions (as nddt user for go installs)
+# Install requested extensions (as addt user for go installs)
 # EXTENSION_VERSIONS overrides default versions from config.yaml
 USER ${USERNAME}
 RUN EXTENSION_VERSIONS="${EXTENSION_VERSIONS}" \
-    /usr/local/share/nddt/install.sh "${NDDT_EXTENSIONS}"
+    /usr/local/share/addt/install.sh "${ADDT_EXTENSIONS}"
 
 # Add Go, UV, and extensions to PATH environment and bash profile
 # UV installs to ~/.local/bin, Go tools install to ~/go/bin by default
@@ -104,7 +104,7 @@ RUN chmod +x /usr/local/bin/init-firewall.sh
 USER ${USERNAME}
 
 # Add version labels for tracking
-LABEL org.opencontainers.image.title="nddt"
+LABEL org.opencontainers.image.title="addt"
 LABEL org.opencontainers.image.description="Containerized environment for AI coding agents"
 LABEL org.opencontainers.image.authors="https://github.com/anthropics/claude-code"
 

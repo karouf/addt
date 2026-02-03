@@ -1,4 +1,4 @@
-module github.com/jedi4ever/nddt
+module github.com/jedi4ever/addt
 
 go 1.25.4
 

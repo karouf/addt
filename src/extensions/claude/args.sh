@@ -1,6 +1,6 @@
 #!/bin/bash
 # Claude Code argument transformer
-# Transforms generic nddt args to Claude-specific args
+# Transforms generic addt args to Claude-specific args
 
 ARGS=()
 
@@ -19,8 +19,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Add system prompt if set (for port mappings, etc.)
-if [ -n "$DCLAUDE_SYSTEM_PROMPT" ]; then
-    ARGS+=(--append-system-prompt "$DCLAUDE_SYSTEM_PROMPT")
+if [ -n "$ADDT_SYSTEM_PROMPT" ]; then
+    ARGS+=(--append-system-prompt "$ADDT_SYSTEM_PROMPT")
 fi
 
 # Output transformed args (one per line for proper handling)

@@ -6,26 +6,26 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/jedi4ever/nddt/config"
-	"github.com/jedi4ever/nddt/core"
-	"github.com/jedi4ever/nddt/internal/update"
-	"github.com/jedi4ever/nddt/provider"
+	"github.com/jedi4ever/addt/config"
+	"github.com/jedi4ever/addt/core"
+	"github.com/jedi4ever/addt/internal/update"
+	"github.com/jedi4ever/addt/provider"
 )
 
 // Execute is the main entry point for the CLI
 func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion string, defaultPortRangeStart int) {
 	// Detect binary name for symlink-based extension selection
-	// If binary is named "codex", "gemini", etc. (not "nddt"), use that as the extension
+	// If binary is named "codex", "gemini", etc. (not "addt"), use that as the extension
 	binaryName := filepath.Base(os.Args[0])
 	binaryName = strings.TrimSuffix(binaryName, filepath.Ext(binaryName)) // Remove .exe on Windows
 
-	if binaryName != "nddt" && binaryName != "" {
+	if binaryName != "addt" && binaryName != "" {
 		// Set extension and command based on binary name if not already set
-		if os.Getenv("NDDT_EXTENSIONS") == "" {
-			os.Setenv("NDDT_EXTENSIONS", binaryName)
+		if os.Getenv("ADDT_EXTENSIONS") == "" {
+			os.Setenv("ADDT_EXTENSIONS", binaryName)
 		}
-		if os.Getenv("NDDT_COMMAND") == "" {
-			os.Setenv("NDDT_COMMAND", binaryName)
+		if os.Getenv("ADDT_COMMAND") == "" {
+			os.Setenv("ADDT_COMMAND", binaryName)
 		}
 	}
 
@@ -35,16 +35,16 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 	// Check for special commands
 	if len(args) > 0 {
 		switch args[0] {
-		case "--nddt-update":
-			update.UpdateNddt(version)
+		case "--addt-update":
+			update.UpdateAddt(version)
 			return
-		case "--nddt-version":
+		case "--addt-version":
 			PrintVersion(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion)
 			return
-		case "--nddt-list-extensions":
+		case "--addt-list-extensions":
 			ListExtensions()
 			return
-		case "--nddt-help":
+		case "--addt-help":
 			// Try to show help with extension-specific flags
 			cfg := config.LoadConfig(defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
 			providerCfg := &provider.Config{
@@ -63,10 +63,10 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 				PrintHelp(version)
 			}
 			return
-		case "nddt":
-			// nddt subcommand namespace for container management
+		case "addt":
+			// addt subcommand namespace for container management
 			if len(args) < 2 {
-				fmt.Println("Usage: <agent> nddt <command>")
+				fmt.Println("Usage: <agent> addt <command>")
 				fmt.Println()
 				fmt.Println("Commands:")
 				fmt.Println("  build [--build-arg ...]   Build the container image")
@@ -172,8 +172,8 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 				return
 
 			default:
-				fmt.Printf("Unknown nddt command: %s\n", subCmd)
-				fmt.Println("Run '<agent> nddt' for usage")
+				fmt.Printf("Unknown addt command: %s\n", subCmd)
+				fmt.Println("Run '<agent> addt' for usage")
 				os.Exit(1)
 			}
 		}
@@ -182,9 +182,9 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 	// Load configuration
 	cfg := config.LoadConfig(defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
 
-	// Check for --nddt-rebuild flag
+	// Check for --addt-rebuild flag
 	rebuildImage := false
-	if len(args) > 0 && args[0] == "--nddt-rebuild" {
+	if len(args) > 0 && args[0] == "--addt-rebuild" {
 		rebuildImage = true
 		args = args[1:]
 	}

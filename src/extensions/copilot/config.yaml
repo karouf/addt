@@ -8,4 +8,4 @@ env_vars:
   - GITHUB_TOKEN
 mounts:
   - source: ~/.copilot
-    target: /home/nddt/.copilot
+    target: /home/addt/.copilot

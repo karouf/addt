@@ -1,4 +1,4 @@
-# nddt - Development Guide
+# addt - Development Guide
 
 Technical documentation for developers and contributors.
 
@@ -18,10 +18,10 @@ Technical documentation for developers and contributors.
 
 ### Base Image
 
-nddt uses `node:${NODE_VERSION}-slim` as the base image:
+addt uses `node:${NODE_VERSION}-slim` as the base image:
 - **Debian-based** for easy package installation
 - **Slim variant** for smaller image size (~500MB vs 1GB+)
-- **Configurable Node version** via `NDDT_NODE_VERSION`
+- **Configurable Node version** via `ADDT_NODE_VERSION`
 
 ### Non-Root User Setup
 
@@ -43,7 +43,7 @@ Tools pre-installed in the image:
 
 ### Volume Mounting
 
-The wrapper script (`nddt.sh`) automatically mounts:
+The wrapper script (`addt.sh`) automatically mounts:
 
 1. **Current directory** → `/workspace`
    - Your project files
@@ -65,12 +65,12 @@ The wrapper script (`nddt.sh`) automatically mounts:
 
 5. **`~/.gnupg`** → `/home/<user>/.gnupg` (opt-in)
    - GPG keys for commit signing
-   - Only when `NDDT_GPG_FORWARD=true`
+   - Only when `ADDT_GPG_FORWARD=true`
 
 6. **`~/.ssh`** or SSH agent (opt-in)
    - SSH keys for git operations
    - Agent forwarding or key mounting
-   - Only when `NDDT_SSH_FORWARD` is set
+   - Only when `ADDT_SSH_FORWARD` is set
 
 ### Authentication & Identity
 
@@ -85,7 +85,7 @@ The wrapper script (`nddt.sh`) automatically mounts:
 
 **GitHub CLI:**
 - Requires `GH_TOKEN` environment variable
-- Or use `NDDT_GITHUB_DETECT=true` to auto-detect from `gh` CLI
+- Or use `ADDT_GITHUB_DETECT=true` to auto-detect from `gh` CLI
 
 ### Image Metadata & Labels
 
@@ -93,7 +93,7 @@ Images include OCI-compliant labels:
 
 ```json
 {
-  "org.opencontainers.image.title": "nddt",
+  "org.opencontainers.image.title": "addt",
   "org.opencontainers.image.description": "Claude Code with Git, GitHub CLI, and Ripgrep",
   "tools.claude.version": "2.1.27",
   "tools.gh.version": "2.86.0",
@@ -109,10 +109,10 @@ Images include OCI-compliant labels:
 docker images --filter "label=tools.claude.version=2.1.27"
 
 # Get specific label value
-docker inspect nddt:claude-2.1.27 --format '{{index .Config.Labels "tools.node.version"}}'
+docker inspect addt:claude-2.1.27 --format '{{index .Config.Labels "tools.node.version"}}'
 
 # View all labels
-docker inspect nddt:latest --format '{{json .Config.Labels}}' | jq
+docker inspect addt:latest --format '{{json .Config.Labels}}' | jq
 ```
 
 ## Build System
@@ -123,11 +123,11 @@ The `make standalone` command creates a single self-contained script:
 
 ```bash
 make standalone
-# Creates: dist/nddt-standalone.sh
+# Creates: dist/addt-standalone.sh
 ```
 
 **How it works:**
-1. `build.sh` reads `nddt.sh`, `Dockerfile`, and `docker-entrypoint.sh`
+1. `build.sh` reads `addt.sh`, `Dockerfile`, and `docker-entrypoint.sh`
 2. Embeds Dockerfile and entrypoint as heredocs at `INJECT:*` markers
 3. Adds cleanup for temporary files
 4. Outputs single executable script
@@ -137,7 +137,7 @@ make standalone
 # build.sh uses awk to inject content
 awk '
 /INJECT:Dockerfile-start/ {
-    print "    DOCKERFILE_PATH=\"$SCRIPT_DIR/.nddt-Dockerfile.tmp\""
+    print "    DOCKERFILE_PATH=\"$SCRIPT_DIR/.addt-Dockerfile.tmp\""
     print "    cat > \"$DOCKERFILE_PATH\" <<'\''DOCKERFILE_EOF'\''"
     # Insert full Dockerfile content
     print "DOCKERFILE_EOF"
@@ -146,7 +146,7 @@ awk '
     next
 }
 { print }
-' nddt.sh > dist/nddt-standalone.sh
+' addt.sh > dist/addt-standalone.sh
 ```
 
 ### Version Management
@@ -233,8 +233,8 @@ RUN (groupadd -g ${GROUP_ID} ${USERNAME} 2>/dev/null || true) \
 ## File Structure
 
 ```
-nddt/
-├── nddt.sh              # Main wrapper script (source)
+addt/
+├── addt.sh              # Main wrapper script (source)
 ├── Dockerfile              # Container definition
 ├── docker-entrypoint.sh    # Container entrypoint
 ├── build.sh                # Standalone builder
@@ -244,7 +244,7 @@ nddt/
 ├── README.md               # User documentation
 ├── README-development.md   # This file
 └── dist/
-    └── nddt-standalone.sh  # Single-file distribution
+    └── addt-standalone.sh  # Single-file distribution
 ```
 
 ## Development Workflow
@@ -252,55 +252,55 @@ nddt/
 ### Local Development
 
 ```bash
-# Make changes to nddt.sh, Dockerfile, or docker-entrypoint.sh
-vim nddt.sh
+# Make changes to addt.sh, Dockerfile, or docker-entrypoint.sh
+vim addt.sh
 
 # Test changes
-./nddt.sh --version
+./addt.sh --version
 
 # Rebuild standalone
 make standalone
 
 # Test standalone
-./dist/nddt-standalone.sh --version
+./dist/addt-standalone.sh --version
 ```
 
 ### Force Rebuild
 
 ```bash
 # Remove image to force rebuild
-docker rmi nddt:claude-2.1.27
+docker rmi addt:claude-2.1.27
 
-# Or remove all nddt images
-docker images | grep nddt | awk '{print $3}' | xargs docker rmi
+# Or remove all addt images
+docker images | grep addt | awk '{print $3}' | xargs docker rmi
 
 # Next run will rebuild
-./nddt.sh --version
+./addt.sh --version
 ```
 
 ### Debug Mode
 
 ```bash
 # Enable logging
-export NDDT_LOG=true
-export NDDT_LOG_FILE="/tmp/nddt-debug.log"
-./nddt.sh
+export ADDT_LOG=true
+export ADDT_LOG_FILE="/tmp/addt-debug.log"
+./addt.sh
 
 # View logs
-tail -f /tmp/nddt-debug.log
+tail -f /tmp/addt-debug.log
 ```
 
 ### Shell Access
 
 ```bash
 # Open bash shell in container
-./nddt.sh shell
+./addt.sh shell
 
 # Run specific command
-./nddt.sh shell -c "env | grep DCLAUDE"
+./addt.sh shell -c "env | grep DCLAUDE"
 
 # Check mounted directories
-./nddt.sh shell -c "ls -la ~ && ls -la /workspace"
+./addt.sh shell -c "ls -la ~ && ls -la /workspace"
 ```
 
 ## Testing
@@ -309,34 +309,34 @@ tail -f /tmp/nddt-debug.log
 
 ```bash
 # Test basic functionality
-./nddt.sh --version
+./addt.sh --version
 
 # Test port mapping
-NDDT_PORTS="3000,8080" ./nddt.sh --version
+ADDT_PORTS="3000,8080" ./addt.sh --version
 
 # Test SSH forwarding
-NDDT_SSH_FORWARD=agent ./nddt.sh shell -c "ssh-add -l"
+ADDT_SSH_FORWARD=agent ./addt.sh shell -c "ssh-add -l"
 
 # Test Docker forwarding
-NDDT_DOCKER_FORWARD=isolated ./nddt.sh shell -c "docker ps"
+ADDT_DOCKER_FORWARD=isolated ./addt.sh shell -c "docker ps"
 
 # Test GPG forwarding
-NDDT_GPG_FORWARD=true ./nddt.sh shell -c "gpg --list-keys"
+ADDT_GPG_FORWARD=true ./addt.sh shell -c "gpg --list-keys"
 ```
 
 ### Version Tests
 
 ```bash
 # Test invalid version
-NDDT_CLAUDE_VERSION=2.1.24 ./nddt.sh --version
+ADDT_CLAUDE_VERSION=2.1.24 ./addt.sh --version
 # Should error: version does not exist
 
 # Test specific version
-NDDT_CLAUDE_VERSION=2.1.29 ./nddt.sh --version
+ADDT_CLAUDE_VERSION=2.1.29 ./addt.sh --version
 # Should build with 2.1.29
 
 # Test version reuse
-NDDT_CLAUDE_VERSION=2.1.29 ./nddt.sh --version
+ADDT_CLAUDE_VERSION=2.1.29 ./addt.sh --version
 # Should reuse existing image (fast)
 ```
 
@@ -348,10 +348,10 @@ make standalone
 
 # Test in clean directory
 cd /tmp
-/path/to/nddt/dist/nddt-standalone.sh --version
+/path/to/addt/dist/addt-standalone.sh --version
 
 # Test embedded Dockerfile
-./dist/nddt-standalone.sh shell -c "ls -la .nddt-*.tmp"
+./dist/addt-standalone.sh shell -c "ls -la .addt-*.tmp"
 ```
 
 ## Advanced Usage
@@ -373,8 +373,8 @@ RUN npm install -g typescript prettier eslint
 
 Then rebuild:
 ```bash
-docker rmi nddt:latest
-./nddt.sh  # Auto-rebuilds
+docker rmi addt:latest
+./addt.sh  # Auto-rebuilds
 ```
 
 ### Alpine-based Image
@@ -400,7 +400,7 @@ Build for multiple platforms:
 docker buildx build \
     --platform linux/amd64,linux/arm64 \
     --build-arg CLAUDE_VERSION=2.1.27 \
-    -t nddt:latest \
+    -t addt:latest \
     .
 ```
 
@@ -409,10 +409,10 @@ docker buildx build \
 Pass custom environment variables:
 
 ```bash
-export NDDT_ENV_VARS="ANTHROPIC_API_KEY,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY"
+export ADDT_ENV_VARS="ANTHROPIC_API_KEY,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY"
 export AWS_ACCESS_KEY_ID="your-key"
 export AWS_SECRET_ACCESS_KEY="your-secret"
-./nddt.sh
+./addt.sh
 ```
 
 Inside container, Claude can access:
@@ -450,11 +450,11 @@ echo $AWS_ACCESS_KEY_ID  # Available
 ### Testing Checklist
 
 Before submitting PR:
-- [ ] `./nddt.sh --version` works
+- [ ] `./addt.sh --version` works
 - [ ] `make standalone` succeeds
-- [ ] `./dist/nddt-standalone.sh --version` works
+- [ ] `./dist/addt-standalone.sh --version` works
 - [ ] Port mapping works (if modified)
-- [ ] Volume mounts work (test with `./nddt.sh shell`)
+- [ ] Volume mounts work (test with `./addt.sh shell`)
 - [ ] Documentation updated
 
 ## Debugging
@@ -480,7 +480,7 @@ ls -la ~/.claude
 ls -la ~/.gitconfig
 
 # Test mount
-./nddt.sh shell -c "ls -la ~"
+./addt.sh shell -c "ls -la ~"
 ```
 
 **Port mapping issues:**
@@ -489,30 +489,30 @@ ls -la ~/.gitconfig
 bash -c "exec 3<>/dev/tcp/localhost/30000" && echo "Port busy" || echo "Port free"
 
 # Test with specific ports
-NDDT_PORTS="3000" NDDT_PORT_RANGE_START=40000 ./nddt.sh --version
+ADDT_PORTS="3000" ADDT_PORT_RANGE_START=40000 ./addt.sh --version
 ```
 
 ### Verbose Mode
 
 ```bash
 # Enable bash debugging
-bash -x ./nddt.sh --version 2>&1 | tee debug.log
+bash -x ./addt.sh --version 2>&1 | tee debug.log
 
 # Or modify script temporarily
-set -x  # Add to top of nddt.sh
+set -x  # Add to top of addt.sh
 ```
 
 ### Container Inspection
 
 ```bash
 # List running containers
-docker ps -a | grep nddt
+docker ps -a | grep addt
 
 # Inspect container
-docker inspect nddt-YYYYMMDD-HHMMSS-PID
+docker inspect addt-YYYYMMDD-HHMMSS-PID
 
 # View logs
-docker logs nddt-YYYYMMDD-HHMMSS-PID
+docker logs addt-YYYYMMDD-HHMMSS-PID
 ```
 
 ## License

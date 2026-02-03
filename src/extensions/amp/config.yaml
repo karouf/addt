@@ -5,4 +5,4 @@ default_version: latest
 dependencies: []
 mounts:
   - source: ~/.amp
-    target: /home/nddt/.amp
+    target: /home/addt/.amp
