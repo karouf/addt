@@ -3,50 +3,10 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/user"
-	"path/filepath"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"github.com/jedi4ever/addt/config"
 )
-
-// ExtensionSettings holds per-extension configuration settings
-type ExtensionSettings struct {
-	Version   string `yaml:"version,omitempty"`
-	Automount *bool  `yaml:"automount,omitempty"`
-}
-
-// GlobalConfig represents the persistent configuration stored in ~/.addt/config.yaml
-type GlobalConfig struct {
-	// Container Resources
-	DockerCPUs       string `yaml:"docker_cpus,omitempty"`
-	DockerMemory     string `yaml:"docker_memory,omitempty"`
-	Persistent       *bool  `yaml:"persistent,omitempty"`
-	Workdir          string `yaml:"workdir,omitempty"`
-	WorkdirAutomount *bool  `yaml:"workdir_automount,omitempty"`
-
-	// Security/Network
-	Dind         *bool  `yaml:"dind,omitempty"`
-	DindMode     string `yaml:"dind_mode,omitempty"`
-	Firewall     *bool  `yaml:"firewall,omitempty"`
-	FirewallMode string `yaml:"firewall_mode,omitempty"`
-	GPGForward   *bool  `yaml:"gpg_forward,omitempty"`
-	SSHForward   string `yaml:"ssh_forward,omitempty"`
-
-	// Tool Versions
-	GoVersion   string `yaml:"go_version,omitempty"`
-	NodeVersion string `yaml:"node_version,omitempty"`
-	UvVersion   string `yaml:"uv_version,omitempty"`
-
-	// Other
-	GitHubDetect   *bool  `yaml:"github_detect,omitempty"`
-	Log            *bool  `yaml:"log,omitempty"`
-	LogFile        string `yaml:"log_file,omitempty"`
-	PortRangeStart *int   `yaml:"port_range_start,omitempty"`
-
-	// Per-extension configuration
-	Extensions map[string]*ExtensionSettings `yaml:"extensions,omitempty"`
-}
 
 // configKeyInfo holds metadata about a config key
 type configKeyInfo struct {
@@ -81,118 +41,6 @@ func getConfigKeys() []configKeyInfo {
 	return keys
 }
 
-// GetConfigFilePath returns the path to the global config file
-// Can be overridden with ADDT_CONFIG_DIR environment variable
-func GetConfigFilePath() string {
-	configDir := os.Getenv("ADDT_CONFIG_DIR")
-	if configDir == "" {
-		currentUser, err := user.Current()
-		if err != nil {
-			return ""
-		}
-		configDir = filepath.Join(currentUser.HomeDir, ".addt")
-	}
-	return filepath.Join(configDir, "config.yaml")
-}
-
-// GetProjectConfigFilePath returns the path to the project config file
-func GetProjectConfigFilePath() string {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return ""
-	}
-	return filepath.Join(cwd, ".addt.yaml")
-}
-
-// LoadProjectConfig loads the project config from .addt.yaml in current directory
-func LoadProjectConfig() (*GlobalConfig, error) {
-	configPath := GetProjectConfigFilePath()
-	if configPath == "" {
-		return &GlobalConfig{}, nil
-	}
-
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return &GlobalConfig{}, nil
-		}
-		return nil, err
-	}
-
-	var cfg GlobalConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("failed to parse project config file: %w", err)
-	}
-
-	return &cfg, nil
-}
-
-// SaveProjectConfig saves the project config to .addt.yaml in current directory
-func SaveProjectConfig(cfg *GlobalConfig) error {
-	configPath := GetProjectConfigFilePath()
-	if configPath == "" {
-		return fmt.Errorf("could not determine project config file path")
-	}
-
-	data, err := yaml.Marshal(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
-	}
-
-	if err := os.WriteFile(configPath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write project config file: %w", err)
-	}
-
-	return nil
-}
-
-// LoadGlobalConfig loads the global config from ~/.addt/config.yaml
-func LoadGlobalConfig() (*GlobalConfig, error) {
-	configPath := GetConfigFilePath()
-	if configPath == "" {
-		return &GlobalConfig{}, nil
-	}
-
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return &GlobalConfig{}, nil
-		}
-		return nil, err
-	}
-
-	var cfg GlobalConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("failed to parse config file: %w", err)
-	}
-
-	return &cfg, nil
-}
-
-// SaveGlobalConfig saves the global config to ~/.addt/config.yaml
-func SaveGlobalConfig(cfg *GlobalConfig) error {
-	configPath := GetConfigFilePath()
-	if configPath == "" {
-		return fmt.Errorf("could not determine config file path")
-	}
-
-	// Ensure directory exists
-	configDir := filepath.Dir(configPath)
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
-	}
-
-	data, err := yaml.Marshal(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
-	}
-
-	if err := os.WriteFile(configPath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write config file: %w", err)
-	}
-
-	return nil
-}
 
 // HandleConfigCommand handles the config subcommand
 func HandleConfigCommand(args []string) {
@@ -209,8 +57,8 @@ func HandleConfigCommand(args []string) {
 	case "extension":
 		handleExtensionConfig(args[1:])
 	case "path":
-		fmt.Printf("Global config:  %s\n", GetConfigFilePath())
-		fmt.Printf("Project config: %s\n", GetProjectConfigFilePath())
+		fmt.Printf("Global config:  %s\n", config.GetGlobalConfigPath())
+		fmt.Printf("Project config: %s\n", config.GetProjectConfigPath())
 	default:
 		fmt.Printf("Unknown config command: %s\n", args[0])
 		printConfigHelp()
@@ -513,20 +361,20 @@ func getDefaultValue(key string) string {
 }
 
 func listConfig() {
-	globalCfg, err := LoadGlobalConfig()
+	globalCfg, err := config.LoadGlobalConfigFile()
 	if err != nil {
 		fmt.Printf("Error loading global config: %v\n", err)
 		os.Exit(1)
 	}
 
-	projectCfg, err := LoadProjectConfig()
+	projectCfg, err := config.LoadProjectConfigFile()
 	if err != nil {
 		fmt.Printf("Error loading project config: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("Global config:  %s\n", GetConfigFilePath())
-	fmt.Printf("Project config: %s\n\n", GetProjectConfigFilePath())
+	fmt.Printf("Global config:  %s\n", config.GetGlobalConfigPath())
+	fmt.Printf("Project config: %s\n\n", config.GetProjectConfigPath())
 
 	keys := getConfigKeys()
 
@@ -604,7 +452,7 @@ func getConfig(key string) {
 		os.Exit(1)
 	}
 
-	cfg, err := LoadGlobalConfig()
+	cfg, err := config.LoadGlobalConfigFile()
 	if err != nil {
 		fmt.Printf("Error loading config: %v\n", err)
 		os.Exit(1)
@@ -636,7 +484,7 @@ func setConfig(key, value string) {
 		}
 	}
 
-	cfg, err := LoadGlobalConfig()
+	cfg, err := config.LoadGlobalConfigFile()
 	if err != nil {
 		fmt.Printf("Error loading config: %v\n", err)
 		os.Exit(1)
@@ -644,7 +492,7 @@ func setConfig(key, value string) {
 
 	setConfigValue(cfg, key, value)
 
-	if err := SaveGlobalConfig(cfg); err != nil {
+	if err := config.SaveGlobalConfigFile(cfg); err != nil {
 		fmt.Printf("Error saving config: %v\n", err)
 		os.Exit(1)
 	}
@@ -660,7 +508,7 @@ func unsetConfig(key string) {
 		os.Exit(1)
 	}
 
-	cfg, err := LoadGlobalConfig()
+	cfg, err := config.LoadGlobalConfigFile()
 	if err != nil {
 		fmt.Printf("Error loading config: %v\n", err)
 		os.Exit(1)
@@ -668,7 +516,7 @@ func unsetConfig(key string) {
 
 	unsetConfigValue(cfg, key)
 
-	if err := SaveGlobalConfig(cfg); err != nil {
+	if err := config.SaveGlobalConfigFile(cfg); err != nil {
 		fmt.Printf("Error saving config: %v\n", err)
 		os.Exit(1)
 	}
@@ -679,13 +527,13 @@ func unsetConfig(key string) {
 // Project config functions
 
 func listProjectConfig() {
-	cfg, err := LoadProjectConfig()
+	cfg, err := config.LoadProjectConfigFile()
 	if err != nil {
 		fmt.Printf("Error loading project config: %v\n", err)
 		os.Exit(1)
 	}
 
-	configPath := GetProjectConfigFilePath()
+	configPath := config.GetProjectConfigPath()
 	fmt.Printf("Project config: %s\n\n", configPath)
 
 	keys := getConfigKeys()
@@ -731,7 +579,7 @@ func getProjectConfig(key string) {
 		os.Exit(1)
 	}
 
-	cfg, err := LoadProjectConfig()
+	cfg, err := config.LoadProjectConfigFile()
 	if err != nil {
 		fmt.Printf("Error loading project config: %v\n", err)
 		os.Exit(1)
@@ -761,7 +609,7 @@ func setProjectConfig(key, value string) {
 		}
 	}
 
-	cfg, err := LoadProjectConfig()
+	cfg, err := config.LoadProjectConfigFile()
 	if err != nil {
 		fmt.Printf("Error loading project config: %v\n", err)
 		os.Exit(1)
@@ -769,7 +617,7 @@ func setProjectConfig(key, value string) {
 
 	setConfigValue(cfg, key, value)
 
-	if err := SaveProjectConfig(cfg); err != nil {
+	if err := config.SaveProjectConfigFile(cfg); err != nil {
 		fmt.Printf("Error saving project config: %v\n", err)
 		os.Exit(1)
 	}
@@ -784,7 +632,7 @@ func unsetProjectConfig(key string) {
 		os.Exit(1)
 	}
 
-	cfg, err := LoadProjectConfig()
+	cfg, err := config.LoadProjectConfigFile()
 	if err != nil {
 		fmt.Printf("Error loading project config: %v\n", err)
 		os.Exit(1)
@@ -792,7 +640,7 @@ func unsetProjectConfig(key string) {
 
 	unsetConfigValue(cfg, key)
 
-	if err := SaveProjectConfig(cfg); err != nil {
+	if err := config.SaveProjectConfigFile(cfg); err != nil {
 		fmt.Printf("Error saving project config: %v\n", err)
 		os.Exit(1)
 	}
@@ -818,7 +666,7 @@ func getConfigKeyInfo(key string) *configKeyInfo {
 	return nil
 }
 
-func getConfigValue(cfg *GlobalConfig, key string) string {
+func getConfigValue(cfg *config.GlobalConfig, key string) string {
 	switch key {
 	case "docker_cpus":
 		return cfg.DockerCPUs
@@ -876,7 +724,7 @@ func getConfigValue(cfg *GlobalConfig, key string) string {
 	return ""
 }
 
-func setConfigValue(cfg *GlobalConfig, key, value string) {
+func setConfigValue(cfg *config.GlobalConfig, key, value string) {
 	switch key {
 	case "docker_cpus":
 		cfg.DockerCPUs = value
@@ -926,7 +774,7 @@ func setConfigValue(cfg *GlobalConfig, key, value string) {
 	}
 }
 
-func unsetConfigValue(cfg *GlobalConfig, key string) {
+func unsetConfigValue(cfg *config.GlobalConfig, key string) {
 	switch key {
 	case "docker_cpus":
 		cfg.DockerCPUs = ""
@@ -985,13 +833,13 @@ func isValidExtensionConfigKey(key string) bool {
 }
 
 func listExtensionConfig(extName string) {
-	globalCfg, err := LoadGlobalConfig()
+	globalCfg, err := config.LoadGlobalConfigFile()
 	if err != nil {
 		fmt.Printf("Error loading global config: %v\n", err)
 		os.Exit(1)
 	}
 
-	projectCfg, err := LoadProjectConfig()
+	projectCfg, err := config.LoadProjectConfigFile()
 	if err != nil {
 		fmt.Printf("Error loading project config: %v\n", err)
 		os.Exit(1)
@@ -1015,7 +863,7 @@ func listExtensionConfig(extName string) {
 	keys := getExtensionConfigKeys()
 
 	// Get extension config from global and project config files
-	var globalExtCfg, projectExtCfg *ExtensionSettings
+	var globalExtCfg, projectExtCfg *config.ExtensionSettings
 	if globalCfg.Extensions != nil {
 		globalExtCfg = globalCfg.Extensions[extName]
 	}
@@ -1101,13 +949,13 @@ func getExtensionConfig(extName, key string) {
 		os.Exit(1)
 	}
 
-	cfg, err := LoadGlobalConfig()
+	cfg, err := config.LoadGlobalConfigFile()
 	if err != nil {
 		fmt.Printf("Error loading config: %v\n", err)
 		os.Exit(1)
 	}
 
-	var extCfg *ExtensionSettings
+	var extCfg *config.ExtensionSettings
 	if cfg.Extensions != nil {
 		extCfg = cfg.Extensions[extName]
 	}
@@ -1150,12 +998,12 @@ func setExtensionConfig(extName, key, value string, useProject bool) {
 		}
 	}
 
-	var cfg *GlobalConfig
+	var cfg *config.GlobalConfig
 	var err error
 	if useProject {
-		cfg, err = LoadProjectConfig()
+		cfg, err = config.LoadProjectConfigFile()
 	} else {
-		cfg, err = LoadGlobalConfig()
+		cfg, err = config.LoadGlobalConfigFile()
 	}
 	if err != nil {
 		fmt.Printf("Error loading config: %v\n", err)
@@ -1164,12 +1012,12 @@ func setExtensionConfig(extName, key, value string, useProject bool) {
 
 	// Initialize extensions map if needed
 	if cfg.Extensions == nil {
-		cfg.Extensions = make(map[string]*ExtensionSettings)
+		cfg.Extensions = make(map[string]*config.ExtensionSettings)
 	}
 
 	// Initialize extension config if needed
 	if cfg.Extensions[extName] == nil {
-		cfg.Extensions[extName] = &ExtensionSettings{}
+		cfg.Extensions[extName] = &config.ExtensionSettings{}
 	}
 
 	extCfg := cfg.Extensions[extName]
@@ -1182,13 +1030,13 @@ func setExtensionConfig(extName, key, value string, useProject bool) {
 	}
 
 	if useProject {
-		if err := SaveProjectConfig(cfg); err != nil {
+		if err := config.SaveProjectConfigFile(cfg); err != nil {
 			fmt.Printf("Error saving project config: %v\n", err)
 			os.Exit(1)
 		}
 		fmt.Printf("Set %s.%s = %s (project)\n", extName, key, value)
 	} else {
-		if err := SaveGlobalConfig(cfg); err != nil {
+		if err := config.SaveGlobalConfigFile(cfg); err != nil {
 			fmt.Printf("Error saving config: %v\n", err)
 			os.Exit(1)
 		}
@@ -1203,12 +1051,12 @@ func unsetExtensionConfig(extName, key string, useProject bool) {
 		os.Exit(1)
 	}
 
-	var cfg *GlobalConfig
+	var cfg *config.GlobalConfig
 	var err error
 	if useProject {
-		cfg, err = LoadProjectConfig()
+		cfg, err = config.LoadProjectConfigFile()
 	} else {
-		cfg, err = LoadGlobalConfig()
+		cfg, err = config.LoadGlobalConfigFile()
 	}
 	if err != nil {
 		fmt.Printf("Error loading config: %v\n", err)
@@ -1244,13 +1092,13 @@ func unsetExtensionConfig(extName, key string, useProject bool) {
 	}
 
 	if useProject {
-		if err := SaveProjectConfig(cfg); err != nil {
+		if err := config.SaveProjectConfigFile(cfg); err != nil {
 			fmt.Printf("Error saving project config: %v\n", err)
 			os.Exit(1)
 		}
 		fmt.Printf("Unset %s.%s (project)\n", extName, key)
 	} else {
-		if err := SaveGlobalConfig(cfg); err != nil {
+		if err := config.SaveGlobalConfigFile(cfg); err != nil {
 			fmt.Printf("Error saving config: %v\n", err)
 			os.Exit(1)
 		}

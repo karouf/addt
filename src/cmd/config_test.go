@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/jedi4ever/addt/config"
 )
 
 // setupTestEnv creates temporary directories for testing and sets ADDT_CONFIG_DIR
@@ -33,45 +35,45 @@ func setupTestEnv(t *testing.T) (globalDir, projectDir string, cleanup func()) {
 	return globalDir, projectDir, cleanup
 }
 
-func TestGetConfigFilePath(t *testing.T) {
+func TestGetGlobalConfigPath(t *testing.T) {
 	globalDir, _, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	path := GetConfigFilePath()
+	path := config.GetGlobalConfigPath()
 
 	// Check that path ends with config.yaml and contains our temp dir name
 	// (avoid macOS /var vs /private/var symlink issues)
 	if filepath.Base(path) != "config.yaml" {
-		t.Errorf("GetConfigFilePath() should end with config.yaml, got %q", path)
+		t.Errorf("GetGlobalConfigPath() should end with config.yaml, got %q", path)
 	}
 	if filepath.Base(filepath.Dir(path)) != filepath.Base(globalDir) {
-		t.Errorf("GetConfigFilePath() dir = %q, want dir containing %q", filepath.Dir(path), filepath.Base(globalDir))
+		t.Errorf("GetGlobalConfigPath() dir = %q, want dir containing %q", filepath.Dir(path), filepath.Base(globalDir))
 	}
 }
 
-func TestGetProjectConfigFilePath(t *testing.T) {
+func TestGetProjectConfigPath(t *testing.T) {
 	_, _, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	path := GetProjectConfigFilePath()
+	path := config.GetProjectConfigPath()
 
 	// Check that path ends with .addt.yaml (avoid macOS /var vs /private/var issues)
 	if filepath.Base(path) != ".addt.yaml" {
-		t.Errorf("GetProjectConfigFilePath() = %q, want path ending in .addt.yaml", path)
+		t.Errorf("GetProjectConfigPath() = %q, want path ending in .addt.yaml", path)
 	}
 }
 
-func TestLoadGlobalConfig_NonExistent(t *testing.T) {
+func TestLoadGlobalConfigFile_NonExistent(t *testing.T) {
 	_, _, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	cfg, err := LoadGlobalConfig()
+	cfg, err := config.LoadGlobalConfigFile()
 	if err != nil {
-		t.Fatalf("LoadGlobalConfig() error = %v", err)
+		t.Fatalf("LoadGlobalConfigFile() error = %v", err)
 	}
 
 	if cfg == nil {
-		t.Fatal("LoadGlobalConfig() returned nil")
+		t.Fatal("LoadGlobalConfigFile() returned nil")
 	}
 
 	// Should return empty config when file doesn't exist
@@ -85,22 +87,22 @@ func TestSaveAndLoadGlobalConfig(t *testing.T) {
 	defer cleanup()
 
 	// Create and save config
-	cfg := &GlobalConfig{
+	cfg := &config.GlobalConfig{
 		NodeVersion:  "20",
 		GoVersion:    "1.21",
 		DockerCPUs:   "2",
 		DockerMemory: "4g",
 	}
 
-	err := SaveGlobalConfig(cfg)
+	err := config.SaveGlobalConfigFile(cfg)
 	if err != nil {
-		t.Fatalf("SaveGlobalConfig() error = %v", err)
+		t.Fatalf("SaveGlobalConfigFile() error = %v", err)
 	}
 
 	// Load and verify
-	loaded, err := LoadGlobalConfig()
+	loaded, err := config.LoadGlobalConfigFile()
 	if err != nil {
-		t.Fatalf("LoadGlobalConfig() error = %v", err)
+		t.Fatalf("LoadGlobalConfigFile() error = %v", err)
 	}
 
 	if loaded.NodeVersion != "20" {
@@ -123,20 +125,20 @@ func TestSaveAndLoadProjectConfig(t *testing.T) {
 
 	// Create and save project config
 	persistent := true
-	cfg := &GlobalConfig{
+	cfg := &config.GlobalConfig{
 		Persistent:   &persistent,
 		FirewallMode: "permissive",
 	}
 
-	err := SaveProjectConfig(cfg)
+	err := config.SaveProjectConfigFile(cfg)
 	if err != nil {
-		t.Fatalf("SaveProjectConfig() error = %v", err)
+		t.Fatalf("SaveProjectConfigFile() error = %v", err)
 	}
 
 	// Load and verify
-	loaded, err := LoadProjectConfig()
+	loaded, err := config.LoadProjectConfigFile()
 	if err != nil {
-		t.Fatalf("LoadProjectConfig() error = %v", err)
+		t.Fatalf("LoadProjectConfigFile() error = %v", err)
 	}
 
 	if loaded.Persistent == nil || *loaded.Persistent != true {
@@ -153,8 +155,8 @@ func TestExtensionSettings(t *testing.T) {
 
 	// Create config with extension settings
 	automount := true
-	cfg := &GlobalConfig{
-		Extensions: map[string]*ExtensionSettings{
+	cfg := &config.GlobalConfig{
+		Extensions: map[string]*config.ExtensionSettings{
 			"claude": {
 				Version:   "1.0.5",
 				Automount: &automount,
@@ -162,15 +164,15 @@ func TestExtensionSettings(t *testing.T) {
 		},
 	}
 
-	err := SaveGlobalConfig(cfg)
+	err := config.SaveGlobalConfigFile(cfg)
 	if err != nil {
-		t.Fatalf("SaveGlobalConfig() error = %v", err)
+		t.Fatalf("SaveGlobalConfigFile() error = %v", err)
 	}
 
 	// Load and verify
-	loaded, err := LoadGlobalConfig()
+	loaded, err := config.LoadGlobalConfigFile()
 	if err != nil {
-		t.Fatalf("LoadGlobalConfig() error = %v", err)
+		t.Fatalf("LoadGlobalConfigFile() error = %v", err)
 	}
 
 	if loaded.Extensions == nil {
@@ -196,23 +198,23 @@ func TestExtensionSettingsInProjectConfig(t *testing.T) {
 
 	// Create project config with extension settings
 	automount := false
-	cfg := &GlobalConfig{
-		Extensions: map[string]*ExtensionSettings{
+	cfg := &config.GlobalConfig{
+		Extensions: map[string]*config.ExtensionSettings{
 			"claude": {
 				Automount: &automount,
 			},
 		},
 	}
 
-	err := SaveProjectConfig(cfg)
+	err := config.SaveProjectConfigFile(cfg)
 	if err != nil {
-		t.Fatalf("SaveProjectConfig() error = %v", err)
+		t.Fatalf("SaveProjectConfigFile() error = %v", err)
 	}
 
 	// Load and verify
-	loaded, err := LoadProjectConfig()
+	loaded, err := config.LoadProjectConfigFile()
 	if err != nil {
-		t.Fatalf("LoadProjectConfig() error = %v", err)
+		t.Fatalf("LoadProjectConfigFile() error = %v", err)
 	}
 
 	if loaded.Extensions == nil {
@@ -269,7 +271,7 @@ func TestExtensionConfigKeyValidation(t *testing.T) {
 func TestGetConfigValue(t *testing.T) {
 	persistent := true
 	portStart := 35000
-	cfg := &GlobalConfig{
+	cfg := &config.GlobalConfig{
 		NodeVersion:    "20",
 		DockerCPUs:     "4",
 		Persistent:     &persistent,
@@ -296,7 +298,7 @@ func TestGetConfigValue(t *testing.T) {
 }
 
 func TestSetConfigValue(t *testing.T) {
-	cfg := &GlobalConfig{}
+	cfg := &config.GlobalConfig{}
 
 	setConfigValue(cfg, "node_version", "18")
 	if cfg.NodeVersion != "18" {
@@ -316,7 +318,7 @@ func TestSetConfigValue(t *testing.T) {
 
 func TestUnsetConfigValue(t *testing.T) {
 	persistent := true
-	cfg := &GlobalConfig{
+	cfg := &config.GlobalConfig{
 		NodeVersion: "20",
 		Persistent:  &persistent,
 	}
