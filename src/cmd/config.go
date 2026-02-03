@@ -935,10 +935,28 @@ func isValidExtensionConfigKey(key string) bool {
 }
 
 func listExtensionConfig(extName string) {
-	cfg, err := LoadGlobalConfig()
+	globalCfg, err := LoadGlobalConfig()
 	if err != nil {
-		fmt.Printf("Error loading config: %v\n", err)
+		fmt.Printf("Error loading global config: %v\n", err)
 		os.Exit(1)
+	}
+
+	projectCfg, err := LoadProjectConfig()
+	if err != nil {
+		fmt.Printf("Error loading project config: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Get extension defaults from extension's config.yaml
+	var extDefaults *ExtensionConfig
+	exts, err := getExtensions()
+	if err == nil {
+		for _, ext := range exts {
+			if ext.Name == extName {
+				extDefaults = &ext
+				break
+			}
+		}
 	}
 
 	extNameUpper := strings.ToUpper(extName)
@@ -946,10 +964,13 @@ func listExtensionConfig(extName string) {
 
 	keys := getExtensionConfigKeys()
 
-	// Get extension config from file
-	var extCfg *ExtensionSettings
-	if cfg.Extensions != nil {
-		extCfg = cfg.Extensions[extName]
+	// Get extension config from global and project config files
+	var globalExtCfg, projectExtCfg *ExtensionSettings
+	if globalCfg.Extensions != nil {
+		globalExtCfg = globalCfg.Extensions[extName]
+	}
+	if projectCfg.Extensions != nil {
+		projectExtCfg = projectCfg.Extensions[extName]
 	}
 
 	// Print header
@@ -960,31 +981,62 @@ func listExtensionConfig(extName string) {
 		envVar := fmt.Sprintf(k.EnvVar, extNameUpper)
 		envValue := os.Getenv(envVar)
 
-		var configValue string
-		if extCfg != nil {
+		var projectValue, globalValue, defaultValue string
+
+		// Get project config value
+		if projectExtCfg != nil {
 			switch k.Key {
 			case "version":
-				configValue = extCfg.Version
+				projectValue = projectExtCfg.Version
 			case "automount":
-				if extCfg.Automount != nil {
-					configValue = fmt.Sprintf("%v", *extCfg.Automount)
+				if projectExtCfg.Automount != nil {
+					projectValue = fmt.Sprintf("%v", *projectExtCfg.Automount)
 				}
 			}
 		}
 
+		// Get global config value
+		if globalExtCfg != nil {
+			switch k.Key {
+			case "version":
+				globalValue = globalExtCfg.Version
+			case "automount":
+				if globalExtCfg.Automount != nil {
+					globalValue = fmt.Sprintf("%v", *globalExtCfg.Automount)
+				}
+			}
+		}
+
+		// Get extension default value
+		if extDefaults != nil {
+			switch k.Key {
+			case "version":
+				defaultValue = extDefaults.DefaultVersion
+			case "automount":
+				defaultValue = fmt.Sprintf("%v", extDefaults.AutoMount)
+			}
+		}
+
+		// Determine effective value and source (env > project > global > default)
 		var displayValue, source string
 		if envValue != "" {
 			displayValue = envValue
 			source = "env"
-		} else if configValue != "" {
-			displayValue = configValue
-			source = "config"
+		} else if projectValue != "" {
+			displayValue = projectValue
+			source = "project"
+		} else if globalValue != "" {
+			displayValue = globalValue
+			source = "global"
+		} else if defaultValue != "" {
+			displayValue = defaultValue
+			source = "default"
 		} else {
 			displayValue = "-"
 			source = ""
 		}
 
-		if source == "env" || source == "config" {
+		if source == "env" || source == "project" || source == "global" {
 			fmt.Printf("* %-10s   %-15s   %s\n", k.Key, displayValue, source)
 		} else {
 			fmt.Printf("  %-10s   %-15s   %s\n", k.Key, displayValue, source)
