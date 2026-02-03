@@ -6,8 +6,6 @@
 
 **Run AI coding agents in Docker containers.** Your agent can read, write, and execute code in complete isolation - no surprises on your host machine.
 
-The binary name determines which agent runs. Symlink `addt` to an extension name (e.g., `claude`, `codex`, `gemini`) and it auto-detects which agent to use. Run `addt --addt-list-extensions` to see all available extensions.
-
 ## Quick Start
 
 ```bash
@@ -17,15 +15,21 @@ chmod +x addt
 xattr -c addt && codesign --sign - --force addt
 sudo mv addt /usr/local/bin/
 
-# 2. Use it directly or via symlink
-addt "Fix the bug in app.js"           # Uses default (claude)
-addt --addt-list-extensions            # See all available agents
+# 2. Run an agent
+addt run claude "Fix the bug in app.js"
+addt run codex "Explain this function"
+
+# 3. See available extensions
+addt extensions list
 ```
 
 **That's it.** First run auto-builds the container.
 
+### Using Symlinks (Optional)
+
+For convenience, create symlinks to run agents directly:
+
 ```bash
-# Want to use as a specific agent? Create symlinks in ~/bin (won't override real installs):
 mkdir -p ~/bin
 ln -s /usr/local/bin/addt ~/bin/claude
 ln -s /usr/local/bin/addt ~/bin/codex
@@ -34,7 +38,7 @@ ln -s /usr/local/bin/addt ~/bin/gemini
 # Add ~/bin to PATH (add to ~/.bashrc or ~/.zshrc)
 export PATH="$HOME/bin:$PATH"
 
-# Now use them:
+# Now use them directly:
 claude "help me with this code"
 codex "explain this function"
 ```
@@ -43,7 +47,7 @@ Each symlink name runs its own containerized agent with isolated config and Dock
 
 ## How It Works
 
-1. **Name-based detection**: The binary checks its own filename (`claude`, `codex`, `gemini`, etc.)
+1. **Run command**: Use `addt run <extension>` or create symlinks for direct access
 2. **Auto-builds container**: First run builds a Docker image with the right agent installed
 3. **Runs in isolation**: Your code runs in a container with your project mounted at `/workspace`
 4. **Same commands**: All CLI arguments pass through to the real agent
@@ -121,13 +125,17 @@ brew install addt
 ### Verify Installation
 
 ```bash
-addt --addt-version         # Shows addt version
-addt --addt-list-extensions # List available agents
+addt version              # Shows addt version
+addt extensions list      # List available agents
 ```
 
 **Upgrading:**
 
-Re-run the installation command with codesign to avoid corruption:
+```bash
+addt cli update
+```
+
+Or re-run the installation command with codesign:
 
 ```bash
 curl -fsSL https://github.com/jedi4ever/addt/releases/latest/download/addt-darwin-arm64 -o addt
@@ -147,10 +155,15 @@ sudo cp dist/addt /usr/local/bin/
 
 ## Usage
 
-Use your containerized agent exactly like the real one:
+### Running Agents
 
 ```bash
-# All normal commands work
+# Using addt run
+addt run claude "Fix the bug in app.js"
+addt run codex "Explain this function"
+addt run gemini "Help me refactor"
+
+# Using symlinks (if set up)
 claude "Fix the bug in app.js"
 claude -p "Explain this function"
 claude --continue
@@ -158,46 +171,53 @@ claude --model opus "Refactor this"
 claude --help
 ```
 
-### addt-Specific Flags
-
-These flags control the container, not the agent:
+### addt Commands
 
 ```bash
-claude --addt-version          # Show addt version
-claude --addt-help             # Show addt help (not agent help)
-claude --addt-rebuild          # Rebuild the Docker image
-claude --addt-update           # Check for addt updates
-claude --addt-list-extensions  # List available extensions
+# Run agents
+addt run <extension> [args...]     # Run a specific extension
+addt run claude "Fix the bug"
+addt run codex --help
 
-# YOLO mode - bypass all permission checks
-claude --yolo "Refactor this entire codebase"
+# Build and manage containers
+addt build <extension>             # Build the container image
+addt build claude --force          # Rebuild without cache
+addt shell <extension>             # Open bash shell in container
+
+# Container management
+addt containers list               # List persistent containers
+addt containers stop <name>        # Stop a container
+addt containers rm <name>          # Remove a container
+addt containers clean              # Remove all persistent containers
+
+# Firewall management
+addt firewall list                 # List allowed domains
+addt firewall add example.com      # Add domain to whitelist
+addt firewall rm example.com       # Remove domain
+addt firewall reset                # Reset to defaults
+
+# Extension management
+addt extensions list               # List available extensions
+addt extensions info <name>        # Show extension details
+
+# CLI management
+addt cli update                    # Check for and install updates
+addt version                       # Show version info
 ```
 
-### addt Subcommands
+### Via Symlink
 
-Container management commands live under the `addt` subcommand:
+When running via symlink (e.g., `claude`), use the `addt` subcommand:
 
 ```bash
-claude addt build                    # Build the container image
-claude addt build --build-arg ADDT_EXTENSIONS=claude,codex
-
-claude addt shell                    # Open bash shell in container
-claude addt shell -c "git status"    # Run a command in container
-
-claude addt containers list          # List persistent containers
-claude addt containers stop <name>   # Stop a container
-claude addt containers rm <name>     # Remove a container
-claude addt containers clean         # Remove all persistent containers
-
-claude addt firewall list            # List allowed domains
-claude addt firewall add example.com # Add domain to whitelist
-claude addt firewall rm example.com  # Remove domain
-claude addt firewall reset           # Reset to defaults
+claude addt build                  # Build the container image
+claude addt shell                  # Open bash shell in container
+claude addt containers list        # List persistent containers
+claude addt extensions list        # List available extensions
+claude addt version                # Show version info
 ```
 
 Firewall config: `~/.addt/firewall/allowed-domains.txt`
-
-
 
 ### Persistent Mode
 
@@ -217,7 +237,7 @@ claude "Continue working"       # Reuses same container (instant!)
 |----------|---------|-------------|
 | **ANTHROPIC_API_KEY** | *(optional)* | Your Anthropic API key for authentication. Not needed if you've already run `claude login` locally (uses `~/.claude` config) |
 | **GH_TOKEN** | *(optional)* | GitHub personal access token for gh CLI. Required for private repos, PRs, and write operations. Get yours at [github.com/settings/tokens](https://github.com/settings/tokens) |
-| **ADDT_EXTENSIONS** | `claude` | Comma-separated list of extensions to install. Example: `claude,codex,gemini`. See [docs/extensions.md](docs/extensions.md) |
+| **ADDT_EXTENSIONS** | *(none)* | Comma-separated list of extensions to install. Example: `claude,codex,gemini`. See [docs/extensions.md](docs/extensions.md) |
 | **ADDT_COMMAND** | *(auto)* | Command to run instead of default. Example: `codex`, `gemini`, `gt` |
 | **ADDT_<EXT>_VERSION** | `stable`/`latest` | Version for specific extension. Example: `ADDT_CLAUDE_VERSION=2.1.27`, `ADDT_CODEX_VERSION=latest` |
 | **ADDT_<EXT>_AUTOMOUNT** | `true` | Mount extension config dirs. Example: `ADDT_CLAUDE_AUTOMOUNT=false` |
@@ -225,7 +245,7 @@ claude "Continue working"       # Reuses same container (instant!)
 | **ADDT_GO_VERSION** | `latest` | Go version for the container. Use `latest` for newest stable, or specific version like `1.23.5`, `1.25.6`, etc. |
 | **ADDT_UV_VERSION** | `latest` | UV (Python package manager) version. Use `latest` for newest stable, or specific version like `0.5.11`, `0.9.28`, etc. Supports `uv self update` inside containers. |
 | **ADDT_GPG_FORWARD** | `false` | Enable GPG commit signing. Set to `true` to mount `~/.gnupg` |
-| **ADDT_SSH_FORWARD** | `false` | Enable SSH forwarding. Use `agent` or `true` for agent forwarding (recommended - secure), or `keys` to mount entire `~/.ssh` directory (⚠️ exposes all private keys) |
+| **ADDT_SSH_FORWARD** | `false` | Enable SSH forwarding. Use `agent` or `true` for agent forwarding (recommended - secure), or `keys` to mount entire `~/.ssh` directory (exposes all private keys) |
 | **ADDT_DIND_MODE** | *(none)* | Docker-in-Docker mode. Use `isolated` for own Docker daemon (recommended), or `host` to access host Docker socket |
 | **ADDT_ENV_VARS** | `ANTHROPIC_API_KEY,GH_TOKEN` | Comma-separated list of environment variables to pass to container. Example: `ANTHROPIC_API_KEY,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY` |
 | **ADDT_ENV_FILE** | `.env` | Path to environment file. Example: `.env.production` or `/path/to/config.env` |
@@ -247,17 +267,17 @@ claude "Continue working"       # Reuses same container (instant!)
 ```bash
 # Web development with port mapping
 export ADDT_PORTS="3000,8080"
-claude "Create an Express app"
+addt run claude "Create an Express app"
 
 # With SSH and Docker support
 export ADDT_SSH_FORWARD=agent
 export ADDT_DIND_MODE=isolated
-claude
+addt run claude
 
 # Pin to specific versions
 export ADDT_CLAUDE_VERSION=2.1.27
 export ADDT_NODE_VERSION=18
-claude
+addt run claude
 ```
 
 ## Common Use Cases
@@ -268,7 +288,7 @@ Container ports are auto-mapped to available host ports. The agent is told the c
 
 ```bash
 export ADDT_PORTS="3000,8080"
-claude "Create a web server on port 3000"
+addt run claude "Create a web server on port 3000"
 # Agent will tell you: "Visit http://localhost:30000 in your browser"
 ```
 
@@ -277,7 +297,7 @@ claude "Create a web server on port 3000"
 ```bash
 export ADDT_SSH_FORWARD=agent   # Recommended: forwards agent socket only
 # export ADDT_SSH_FORWARD=keys  # Mounts ~/.ssh (exposes all keys)
-claude
+addt run claude
 ```
 
 ### Docker-in-Docker
@@ -285,14 +305,14 @@ claude
 ```bash
 export ADDT_DIND_MODE=isolated   # Own Docker environment
 # export ADDT_DIND_MODE=host     # Access host Docker
-claude "Build a Docker image"
+addt run claude "Build a Docker image"
 ```
 
 ### GPG Signing
 
 ```bash
 export ADDT_GPG_FORWARD=true
-claude
+addt run claude
 ```
 
 ### Version Pinning
@@ -300,24 +320,26 @@ claude
 ```bash
 export ADDT_CLAUDE_VERSION=2.1.27
 export ADDT_NODE_VERSION=18
-claude
+addt run claude
 ```
 
 ### Custom Env Vars
 
 ```bash
 export ADDT_ENV_VARS="ANTHROPIC_API_KEY,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY"
-claude
+addt run claude
 ```
 
 ### Aliases
 
 ```bash
 # Add to ~/.bashrc or ~/.zshrc
-alias claude-yolo='claude --yolo'
+alias claude='addt run claude'
+alias codex='addt run codex'
+alias claude-yolo='addt run claude --yolo'
 
-alias claude-dev='ADDT_DIND_MODE=isolated ADDT_PORTS="3000,8080" claude'
-alias claude-opus='claude --model opus'
+alias claude-dev='ADDT_DIND_MODE=isolated ADDT_PORTS="3000,8080" addt run claude'
+alias claude-opus='addt run claude --model opus'
 ```
 
 **YOLO mode** (`--yolo`) bypasses all permission checks. Only use in trusted environments.
@@ -328,7 +350,7 @@ alias claude-opus='claude --model opus'
 
 Binary needs code-signing. Re-run:
 ```bash
-codesign --sign - --force /usr/local/bin/claude
+codesign --sign - --force /usr/local/bin/addt
 ```
 
 ### Authentication Errors
@@ -338,17 +360,17 @@ Either run `claude login` locally (config auto-mounted), or set `ANTHROPIC_API_K
 ### Force Rebuild
 
 ```bash
-claude --addt-rebuild
+addt build claude --force
 ```
 
 ### Debug
 
 ```bash
 export ADDT_LOG=true
-claude
+addt run claude
 cat addt.log
 
-claude shell     # Open shell to inspect container
+addt shell claude     # Open shell to inspect container
 ```
 
 ## Contributing

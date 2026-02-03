@@ -215,15 +215,21 @@ func (p *DockerProvider) BuildImage(embeddedDockerfile, embeddedEntrypoint []byt
 	extensionVersions := strings.Join(versionPairs, ",")
 
 	// Build docker command - use base image and only pass extension args
-	args := []string{
-		"build",
+	args := []string{"build"}
+
+	// Add --no-cache if requested
+	if p.config.NoCache {
+		args = append(args, "--no-cache")
+	}
+
+	args = append(args,
 		"--build-arg", fmt.Sprintf("BASE_IMAGE=%s", baseImageName),
 		"--build-arg", fmt.Sprintf("ADDT_EXTENSIONS=%s", p.config.Extensions),
 		"--build-arg", fmt.Sprintf("EXTENSION_VERSIONS=%s", extensionVersions),
 		"-t", p.config.ImageName,
 		"-f", dockerfilePath,
 		scriptDir,
-	}
+	)
 
 	cmd := exec.Command("docker", args...)
 	cmd.Stdout = os.Stdout

@@ -59,6 +59,7 @@ type Config struct {
 	Command            string
 	ExtensionVersions  map[string]string // Per-extension versions (e.g., {"claude": "1.0.5", "codex": "latest"})
 	ExtensionAutomount map[string]bool   // Per-extension automount control (e.g., {"claude": true, "codex": false})
+	NoCache            bool              // Disable Docker cache for builds
 }
 
 // RunSpec specifies how to run a container/workspace

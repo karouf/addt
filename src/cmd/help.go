@@ -13,27 +13,21 @@ func PrintHelp(version string) {
 
 Version: %s
 
-Usage:
+Commands:
   addt run <extension> [args...]     Run a specific extension
-  addt build [--build-arg ...]       Build the container image
-  addt shell                         Open bash shell in container
+  addt build <extension>             Build the container image
+  addt shell <extension>             Open bash shell in container
   addt containers [list|stop|rm]     Manage containers
   addt firewall [list|add|rm|reset]  Manage firewall
+  addt extensions [list|info]        Manage extensions
+  addt cli [update]                  Manage addt CLI
+  addt version                       Show version info
 
 Examples:
   addt run claude "Fix the bug"
-  addt run codex --help
-  addt build --build-arg ADDT_EXTENSIONS=claude,codex
-
-Or create symlinks for direct access:
-  ln -s /usr/local/bin/addt ~/bin/claude      # Run as: claude "prompt"
-  ln -s /usr/local/bin/addt ~/bin/addt-claude # Run as: addt-claude "prompt"
-
-Flags:
-  --addt-version                     Show addt version
-  --addt-list-extensions             List available extensions
-  --addt-update                      Check for updates
-  --addt-help                        Show this help
+  addt extensions list
+  addt extensions info claude
+  addt cli update
 `, version)
 }
 
@@ -46,18 +40,13 @@ Version: %s
 Usage: <agent> [options] [prompt]
 
 Container management (via agent):
-  <agent> addt build [--build-arg ...]       Build the container image
+  <agent> addt build                         Build the container image
   <agent> addt shell                         Open bash shell in container
   <agent> addt containers [list|stop|rm]     Manage persistent containers
   <agent> addt firewall [list|add|rm|reset]  Manage network firewall
-
-Flags:
-  --addt-version                     Show addt version
-  --addt-list-extensions             List available extensions
-  --addt-update                      Check for and install updates
-  --addt-rebuild                     Rebuild the extension image (uses cached base)
-  --addt-rebuild-base                Rebuild both base and extension images
-  --addt-help                        Show this help
+  <agent> addt extensions [list|info]        Manage extensions
+  <agent> addt cli [update]                  Manage addt CLI
+  <agent> addt version                       Show version info
 
 `, version)
 

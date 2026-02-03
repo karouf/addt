@@ -18,6 +18,39 @@ func handleSubcommand(subCmd string, subArgs []string, defaultNodeVersion, defau
 
 	switch subCmd {
 	case "build":
+		// Check for --force flag
+		forceNoCache := false
+		var filteredArgs []string
+		for _, arg := range subArgs {
+			if arg == "--force" {
+				forceNoCache = true
+			} else {
+				filteredArgs = append(filteredArgs, arg)
+			}
+		}
+		subArgs = filteredArgs
+
+		// Check if extension is passed as first arg (addt build claude)
+		if len(subArgs) > 0 && !strings.HasPrefix(subArgs[0], "-") {
+			cfg.Extensions = subArgs[0]
+			subArgs = subArgs[1:]
+		}
+		// Check if extension is specified
+		if cfg.Extensions == "" {
+			fmt.Println("Error: No extension specified")
+			fmt.Println()
+			fmt.Println("Usage: addt build <extension> [--force]")
+			fmt.Println("       ADDT_EXTENSIONS=claude addt build")
+			fmt.Println()
+			fmt.Println("Options:")
+			fmt.Println("  --force    Rebuild without using Docker cache")
+			fmt.Println()
+			fmt.Println("Examples:")
+			fmt.Println("  addt build claude")
+			fmt.Println("  addt build claude --force")
+			fmt.Println("  addt build claude,codex")
+			os.Exit(1)
+		}
 		providerCfg := &provider.Config{
 			ExtensionVersions: cfg.ExtensionVersions,
 			NodeVersion:       cfg.NodeVersion,
@@ -25,15 +58,33 @@ func handleSubcommand(subCmd string, subArgs []string, defaultNodeVersion, defau
 			UvVersion:         cfg.UvVersion,
 			Provider:          cfg.Provider,
 			Extensions:        cfg.Extensions,
+			NoCache:           forceNoCache,
 		}
 		prov, err := NewProvider(cfg.Provider, providerCfg)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
-		HandleBuildCommand(prov, providerCfg, subArgs)
+		HandleBuildCommand(prov, providerCfg, subArgs, forceNoCache)
 
 	case "shell":
+		// Check if extension is passed as first arg (addt shell claude)
+		if len(subArgs) > 0 && !strings.HasPrefix(subArgs[0], "-") {
+			cfg.Extensions = subArgs[0]
+			subArgs = subArgs[1:]
+		}
+		// Check if extension is specified
+		if cfg.Extensions == "" {
+			fmt.Println("Error: No extension specified")
+			fmt.Println()
+			fmt.Println("Usage: addt shell <extension>")
+			fmt.Println("       ADDT_EXTENSIONS=claude addt shell")
+			fmt.Println()
+			fmt.Println("Examples:")
+			fmt.Println("  addt shell claude")
+			fmt.Println("  addt shell codex")
+			os.Exit(1)
+		}
 		providerCfg := &provider.Config{
 			ExtensionVersions:  cfg.ExtensionVersions,
 			ExtensionAutomount: cfg.ExtensionAutomount,
@@ -152,7 +203,7 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 		// Check if first arg is a known addt command (matches switch cases below)
 		switch args[0] {
 		case "run", "build", "shell", "containers", "firewall",
-			"--addt-version", "--addt-update", "--addt-list-extensions", "--addt-help":
+			"extensions", "cli", "version":
 			// Known command, continue processing
 		default:
 			// Unknown command, show help
@@ -164,32 +215,48 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 	// Check for special commands
 	if len(args) > 0 {
 		switch args[0] {
-		case "--addt-update":
-			update.UpdateAddt(version)
-			return
-		case "--addt-version":
+		case "version":
 			PrintVersion(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion)
 			return
-		case "--addt-list-extensions":
-			ListExtensions()
-			return
-		case "--addt-help":
-			// Try to show help with extension-specific flags
-			cfg := config.LoadConfig(defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
-			providerCfg := &provider.Config{
-				ExtensionVersions: cfg.ExtensionVersions,
-				NodeVersion:       cfg.NodeVersion,
-				Provider:          cfg.Provider,
-				Extensions:        cfg.Extensions,
+		case "cli":
+			// CLI management subcommands
+			if len(args) < 2 {
+				fmt.Println("Usage: addt cli <command>")
+				fmt.Println()
+				fmt.Println("Commands:")
+				fmt.Println("  update    Install addt updates")
+				return
 			}
-			prov, err := NewProvider(cfg.Provider, providerCfg)
-			if err == nil {
-				prov.Initialize(providerCfg)
-				imageName := prov.DetermineImageName()
-				command := GetActiveCommand()
-				PrintHelpWithFlags(version, imageName, command)
-			} else {
-				PrintHelp(version)
+			switch args[1] {
+			case "update":
+				update.UpdateAddt(version)
+			default:
+				fmt.Printf("Unknown cli command: %s\n", args[1])
+				os.Exit(1)
+			}
+			return
+		case "extensions":
+			// Extensions management subcommands
+			if len(args) < 2 {
+				fmt.Println("Usage: addt extensions <command>")
+				fmt.Println()
+				fmt.Println("Commands:")
+				fmt.Println("  list              List available extensions")
+				fmt.Println("  info <name>       Show extension details")
+				return
+			}
+			switch args[1] {
+			case "list":
+				ListExtensions()
+			case "info":
+				if len(args) < 3 {
+					fmt.Println("Usage: addt extensions info <name>")
+					os.Exit(1)
+				}
+				ShowExtensionInfo(args[2])
+			default:
+				fmt.Printf("Unknown extensions command: %s\n", args[1])
+				os.Exit(1)
 			}
 			return
 		case "run":
@@ -228,31 +295,63 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 				fmt.Println("  shell                     Open bash shell in container")
 				fmt.Println("  containers <subcommand>   Manage containers (list, stop, rm, clean)")
 				fmt.Println("  firewall <subcommand>     Manage firewall (list, add, remove, reset)")
+				fmt.Println("  extensions <subcommand>   Manage extensions (list, info)")
+				fmt.Println("  cli <subcommand>          Manage addt CLI (update)")
+				fmt.Println("  version                   Show version info")
 				return
 			}
-			handleSubcommand(args[1], args[2:], defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
+			// Handle addt subcommands
+			subCmd := args[1]
+			subArgs := args[2:]
+			switch subCmd {
+			case "extensions":
+				if len(subArgs) == 0 {
+					fmt.Println("Usage: <agent> addt extensions <command>")
+					fmt.Println()
+					fmt.Println("Commands:")
+					fmt.Println("  list              List available extensions")
+					fmt.Println("  info <name>       Show extension details")
+					return
+				}
+				switch subArgs[0] {
+				case "list":
+					ListExtensions()
+				case "info":
+					if len(subArgs) < 2 {
+						fmt.Println("Usage: <agent> addt extensions info <name>")
+						os.Exit(1)
+					}
+					ShowExtensionInfo(subArgs[1])
+				default:
+					fmt.Printf("Unknown extensions command: %s\n", subArgs[0])
+					os.Exit(1)
+				}
+			case "cli":
+				if len(subArgs) == 0 {
+					fmt.Println("Usage: <agent> addt cli <command>")
+					fmt.Println()
+					fmt.Println("Commands:")
+					fmt.Println("  update    Install addt updates")
+					return
+				}
+				switch subArgs[0] {
+				case "update":
+					update.UpdateAddt(version)
+				default:
+					fmt.Printf("Unknown cli command: %s\n", subArgs[0])
+					os.Exit(1)
+				}
+			case "version":
+				PrintVersion(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion)
+			default:
+				handleSubcommand(subCmd, subArgs, defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
+			}
 			return
 		}
 	}
 
 	// Load configuration
 	cfg := config.LoadConfig(defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
-
-	// Check for --addt-rebuild and --addt-rebuild-base flags
-	rebuildImage := false
-	rebuildBase := false
-	for len(args) > 0 {
-		if args[0] == "--addt-rebuild" {
-			rebuildImage = true
-			args = args[1:]
-		} else if args[0] == "--addt-rebuild-base" {
-			rebuildBase = true
-			rebuildImage = true // Rebuilding base also requires extension rebuild
-			args = args[1:]
-		} else {
-			break
-		}
-	}
 
 	// Note: --yolo and other agent-specific arg transformations are handled
 	// by each extension's args.sh script in the container
@@ -301,7 +400,7 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 
 	// Determine image name and build if needed (provider-specific)
 	providerCfg.ImageName = prov.DetermineImageName()
-	if err := prov.BuildIfNeeded(rebuildImage, rebuildBase); err != nil {
+	if err := prov.BuildIfNeeded(false, false); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}

@@ -18,7 +18,7 @@ func HandleContainersCommand(prov provider.Provider, cfg *provider.Config, args 
 	switch action {
 	case "build":
 		// Redirect to addt build for backwards compatibility
-		HandleBuildCommand(prov, cfg, args[1:])
+		HandleBuildCommand(prov, cfg, args[1:], false)
 	case "list", "ls":
 		envs, err := prov.List()
 		if err != nil {
@@ -86,7 +86,7 @@ Commands:
 }
 
 // HandleBuildCommand handles the build command
-func HandleBuildCommand(prov provider.Provider, cfg *provider.Config, args []string) {
+func HandleBuildCommand(prov provider.Provider, cfg *provider.Config, args []string, noCache bool) {
 	// Parse --build-arg flags
 	for i := 0; i < len(args); i++ {
 		if args[i] == "--build-arg" && i+1 < len(args) {
@@ -118,6 +118,9 @@ func HandleBuildCommand(prov provider.Provider, cfg *provider.Config, args []str
 
 	// Determine image name
 	cfg.ImageName = prov.DetermineImageName()
+
+	// Set no-cache flag
+	cfg.NoCache = noCache
 
 	// Always rebuild extension image when using build command
 	// Base image is only rebuilt if it doesn't exist
