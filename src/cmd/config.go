@@ -295,6 +295,23 @@ func handleExtensionConfig(args []string) {
 		return
 	}
 
+	// Check for --project flag anywhere in args
+	useProject := false
+	var filteredArgs []string
+	for _, arg := range args {
+		if arg == "--project" {
+			useProject = true
+		} else {
+			filteredArgs = append(filteredArgs, arg)
+		}
+	}
+	args = filteredArgs
+
+	if len(args) == 0 {
+		printExtensionConfigHelp()
+		return
+	}
+
 	extName := args[0]
 
 	// Check if first arg is a subcommand (user forgot extension name)
@@ -329,16 +346,16 @@ func handleExtensionConfig(args []string) {
 		getExtensionConfig(extName, args[2])
 	case "set":
 		if len(args) < 4 {
-			fmt.Println("Usage: addt config extension <name> set <key> <value>")
+			fmt.Println("Usage: addt config extension <name> set <key> <value> [--project]")
 			os.Exit(1)
 		}
-		setExtensionConfig(extName, args[2], args[3])
+		setExtensionConfig(extName, args[2], args[3], useProject)
 	case "unset":
 		if len(args) < 3 {
-			fmt.Println("Usage: addt config extension <name> unset <key>")
+			fmt.Println("Usage: addt config extension <name> unset <key> [--project]")
 			os.Exit(1)
 		}
-		unsetExtensionConfig(extName, args[2])
+		unsetExtensionConfig(extName, args[2], useProject)
 	default:
 		fmt.Printf("Unknown extension config command: %s\n", args[1])
 		printExtensionConfigHelp()
@@ -431,13 +448,16 @@ func printProjectConfigHelp() {
 }
 
 func printExtensionConfigHelp() {
-	fmt.Println("Usage: addt config extension <name> <command>")
+	fmt.Println("Usage: addt config extension <name> <command> [--project]")
 	fmt.Println()
 	fmt.Println("Commands:")
 	fmt.Println("  list              List extension configuration")
 	fmt.Println("  get <key>         Get a configuration value")
 	fmt.Println("  set <key> <value> Set a configuration value")
 	fmt.Println("  unset <key>       Remove a configuration value")
+	fmt.Println()
+	fmt.Println("Flags:")
+	fmt.Println("  --project         Save to project config (.addt.yaml) instead of global")
 	fmt.Println()
 	fmt.Println("Available keys:")
 	fmt.Println("  version     Extension version (e.g., \"1.0.5\", \"latest\", \"stable\")")
@@ -446,7 +466,7 @@ func printExtensionConfigHelp() {
 	fmt.Println("Examples:")
 	fmt.Println("  addt config extension claude list")
 	fmt.Println("  addt config extension claude set version 1.0.5")
-	fmt.Println("  addt config extension codex set automount false")
+	fmt.Println("  addt config extension claude set automount false --project")
 }
 
 // getDefaultValue returns the default value for a config key
@@ -1114,7 +1134,7 @@ func getExtensionConfig(extName, key string) {
 	}
 }
 
-func setExtensionConfig(extName, key, value string) {
+func setExtensionConfig(extName, key, value string, useProject bool) {
 	if !isValidExtensionConfigKey(key) {
 		fmt.Printf("Unknown extension config key: %s\n", key)
 		fmt.Println("Available keys: version, automount")
@@ -1130,7 +1150,13 @@ func setExtensionConfig(extName, key, value string) {
 		}
 	}
 
-	cfg, err := LoadGlobalConfig()
+	var cfg *GlobalConfig
+	var err error
+	if useProject {
+		cfg, err = LoadProjectConfig()
+	} else {
+		cfg, err = LoadGlobalConfig()
+	}
 	if err != nil {
 		fmt.Printf("Error loading config: %v\n", err)
 		os.Exit(1)
@@ -1155,29 +1181,47 @@ func setExtensionConfig(extName, key, value string) {
 		extCfg.Automount = &b
 	}
 
-	if err := SaveGlobalConfig(cfg); err != nil {
-		fmt.Printf("Error saving config: %v\n", err)
-		os.Exit(1)
+	if useProject {
+		if err := SaveProjectConfig(cfg); err != nil {
+			fmt.Printf("Error saving project config: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Set %s.%s = %s (project)\n", extName, key, value)
+	} else {
+		if err := SaveGlobalConfig(cfg); err != nil {
+			fmt.Printf("Error saving config: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Set %s.%s = %s\n", extName, key, value)
 	}
-
-	fmt.Printf("Set %s.%s = %s\n", extName, key, value)
 }
 
-func unsetExtensionConfig(extName, key string) {
+func unsetExtensionConfig(extName, key string, useProject bool) {
 	if !isValidExtensionConfigKey(key) {
 		fmt.Printf("Unknown extension config key: %s\n", key)
 		fmt.Println("Available keys: version, automount")
 		os.Exit(1)
 	}
 
-	cfg, err := LoadGlobalConfig()
+	var cfg *GlobalConfig
+	var err error
+	if useProject {
+		cfg, err = LoadProjectConfig()
+	} else {
+		cfg, err = LoadGlobalConfig()
+	}
 	if err != nil {
 		fmt.Printf("Error loading config: %v\n", err)
 		os.Exit(1)
 	}
 
+	configType := "global"
+	if useProject {
+		configType = "project"
+	}
+
 	if cfg.Extensions == nil || cfg.Extensions[extName] == nil {
-		fmt.Printf("%s.%s is not set\n", extName, key)
+		fmt.Printf("%s.%s is not set in %s config\n", extName, key, configType)
 		return
 	}
 
@@ -1199,10 +1243,17 @@ func unsetExtensionConfig(extName, key string) {
 		cfg.Extensions = nil
 	}
 
-	if err := SaveGlobalConfig(cfg); err != nil {
-		fmt.Printf("Error saving config: %v\n", err)
-		os.Exit(1)
+	if useProject {
+		if err := SaveProjectConfig(cfg); err != nil {
+			fmt.Printf("Error saving project config: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Unset %s.%s (project)\n", extName, key)
+	} else {
+		if err := SaveGlobalConfig(cfg); err != nil {
+			fmt.Printf("Error saving config: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Unset %s.%s\n", extName, key)
 	}
-
-	fmt.Printf("Unset %s.%s\n", extName, key)
 }
