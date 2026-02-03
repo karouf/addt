@@ -7,93 +7,11 @@ import (
 	"strings"
 
 	configcmd "github.com/jedi4ever/addt/cmd/config"
+	extcmd "github.com/jedi4ever/addt/cmd/extensions"
 	"github.com/jedi4ever/addt/config"
 	"github.com/jedi4ever/addt/core"
 	"github.com/jedi4ever/addt/provider"
 )
-
-// handleSubcommand handles addt subcommands (build, shell, containers, firewall)
-func handleSubcommand(subCmd string, subArgs []string, defaultNodeVersion, defaultGoVersion, defaultUvVersion string, defaultPortRangeStart int) {
-	cfg := config.LoadConfig(defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
-
-	switch subCmd {
-	case "build":
-		// Check for --force flag
-		forceNoCache := false
-		var filteredArgs []string
-		for _, arg := range subArgs {
-			if arg == "--force" {
-				forceNoCache = true
-			} else {
-				filteredArgs = append(filteredArgs, arg)
-			}
-		}
-		subArgs = filteredArgs
-
-		// Check if extension is passed as first arg (addt build claude)
-		if len(subArgs) > 0 && !strings.HasPrefix(subArgs[0], "-") {
-			cfg.Extensions = subArgs[0]
-			subArgs = subArgs[1:]
-		}
-		// Check if extension is specified
-		if cfg.Extensions == "" {
-			fmt.Println("Error: No extension specified")
-			fmt.Println()
-			fmt.Println("Usage: addt build <extension> [--force]")
-			fmt.Println("       ADDT_EXTENSIONS=claude addt build")
-			fmt.Println()
-			fmt.Println("Options:")
-			fmt.Println("  --force    Rebuild without using Docker cache")
-			fmt.Println()
-			fmt.Println("Examples:")
-			fmt.Println("  addt build claude")
-			fmt.Println("  addt build claude --force")
-			fmt.Println("  addt build claude,codex")
-			os.Exit(1)
-		}
-		providerCfg := &provider.Config{
-			ExtensionVersions: cfg.ExtensionVersions,
-			NodeVersion:       cfg.NodeVersion,
-			GoVersion:         cfg.GoVersion,
-			UvVersion:         cfg.UvVersion,
-			Provider:          cfg.Provider,
-			Extensions:        cfg.Extensions,
-			NoCache:           forceNoCache,
-		}
-		prov, err := NewProvider(cfg.Provider, providerCfg)
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-		HandleBuildCommand(prov, providerCfg, subArgs, forceNoCache)
-
-	case "shell":
-		HandleShellCommand(subArgs, defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
-
-	case "containers":
-		providerCfg := &provider.Config{
-			ExtensionVersions: cfg.ExtensionVersions,
-			NodeVersion:       cfg.NodeVersion,
-			GoVersion:         cfg.GoVersion,
-			UvVersion:         cfg.UvVersion,
-			Provider:          cfg.Provider,
-			Extensions:        cfg.Extensions,
-		}
-		prov, err := NewProvider(cfg.Provider, providerCfg)
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			os.Exit(1)
-		}
-		HandleContainersCommand(prov, providerCfg, subArgs)
-
-	case "firewall":
-		HandleFirewallCommand(subArgs)
-
-	default:
-		fmt.Printf("Unknown command: %s\n", subCmd)
-		os.Exit(1)
-	}
-}
 
 // Execute is the main entry point for the CLI
 func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion string, defaultPortRangeStart int) {
@@ -124,7 +42,7 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 		extensions := os.Getenv("ADDT_EXTENSIONS")
 		firstExt := strings.Split(extensions, ",")[0]
 		// Get the actual entrypoint command (e.g., "kiro" -> "kiro-cli", "beads" -> "bd")
-		entrypoint := GetEntrypointForExtension(firstExt)
+		entrypoint := extcmd.GetEntrypoint(firstExt)
 		os.Setenv("ADDT_COMMAND", entrypoint)
 	}
 
@@ -157,79 +75,13 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 			PrintVersion(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion)
 			return
 		case "cli":
-			// CLI management subcommands
-			if len(args) < 2 {
-				fmt.Println("Usage: addt cli <command>")
-				fmt.Println()
-				fmt.Println("Commands:")
-				fmt.Println("  update    Install addt updates")
-				return
-			}
-			switch args[1] {
-			case "update":
-				UpdateAddt(version)
-			default:
-				fmt.Printf("Unknown cli command: %s\n", args[1])
-				os.Exit(1)
-			}
+			handleCliCommand(args[1:], version)
 			return
 		case "config":
-			// Config management subcommands
 			configcmd.HandleCommand(args[1:])
 			return
 		case "extensions":
-			// Extensions management subcommands
-			if len(args) < 2 {
-				fmt.Println("Usage: addt extensions <command>")
-				fmt.Println()
-				fmt.Println("Commands:")
-				fmt.Println("  list                       List available extensions")
-				fmt.Println("  info <name>                Show extension details")
-				fmt.Println("  new <name>                 Create a new local extension")
-				fmt.Println("  config <name> <subcommand> Configure extension settings")
-				return
-			}
-			switch args[1] {
-			case "list":
-				ListExtensions()
-			case "info":
-				if len(args) < 3 {
-					fmt.Println("Usage: addt extensions info <name>")
-					os.Exit(1)
-				}
-				ShowExtensionInfo(args[2])
-			case "new":
-				if len(args) < 3 {
-					fmt.Println("Usage: addt extensions new <name>")
-					os.Exit(1)
-				}
-				CreateExtension(args[2])
-			case "config":
-				// addt extensions config <name> [subcommand] - delegates to config extension
-				if len(args) < 3 || args[2] == "--help" || args[2] == "-h" {
-					fmt.Println("Usage: addt extensions config <name> <command>")
-					fmt.Println()
-					fmt.Println("Commands:")
-					fmt.Println("  list              List extension configuration")
-					fmt.Println("  get <key>         Get a configuration value")
-					fmt.Println("  set <key> <value> Set a configuration value")
-					fmt.Println("  unset <key>       Remove a configuration value")
-					fmt.Println()
-					fmt.Println("Available keys:")
-					fmt.Println("  version     Extension version (e.g., \"1.0.5\", \"latest\", \"stable\")")
-					fmt.Println("  automount   Auto-mount extension config directories (true/false)")
-					fmt.Println()
-					fmt.Println("Examples:")
-					fmt.Println("  addt extensions config claude list")
-					fmt.Println("  addt extensions config claude set version 1.0.5")
-					return
-				}
-				// Delegate to HandleConfigCommand with "extension" prefix
-				configcmd.HandleCommand(append([]string{"extension"}, args[2:]...))
-			default:
-				fmt.Printf("Unknown extensions command: %s\n", args[1])
-				os.Exit(1)
-			}
+			extcmd.HandleCommand(args[1:])
 			return
 		case "run":
 			// addt run <extension> [args...] - run a specific extension
@@ -249,17 +101,7 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 		case "addt":
 			// addt subcommand namespace for container management (e.g., claude addt build)
 			if len(args) < 2 {
-				fmt.Println("Usage: <agent> addt <command>")
-				fmt.Println()
-				fmt.Println("Commands:")
-				fmt.Println("  build [--build-arg ...]   Build the container image")
-				fmt.Println("  shell                     Open bash shell in container")
-				fmt.Println("  containers <subcommand>   Manage containers (list, stop, rm, clean)")
-				fmt.Println("  firewall <subcommand>     Manage firewall (list, add, remove, reset)")
-				fmt.Println("  extensions <subcommand>   Manage extensions (list, info, new)")
-				fmt.Println("  config <subcommand>       Manage config (global, project, extension)")
-				fmt.Println("  cli <subcommand>          Manage addt CLI (update)")
-				fmt.Println("  version                   Show version info")
+				printAddtSubcommandUsage()
 				return
 			}
 			// Handle addt subcommands
@@ -267,70 +109,9 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 			subArgs := args[2:]
 			switch subCmd {
 			case "extensions":
-				if len(subArgs) == 0 {
-					fmt.Println("Usage: <agent> addt extensions <command>")
-					fmt.Println()
-					fmt.Println("Commands:")
-					fmt.Println("  list                       List available extensions")
-					fmt.Println("  info <name>                Show extension details")
-					fmt.Println("  new <name>                 Create a new local extension")
-					fmt.Println("  config <name> <subcommand> Configure extension settings")
-					return
-				}
-				switch subArgs[0] {
-				case "list":
-					ListExtensions()
-				case "info":
-					if len(subArgs) < 2 {
-						fmt.Println("Usage: <agent> addt extensions info <name>")
-						os.Exit(1)
-					}
-					ShowExtensionInfo(subArgs[1])
-				case "new":
-					if len(subArgs) < 2 {
-						fmt.Println("Usage: <agent> addt extensions new <name>")
-						os.Exit(1)
-					}
-					CreateExtension(subArgs[1])
-				case "config":
-					if len(subArgs) < 2 || subArgs[1] == "--help" || subArgs[1] == "-h" {
-						fmt.Println("Usage: <agent> addt extensions config <name> <command>")
-						fmt.Println()
-						fmt.Println("Commands:")
-						fmt.Println("  list              List extension configuration")
-						fmt.Println("  get <key>         Get a configuration value")
-						fmt.Println("  set <key> <value> Set a configuration value")
-						fmt.Println("  unset <key>       Remove a configuration value")
-						fmt.Println()
-						fmt.Println("Available keys:")
-						fmt.Println("  version     Extension version (e.g., \"1.0.5\", \"latest\", \"stable\")")
-						fmt.Println("  automount   Auto-mount extension config directories (true/false)")
-						fmt.Println()
-						fmt.Println("Examples:")
-						fmt.Println("  claude addt extensions config claude list")
-						fmt.Println("  claude addt extensions config claude set version 1.0.5")
-						return
-					}
-					configcmd.HandleCommand(append([]string{"extension"}, subArgs[1:]...))
-				default:
-					fmt.Printf("Unknown extensions command: %s\n", subArgs[0])
-					os.Exit(1)
-				}
+				extcmd.HandleCommandAgent(subArgs)
 			case "cli":
-				if len(subArgs) == 0 {
-					fmt.Println("Usage: <agent> addt cli <command>")
-					fmt.Println()
-					fmt.Println("Commands:")
-					fmt.Println("  update    Install addt updates")
-					return
-				}
-				switch subArgs[0] {
-				case "update":
-					UpdateAddt(version)
-				default:
-					fmt.Printf("Unknown cli command: %s\n", subArgs[0])
-					os.Exit(1)
-				}
+				handleCliCommand(subArgs, version)
 			case "config":
 				configcmd.HandleCommand(subArgs)
 			case "version":
@@ -422,4 +203,87 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 
 	// Cleanup
 	prov.Cleanup()
+}
+
+// handleSubcommand handles addt subcommands (build, shell, containers, firewall)
+func handleSubcommand(subCmd string, subArgs []string, defaultNodeVersion, defaultGoVersion, defaultUvVersion string, defaultPortRangeStart int) {
+	cfg := config.LoadConfig(defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
+
+	switch subCmd {
+	case "build":
+		// Check for --force flag
+		forceNoCache := false
+		var filteredArgs []string
+		for _, arg := range subArgs {
+			if arg == "--force" {
+				forceNoCache = true
+			} else {
+				filteredArgs = append(filteredArgs, arg)
+			}
+		}
+		subArgs = filteredArgs
+
+		// Check if extension is passed as first arg (addt build claude)
+		if len(subArgs) > 0 && !strings.HasPrefix(subArgs[0], "-") {
+			cfg.Extensions = subArgs[0]
+			subArgs = subArgs[1:]
+		}
+		// Check if extension is specified
+		if cfg.Extensions == "" {
+			fmt.Println("Error: No extension specified")
+			fmt.Println()
+			fmt.Println("Usage: addt build <extension> [--force]")
+			fmt.Println("       ADDT_EXTENSIONS=claude addt build")
+			fmt.Println()
+			fmt.Println("Options:")
+			fmt.Println("  --force    Rebuild without using Docker cache")
+			fmt.Println()
+			fmt.Println("Examples:")
+			fmt.Println("  addt build claude")
+			fmt.Println("  addt build claude --force")
+			fmt.Println("  addt build claude,codex")
+			os.Exit(1)
+		}
+		providerCfg := &provider.Config{
+			ExtensionVersions: cfg.ExtensionVersions,
+			NodeVersion:       cfg.NodeVersion,
+			GoVersion:         cfg.GoVersion,
+			UvVersion:         cfg.UvVersion,
+			Provider:          cfg.Provider,
+			Extensions:        cfg.Extensions,
+			NoCache:           forceNoCache,
+		}
+		prov, err := NewProvider(cfg.Provider, providerCfg)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+		HandleBuildCommand(prov, providerCfg, subArgs, forceNoCache)
+
+	case "shell":
+		HandleShellCommand(subArgs, defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
+
+	case "containers":
+		providerCfg := &provider.Config{
+			ExtensionVersions: cfg.ExtensionVersions,
+			NodeVersion:       cfg.NodeVersion,
+			GoVersion:         cfg.GoVersion,
+			UvVersion:         cfg.UvVersion,
+			Provider:          cfg.Provider,
+			Extensions:        cfg.Extensions,
+		}
+		prov, err := NewProvider(cfg.Provider, providerCfg)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			os.Exit(1)
+		}
+		HandleContainersCommand(prov, providerCfg, subArgs)
+
+	case "firewall":
+		HandleFirewallCommand(subArgs)
+
+	default:
+		fmt.Printf("Unknown command: %s\n", subCmd)
+		os.Exit(1)
+	}
 }

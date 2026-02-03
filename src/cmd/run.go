@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+
+	extcmd "github.com/jedi4ever/addt/cmd/extensions"
 )
 
 // HandleRunCommand handles the "addt run <extension>" command.
@@ -23,7 +25,7 @@ func HandleRunCommand(args []string) []string {
 	}
 
 	// Validate extension exists
-	if !extensionExists(extName) {
+	if !extcmd.Exists(extName) {
 		fmt.Printf("Error: extension '%s' does not exist\n", extName)
 		fmt.Println("Run 'addt extensions list' to see available extensions")
 		os.Exit(1)
@@ -31,7 +33,7 @@ func HandleRunCommand(args []string) []string {
 
 	// Set the extension environment variables
 	os.Setenv("ADDT_EXTENSIONS", extName)
-	os.Setenv("ADDT_COMMAND", GetEntrypointForExtension(extName))
+	os.Setenv("ADDT_COMMAND", extcmd.GetEntrypoint(extName))
 
 	// Return remaining args for execution
 	if len(args) > 1 {

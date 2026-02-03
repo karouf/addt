@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/jedi4ever/addt/assets"
+	extcmd "github.com/jedi4ever/addt/cmd/extensions"
 	"github.com/jedi4ever/addt/config"
 	"github.com/jedi4ever/addt/extensions"
 	"github.com/jedi4ever/addt/provider"
@@ -356,9 +357,9 @@ func TestRunCommand_Integration_ExtensionEntrypoint(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.extension, func(t *testing.T) {
-			entrypoint := GetEntrypointForExtension(tc.extension)
+			entrypoint := extcmd.GetEntrypoint(tc.extension)
 			if entrypoint != tc.entrypoint {
-				t.Errorf("GetEntrypointForExtension(%q) = %q, want %q",
+				t.Errorf("extcmd.GetEntrypoint(%q) = %q, want %q",
 					tc.extension, entrypoint, tc.entrypoint)
 			}
 		})

@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	extcmd "github.com/jedi4ever/addt/cmd/extensions"
 	"github.com/jedi4ever/addt/config"
 	"github.com/jedi4ever/addt/core"
 	"github.com/jedi4ever/addt/provider"
@@ -31,7 +32,7 @@ func HandleShellCommand(args []string, defaultNodeVersion, defaultGoVersion, def
 	}
 
 	// Validate extension exists
-	if !extensionExists(cfg.Extensions) {
+	if !extcmd.Exists(cfg.Extensions) {
 		fmt.Printf("Error: extension '%s' does not exist\n", cfg.Extensions)
 		fmt.Println("Run 'addt extensions list' to see available extensions")
 		os.Exit(1)
@@ -39,7 +40,7 @@ func HandleShellCommand(args []string, defaultNodeVersion, defaultGoVersion, def
 
 	// Set command to the extension's entrypoint
 	if cfg.Command == "" {
-		cfg.Command = GetEntrypointForExtension(cfg.Extensions)
+		cfg.Command = extcmd.GetEntrypoint(cfg.Extensions)
 	}
 
 	// Create provider config
