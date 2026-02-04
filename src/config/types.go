@@ -37,6 +37,7 @@ type GlobalConfig struct {
 
 // Config holds all configuration options
 type Config struct {
+	AddtVersion              string
 	NodeVersion              string
 	GoVersion                string
 	UvVersion                string

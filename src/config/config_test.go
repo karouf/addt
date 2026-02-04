@@ -92,7 +92,7 @@ func TestLoadConfig_DefaultsOnly(t *testing.T) {
 	_, _, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	cfg := LoadConfig("20", "1.21", "0.1.0", 30000)
+	cfg := LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 
 	if cfg.NodeVersion != "20" {
 		t.Errorf("NodeVersion = %q, want %q (default)", cfg.NodeVersion, "20")
@@ -115,7 +115,7 @@ func TestLoadConfig_GlobalOverridesDefault(t *testing.T) {
 		GoVersion:   "1.22",
 	})
 
-	cfg := LoadConfig("20", "1.21", "0.1.0", 30000)
+	cfg := LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 
 	if cfg.NodeVersion != "18" {
 		t.Errorf("NodeVersion = %q, want %q (from global)", cfg.NodeVersion, "18")
@@ -146,7 +146,7 @@ func TestLoadConfig_ProjectOverridesGlobal(t *testing.T) {
 		// GoVersion not set - should use global
 	})
 
-	cfg := LoadConfig("20", "1.21", "0.1.0", 30000)
+	cfg := LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 
 	if cfg.NodeVersion != "22" {
 		t.Errorf("NodeVersion = %q, want %q (from project)", cfg.NodeVersion, "22")
@@ -178,7 +178,7 @@ func TestLoadConfig_EnvOverridesAll(t *testing.T) {
 	// Set env var (highest precedence)
 	os.Setenv("ADDT_NODE_VERSION", "24")
 
-	cfg := LoadConfig("20", "1.21", "0.1.0", 30000)
+	cfg := LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 
 	if cfg.NodeVersion != "24" {
 		t.Errorf("NodeVersion = %q, want %q (from env)", cfg.NodeVersion, "24")
@@ -206,7 +206,7 @@ func TestLoadConfig_BoolPrecedence(t *testing.T) {
 		Persistent: &falseVal,
 	})
 
-	cfg := LoadConfig("20", "1.21", "0.1.0", 30000)
+	cfg := LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 
 	if cfg.Persistent != false {
 		t.Errorf("Persistent = %v, want false (from project)", cfg.Persistent)
@@ -214,7 +214,7 @@ func TestLoadConfig_BoolPrecedence(t *testing.T) {
 
 	// Now test env override
 	os.Setenv("ADDT_PERSISTENT", "true")
-	cfg = LoadConfig("20", "1.21", "0.1.0", 30000)
+	cfg = LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 
 	if cfg.Persistent != true {
 		t.Errorf("Persistent = %v, want true (from env)", cfg.Persistent)
@@ -226,7 +226,7 @@ func TestLoadConfig_FirewallModePrecedence(t *testing.T) {
 	defer cleanup()
 
 	// Default is "strict"
-	cfg := LoadConfig("20", "1.21", "0.1.0", 30000)
+	cfg := LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 	if cfg.FirewallMode != "strict" {
 		t.Errorf("FirewallMode = %q, want %q (default)", cfg.FirewallMode, "strict")
 	}
@@ -235,7 +235,7 @@ func TestLoadConfig_FirewallModePrecedence(t *testing.T) {
 	writeGlobalConfig(t, globalDir, &GlobalConfig{
 		FirewallMode: "permissive",
 	})
-	cfg = LoadConfig("20", "1.21", "0.1.0", 30000)
+	cfg = LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 	if cfg.FirewallMode != "permissive" {
 		t.Errorf("FirewallMode = %q, want %q (from global)", cfg.FirewallMode, "permissive")
 	}
@@ -244,14 +244,14 @@ func TestLoadConfig_FirewallModePrecedence(t *testing.T) {
 	writeProjectConfig(t, projectDir, &GlobalConfig{
 		FirewallMode: "off",
 	})
-	cfg = LoadConfig("20", "1.21", "0.1.0", 30000)
+	cfg = LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 	if cfg.FirewallMode != "off" {
 		t.Errorf("FirewallMode = %q, want %q (from project)", cfg.FirewallMode, "off")
 	}
 
 	// Env overrides all
 	os.Setenv("ADDT_FIREWALL_MODE", "strict")
-	cfg = LoadConfig("20", "1.21", "0.1.0", 30000)
+	cfg = LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 	if cfg.FirewallMode != "strict" {
 		t.Errorf("FirewallMode = %q, want %q (from env)", cfg.FirewallMode, "strict")
 	}
@@ -271,7 +271,7 @@ func TestLoadConfig_ExtensionVersionPrecedence(t *testing.T) {
 	}()
 
 	// Default for claude is "stable" (set in LoadConfig)
-	cfg := LoadConfig("20", "1.21", "0.1.0", 30000)
+	cfg := LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 	if cfg.ExtensionVersions["claude"] != "stable" {
 		t.Errorf("claude version = %q, want %q (default)", cfg.ExtensionVersions["claude"], "stable")
 	}
@@ -282,7 +282,7 @@ func TestLoadConfig_ExtensionVersionPrecedence(t *testing.T) {
 			"claude": {Version: "1.0.0"},
 		},
 	})
-	cfg = LoadConfig("20", "1.21", "0.1.0", 30000)
+	cfg = LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 	if cfg.ExtensionVersions["claude"] != "1.0.0" {
 		t.Errorf("claude version = %q, want %q (from global)", cfg.ExtensionVersions["claude"], "1.0.0")
 	}
@@ -293,14 +293,14 @@ func TestLoadConfig_ExtensionVersionPrecedence(t *testing.T) {
 			"claude": {Version: "2.0.0"},
 		},
 	})
-	cfg = LoadConfig("20", "1.21", "0.1.0", 30000)
+	cfg = LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 	if cfg.ExtensionVersions["claude"] != "2.0.0" {
 		t.Errorf("claude version = %q, want %q (from project)", cfg.ExtensionVersions["claude"], "2.0.0")
 	}
 
 	// Env var overrides all
 	os.Setenv("ADDT_CLAUDE_VERSION", "3.0.0")
-	cfg = LoadConfig("20", "1.21", "0.1.0", 30000)
+	cfg = LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 	if cfg.ExtensionVersions["claude"] != "3.0.0" {
 		t.Errorf("claude version = %q, want %q (from env)", cfg.ExtensionVersions["claude"], "3.0.0")
 	}
@@ -328,7 +328,7 @@ func TestLoadConfig_ExtensionAutomountPrecedence(t *testing.T) {
 			"claude": {Automount: &trueVal},
 		},
 	})
-	cfg := LoadConfig("20", "1.21", "0.1.0", 30000)
+	cfg := LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 	if cfg.ExtensionAutomount["claude"] != true {
 		t.Errorf("claude automount = %v, want true (from global)", cfg.ExtensionAutomount["claude"])
 	}
@@ -339,14 +339,14 @@ func TestLoadConfig_ExtensionAutomountPrecedence(t *testing.T) {
 			"claude": {Automount: &falseVal},
 		},
 	})
-	cfg = LoadConfig("20", "1.21", "0.1.0", 30000)
+	cfg = LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 	if cfg.ExtensionAutomount["claude"] != false {
 		t.Errorf("claude automount = %v, want false (from project)", cfg.ExtensionAutomount["claude"])
 	}
 
 	// Env: automount=true
 	os.Setenv("ADDT_CLAUDE_AUTOMOUNT", "true")
-	cfg = LoadConfig("20", "1.21", "0.1.0", 30000)
+	cfg = LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 	if cfg.ExtensionAutomount["claude"] != true {
 		t.Errorf("claude automount = %v, want true (from env)", cfg.ExtensionAutomount["claude"])
 	}
@@ -379,7 +379,7 @@ func TestLoadConfig_FullPrecedenceChain(t *testing.T) {
 
 	os.Setenv("ADDT_GO_VERSION", "1.23")
 
-	cfg := LoadConfig("20", "1.21", "0.1.0", 30000)
+	cfg := LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 
 	// Check each value comes from the expected source
 	if cfg.NodeVersion != "22" {

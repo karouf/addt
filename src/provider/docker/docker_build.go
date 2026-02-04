@@ -75,8 +75,9 @@ func (p *DockerProvider) DetermineImageName() string {
 		tag = "base"
 	}
 
+	// Prefix with addt version so images are rebuilt when addt is updated
 	// Check if image already exists with this exact tag
-	imageName := fmt.Sprintf("addt:%s", tag)
+	imageName := fmt.Sprintf("addt:v%s_%s", p.config.AddtVersion, tag)
 	if p.ImageExists(imageName) {
 		return imageName
 	}

@@ -34,6 +34,7 @@ type Provider interface {
 
 // Config holds provider configuration
 type Config struct {
+	AddtVersion        string
 	NodeVersion        string
 	GoVersion          string
 	UvVersion          string

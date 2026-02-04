@@ -96,7 +96,7 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 			// Top-level subcommands (work for both plain addt and via "addt" namespace)
 			subCmd := args[0]
 			subArgs := args[1:]
-			handleSubcommand(subCmd, subArgs, defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
+			handleSubcommand(subCmd, subArgs, version, defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
 			return
 
 		case "addt":
@@ -118,20 +118,21 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 			case "version":
 				PrintVersion(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion)
 			default:
-				handleSubcommand(subCmd, subArgs, defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
+				handleSubcommand(subCmd, subArgs, version, defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
 			}
 			return
 		}
 	}
 
 	// Load configuration
-	cfg := config.LoadConfig(defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
+	cfg := config.LoadConfig(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
 
 	// Note: --yolo and other agent-specific arg transformations are handled
 	// by each extension's args.sh script in the container
 
 	// Convert main config to provider config
 	providerCfg := &provider.Config{
+		AddtVersion:        cfg.AddtVersion,
 		ExtensionVersions:  cfg.ExtensionVersions,
 		ExtensionAutomount: cfg.ExtensionAutomount,
 		NodeVersion:        cfg.NodeVersion,
@@ -207,8 +208,8 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 }
 
 // handleSubcommand handles addt subcommands (build, shell, containers, firewall)
-func handleSubcommand(subCmd string, subArgs []string, defaultNodeVersion, defaultGoVersion, defaultUvVersion string, defaultPortRangeStart int) {
-	cfg := config.LoadConfig(defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
+func handleSubcommand(subCmd string, subArgs []string, version, defaultNodeVersion, defaultGoVersion, defaultUvVersion string, defaultPortRangeStart int) {
+	cfg := config.LoadConfig(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
 
 	switch subCmd {
 	case "build":
@@ -246,6 +247,7 @@ func handleSubcommand(subCmd string, subArgs []string, defaultNodeVersion, defau
 			os.Exit(1)
 		}
 		providerCfg := &provider.Config{
+			AddtVersion:       cfg.AddtVersion,
 			ExtensionVersions: cfg.ExtensionVersions,
 			NodeVersion:       cfg.NodeVersion,
 			GoVersion:         cfg.GoVersion,
@@ -262,10 +264,11 @@ func handleSubcommand(subCmd string, subArgs []string, defaultNodeVersion, defau
 		HandleBuildCommand(prov, providerCfg, subArgs, forceNoCache)
 
 	case "shell":
-		HandleShellCommand(subArgs, defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
+		HandleShellCommand(subArgs, version, defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
 
 	case "containers":
 		providerCfg := &provider.Config{
+			AddtVersion:       cfg.AddtVersion,
 			ExtensionVersions: cfg.ExtensionVersions,
 			NodeVersion:       cfg.NodeVersion,
 			GoVersion:         cfg.GoVersion,

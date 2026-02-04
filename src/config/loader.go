@@ -7,13 +7,14 @@ import (
 )
 
 // LoadConfig loads configuration with precedence: defaults < global config < project config < env vars
-func LoadConfig(defaultNodeVersion string, defaultGoVersion string, defaultUvVersion string, defaultPortRangeStart int) *Config {
+func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVersion string, defaultPortRangeStart int) *Config {
 	// Load config files (project config overrides global config)
 	globalCfg := loadGlobalConfig()
 	projectCfg := loadProjectConfig()
 
 	// Start with defaults, then apply global config, then project config, then env vars
 	cfg := &Config{
+		AddtVersion:        addtVersion,
 		ExtensionVersions:  make(map[string]string),
 		ExtensionAutomount: make(map[string]bool),
 	}

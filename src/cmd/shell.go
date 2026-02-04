@@ -13,8 +13,8 @@ import (
 
 // HandleShellCommand handles the "addt shell <extension>" command.
 // Opens an interactive shell in a container with the specified extension.
-func HandleShellCommand(args []string, defaultNodeVersion, defaultGoVersion, defaultUvVersion string, defaultPortRangeStart int) {
-	cfg := config.LoadConfig(defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
+func HandleShellCommand(args []string, version, defaultNodeVersion, defaultGoVersion, defaultUvVersion string, defaultPortRangeStart int) {
+	cfg := config.LoadConfig(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
 
 	// Parse extension from args
 	var shellArgs []string
@@ -45,6 +45,7 @@ func HandleShellCommand(args []string, defaultNodeVersion, defaultGoVersion, def
 
 	// Create provider config
 	providerCfg := &provider.Config{
+		AddtVersion:        cfg.AddtVersion,
 		ExtensionVersions:  cfg.ExtensionVersions,
 		ExtensionAutomount: cfg.ExtensionAutomount,
 		NodeVersion:        cfg.NodeVersion,

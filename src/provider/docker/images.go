@@ -51,6 +51,8 @@ func (p *DockerProvider) GetBaseImageName() string {
 	if err != nil {
 		return "addt-base:latest"
 	}
-	// Base image is tagged with node version and UID to ensure compatibility
-	return fmt.Sprintf("addt-base:node%s-uid%s", p.config.NodeVersion, currentUser.Uid)
+	// Base image is tagged with addt version, tool versions, and UID to ensure compatibility
+	// When any of these change, a new base image will be built
+	return fmt.Sprintf("addt-base:v%s-node%s-go%s-uv%s-uid%s",
+		p.config.AddtVersion, p.config.NodeVersion, p.config.GoVersion, p.config.UvVersion, currentUser.Uid)
 }
