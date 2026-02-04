@@ -212,13 +212,13 @@ All three set the same thing. Environment wins if multiple are set.
 
 ### Project Config File
 
-Create `.addt.yaml` in your project (commit to git for team sharing):
+Use `addt config project` to manage `.addt.yaml` (commit to git for team sharing):
 
-```yaml
-persistent: true
-docker_cpus: "2"
-docker_memory: "4g"
-firewall: true
+```bash
+addt config project set persistent true
+addt config project set docker_memory 4g
+addt config project set firewall true
+addt config project list
 ```
 
 ### Config Commands
