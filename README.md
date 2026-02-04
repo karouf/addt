@@ -196,11 +196,18 @@ addt containers stop <name>        # Stop a container
 addt containers rm <name>          # Remove a container
 addt containers clean              # Remove all persistent containers
 
-# Firewall management
-addt firewall list                 # List allowed domains
-addt firewall add example.com      # Add domain to whitelist
-addt firewall rm example.com       # Remove domain
-addt firewall reset                # Reset to defaults
+# Firewall management (layered: defaults → extension → global → project)
+addt firewall global list                    # List global firewall rules
+addt firewall global allow api.example.com   # Allow domain globally
+addt firewall global deny malware.com        # Deny domain globally
+addt firewall global reset                   # Reset to defaults
+
+addt firewall project allow custom-api.com   # Allow domain for this project
+addt firewall project deny registry.npmjs.org # Deny domain for this project
+addt firewall project list                   # List project firewall rules
+
+addt firewall extension claude allow api.anthropic.com  # Allow for extension
+addt firewall extension claude list          # List extension rules
 
 # Extension management
 addt extensions list               # List available extensions
@@ -231,7 +238,7 @@ claude addt extensions list        # List available extensions
 claude addt version                # Show version info
 ```
 
-Firewall config: `~/.addt/firewall/allowed-domains.txt`
+Firewall config: `~/.addt/config.yaml` (global) and `.addt.yaml` (project)
 
 ### Persistent Mode
 
@@ -339,6 +346,72 @@ addt run claude
 export ADDT_DOCKER_CPUS=2
 export ADDT_DOCKER_MEMORY=4g
 addt run claude
+```
+
+### Network Firewall
+
+Control outbound network access with layered firewall rules:
+
+```bash
+# Enable firewall (strict mode by default)
+addt config global set firewall true
+
+# Or per-project
+addt config project set firewall true
+```
+
+**Rule Evaluation Order** (most specific wins):
+```
+Defaults → Extension → Global → Project
+```
+
+Each layer checks deny first, then allow. First match wins. More specific layers override less specific ones.
+
+**Managing Rules:**
+
+```bash
+# Global rules (apply to all projects)
+addt firewall global allow api.example.com
+addt firewall global deny malware.com
+addt firewall global list
+addt firewall global reset   # Reset to defaults
+
+# Project rules (override global for this project)
+addt firewall project allow registry.npmjs.org  # Re-allow if globally denied
+addt firewall project deny github.com           # Deny even if globally allowed
+addt firewall project list
+addt firewall project reset  # Clear project rules
+
+# Per-extension rules
+addt firewall extension claude allow api.anthropic.com
+addt firewall extension codex deny api.openai.com
+addt firewall extension claude list
+```
+
+**Example: Deny npm globally, re-allow for specific project:**
+
+```bash
+# Global: deny npm registry
+addt firewall global deny registry.npmjs.org
+
+# This project needs npm
+addt firewall project allow registry.npmjs.org
+# Result: npm is allowed for this project (project wins)
+```
+
+**Default Allowed Domains:**
+- `api.anthropic.com`, `github.com`, `api.github.com`
+- `registry.npmjs.org`, `pypi.org`, `proxy.golang.org`
+- `registry-1.docker.io`, `cdn.jsdelivr.net`, `unpkg.com`
+- And more common development domains
+
+**Firewall Modes:**
+- `strict` (default) - Block all except allowed domains
+- `permissive` - Allow all except denied domains
+- `off` - Disable firewall
+
+```bash
+addt config global set firewall_mode strict
 ```
 
 ## Common Use Cases
