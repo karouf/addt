@@ -156,6 +156,20 @@ addt run claude "Clone git@github.com:org/private-repo.git"
 addt build claude --force    # Rebuild from scratch
 ```
 
+### Complete Isolation (no workdir mount)
+
+```bash
+export ADDT_WORKDIR_AUTOMOUNT=false
+addt run claude "Work without access to host files"
+```
+
+### Network Firewall
+
+```bash
+export ADDT_FIREWALL=true
+addt run claude "Only allowed domains are accessible"
+```
+
 ---
 
 ## Configuration
