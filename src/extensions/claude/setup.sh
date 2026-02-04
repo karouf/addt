@@ -6,16 +6,9 @@ CLAUDE_DIR="$HOME/.claude"
 CLAUDE_INTERNAL_JSON="$CLAUDE_DIR/claude.json"
 
 # Check if user already has authentication configured (from mounted config via automount)
-# If hasCompletedOnboarding is set, they likely have OAuth credentials - don't overwrite
+# If hasCompletedOnboarding is set, they have existing auth - don't touch their config
 if [ -f "$CLAUDE_JSON" ] && grep -q '"hasCompletedOnboarding"' "$CLAUDE_JSON" 2>/dev/null; then
-    echo "Setup [claude]: Found existing Claude config (likely from automount), preserving authentication"
-
-    # Just ensure /workspace is trusted in the existing config
-    if command -v jq &> /dev/null && ! grep -q '"/workspace"' "$CLAUDE_JSON" 2>/dev/null; then
-        echo "Setup [claude]: Adding /workspace trust to existing config"
-        tmp=$(mktemp)
-        jq '.projects["/workspace"] = {"allowedTools": [], "hasTrustDialogAccepted": true, "hasCompletedProjectOnboarding": true}' "$CLAUDE_JSON" > "$tmp" && mv "$tmp" "$CLAUDE_JSON"
-    fi
+    echo "Setup [claude]: Found existing Claude config (likely from automount), not modifying"
     exit 0
 fi
 

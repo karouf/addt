@@ -109,9 +109,9 @@ EXISTING
 		t.Fatalf("Command failed: %v\nOutput: %s", err, outputStr)
 	}
 
-	// Should detect existing config
-	if !strings.Contains(outputStr, "Found existing Claude config") {
-		t.Errorf("Expected setup.sh to detect existing config.\nOutput: %s", outputStr)
+	// Should detect existing config and not modify it
+	if !strings.Contains(outputStr, "not modifying") {
+		t.Errorf("Expected setup.sh to detect existing config and not modify.\nOutput: %s", outputStr)
 	}
 
 	// Should preserve oauthAccount
