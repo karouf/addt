@@ -79,18 +79,20 @@ Your project is mounted at `/workspace` in the container. The agent sees your fi
 
 ## Authentication
 
-**Option 1: Use existing login** (recommended)
+Each agent uses its own API key via environment variable:
+
 ```bash
-# Run this once on your host machine
-claude login
-# Your ~/.claude config is auto-mounted into the container
+# Claude
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+# Codex (OpenAI)
+export OPENAI_API_KEY="sk-..."
+
+# Gemini
+export GEMINI_API_KEY="..."
 ```
 
-**Option 2: API key**
-```bash
-export ANTHROPIC_API_KEY="sk-..."
-addt run claude "Hello"
-```
+**Claude with Max subscription:** If you use Claude Max (not API), run `claude login` on your host machine. Your `~/.claude` config is auto-mounted into the container - no API key needed.
 
 **For GitHub access:**
 ```bash
