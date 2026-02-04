@@ -13,6 +13,8 @@ type Settings struct {
 	TmpfsHomeSize   string   `yaml:"tmpfs_home_size,omitempty"`   // Size of /home/addt tmpfs (default: "512m")
 	SeccompProfile  string   `yaml:"seccomp_profile,omitempty"`   // Seccomp profile: "default", "unconfined", or path
 	NetworkMode     string   `yaml:"network_mode,omitempty"`      // Network mode: "bridge", "none", "host" (default: "bridge")
+	DisableIPC      *bool    `yaml:"disable_ipc,omitempty"`       // Disable IPC namespace sharing (default: false)
+	TimeLimit       int      `yaml:"time_limit,omitempty"`        // Auto-kill container after N minutes (default: 0 = disabled)
 }
 
 // Config holds runtime security configuration with defaults applied
@@ -28,6 +30,8 @@ type Config struct {
 	TmpfsHomeSize   string   // Size of /home/addt tmpfs (default: "512m")
 	SeccompProfile  string   // Seccomp profile (default: "")
 	NetworkMode     string   // Network mode: "bridge", "none", "host" (default: "bridge")
+	DisableIPC      bool     // Disable IPC namespace sharing (default: false)
+	TimeLimit       int      // Auto-kill container after N minutes (default: 0 = disabled)
 }
 
 // DefaultConfig returns a Config with secure defaults applied
@@ -44,5 +48,7 @@ func DefaultConfig() Config {
 		TmpfsHomeSize:   "512m",
 		SeccompProfile:  "",
 		NetworkMode:     "", // Empty means use Docker default (bridge)
+		DisableIPC:      false,
+		TimeLimit:       0, // 0 = disabled
 	}
 }

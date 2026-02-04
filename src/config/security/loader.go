@@ -44,6 +44,12 @@ func ApplySettings(cfg *Config, settings *Settings) {
 	if settings.NetworkMode != "" {
 		cfg.NetworkMode = settings.NetworkMode
 	}
+	if settings.DisableIPC != nil {
+		cfg.DisableIPC = *settings.DisableIPC
+	}
+	if settings.TimeLimit > 0 {
+		cfg.TimeLimit = settings.TimeLimit
+	}
 }
 
 // ApplyEnvOverrides applies environment variable overrides to a Config
@@ -82,6 +88,14 @@ func ApplyEnvOverrides(cfg *Config) {
 	}
 	if v := os.Getenv("ADDT_SECURITY_NETWORK_MODE"); v != "" {
 		cfg.NetworkMode = v
+	}
+	if v := os.Getenv("ADDT_SECURITY_DISABLE_IPC"); v != "" {
+		cfg.DisableIPC = v == "true"
+	}
+	if v := os.Getenv("ADDT_SECURITY_TIME_LIMIT"); v != "" {
+		if minutes, err := strconv.Atoi(v); err == nil && minutes > 0 {
+			cfg.TimeLimit = minutes
+		}
 	}
 }
 

@@ -314,5 +314,15 @@ func (p *DockerProvider) addSecuritySettings(dockerArgs []string) []string {
 		dockerArgs = append(dockerArgs, "--network", sec.NetworkMode)
 	}
 
+	// IPC namespace isolation
+	if sec.DisableIPC {
+		dockerArgs = append(dockerArgs, "--ipc", "none")
+	}
+
+	// Time limit - pass as env var for entrypoint to enforce with timeout command
+	if sec.TimeLimit > 0 {
+		dockerArgs = append(dockerArgs, "-e", fmt.Sprintf("ADDT_TIME_LIMIT_SECONDS=%d", sec.TimeLimit*60))
+	}
+
 	return dockerArgs
 }

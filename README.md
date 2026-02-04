@@ -347,6 +347,8 @@ Containers run with security defaults enabled:
 | `tmpfs_home_size` | 512m | Size of /home/addt when read_only_rootfs is enabled |
 | `network_mode` | bridge | Network mode: "bridge", "none" (air-gapped), "host" |
 | `seccomp_profile` | default | Seccomp: "default", "restrictive", "unconfined", or path |
+| `disable_ipc` | false | Disable IPC namespace sharing (`--ipc=none`) |
+| `time_limit` | 0 | Auto-terminate after N minutes (0 = disabled) |
 
 Configure in `~/.addt/config.yaml`:
 ```yaml
@@ -362,6 +364,8 @@ security:
   tmpfs_home_size: "500m"
   network_mode: none       # Completely disable networking (air-gapped)
   seccomp_profile: restrictive  # Use built-in restrictive syscall filter
+  disable_ipc: true             # Isolate IPC namespace
+  time_limit: 60                # Auto-terminate after 60 minutes
 
 # Mount workspace as read-only (agent can't modify your files)
 workdir_readonly: true
@@ -490,6 +494,8 @@ addt cli update                   # Update addt
 | `ADDT_SECURITY_TMPFS_HOME_SIZE` | 512m | Size of /home/addt tmpfs |
 | `ADDT_SECURITY_NETWORK_MODE` | bridge | Network mode: bridge, none, host |
 | `ADDT_SECURITY_SECCOMP_PROFILE` | default | Seccomp profile to use |
+| `ADDT_SECURITY_DISABLE_IPC` | false | Disable IPC namespace sharing |
+| `ADDT_SECURITY_TIME_LIMIT` | 0 | Auto-terminate after N minutes |
 
 ### Paths & Logging
 | Variable | Default | Description |

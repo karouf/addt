@@ -139,8 +139,16 @@ done
 if [ -n "$ARGS_SCRIPT" ] && [ -f "$ARGS_SCRIPT" ]; then
     # Run args.sh and read transformed args (one per line)
     mapfile -t TRANSFORMED_ARGS < <(bash "$ARGS_SCRIPT" "$@")
-    exec "$ADDT_CMD" "${ADDT_CMD_ARGS[@]}" "${TRANSFORMED_ARGS[@]}"
+    FINAL_ARGS=("${ADDT_CMD_ARGS[@]}" "${TRANSFORMED_ARGS[@]}")
 else
     # No args.sh - pass args directly
-    exec "$ADDT_CMD" "${ADDT_CMD_ARGS[@]}" "$@"
+    FINAL_ARGS=("${ADDT_CMD_ARGS[@]}" "$@")
+fi
+
+# Execute with optional time limit
+if [ -n "$ADDT_TIME_LIMIT_SECONDS" ] && [ "$ADDT_TIME_LIMIT_SECONDS" -gt 0 ]; then
+    echo "Time limit: $((ADDT_TIME_LIMIT_SECONDS / 60)) minutes"
+    exec timeout --signal=TERM "$ADDT_TIME_LIMIT_SECONDS" "$ADDT_CMD" "${FINAL_ARGS[@]}"
+else
+    exec "$ADDT_CMD" "${FINAL_ARGS[@]}"
 fi
