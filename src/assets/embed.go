@@ -28,3 +28,8 @@ var DaytonaDockerfile []byte
 
 //go:embed daytona/daytona-entrypoint.sh
 var DaytonaEntrypoint []byte
+
+// Security assets
+//
+//go:embed seccomp/restrictive.json
+var SeccompRestrictive []byte

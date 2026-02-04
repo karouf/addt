@@ -7,6 +7,7 @@ import (
 	"os/user"
 	"path/filepath"
 
+	"github.com/jedi4ever/addt/assets"
 	"github.com/jedi4ever/addt/provider"
 )
 
@@ -291,13 +292,21 @@ func (p *DockerProvider) addSecuritySettings(dockerArgs []string) []string {
 
 	// Seccomp profile
 	if sec.SeccompProfile != "" {
-		if sec.SeccompProfile == "unconfined" {
+		switch sec.SeccompProfile {
+		case "unconfined":
 			dockerArgs = append(dockerArgs, "--security-opt", "seccomp=unconfined")
-		} else if sec.SeccompProfile != "default" {
+		case "restrictive":
+			// Write embedded restrictive profile to temp file
+			profilePath := filepath.Join(os.TempDir(), "addt-seccomp-restrictive.json")
+			if err := os.WriteFile(profilePath, assets.SeccompRestrictive, 0644); err == nil {
+				dockerArgs = append(dockerArgs, "--security-opt", "seccomp="+profilePath)
+			}
+		case "default":
+			// Use Docker's default profile, no flag needed
+		default:
 			// Custom profile path
 			dockerArgs = append(dockerArgs, "--security-opt", "seccomp="+sec.SeccompProfile)
 		}
-		// "default" means use Docker's default profile, no flag needed
 	}
 
 	// Network mode (none = completely isolated, no network access)
