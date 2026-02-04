@@ -41,6 +41,9 @@ func ApplySettings(cfg *Config, settings *Settings) {
 	if settings.SeccompProfile != "" {
 		cfg.SeccompProfile = settings.SeccompProfile
 	}
+	if settings.NetworkMode != "" {
+		cfg.NetworkMode = settings.NetworkMode
+	}
 }
 
 // ApplyEnvOverrides applies environment variable overrides to a Config
@@ -76,6 +79,9 @@ func ApplyEnvOverrides(cfg *Config) {
 	}
 	if v := os.Getenv("ADDT_SECURITY_SECCOMP_PROFILE"); v != "" {
 		cfg.SeccompProfile = v
+	}
+	if v := os.Getenv("ADDT_SECURITY_NETWORK_MODE"); v != "" {
+		cfg.NetworkMode = v
 	}
 }
 

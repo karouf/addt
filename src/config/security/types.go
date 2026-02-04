@@ -12,6 +12,7 @@ type Settings struct {
 	TmpfsTmpSize    string   `yaml:"tmpfs_tmp_size,omitempty"`    // Size of /tmp tmpfs (default: "256m")
 	TmpfsHomeSize   string   `yaml:"tmpfs_home_size,omitempty"`   // Size of /home/addt tmpfs (default: "512m")
 	SeccompProfile  string   `yaml:"seccomp_profile,omitempty"`   // Seccomp profile: "default", "unconfined", or path
+	NetworkMode     string   `yaml:"network_mode,omitempty"`      // Network mode: "bridge", "none", "host" (default: "bridge")
 }
 
 // Config holds runtime security configuration with defaults applied
@@ -26,6 +27,7 @@ type Config struct {
 	TmpfsTmpSize    string   // Size of /tmp tmpfs (default: "256m")
 	TmpfsHomeSize   string   // Size of /home/addt tmpfs (default: "512m")
 	SeccompProfile  string   // Seccomp profile (default: "")
+	NetworkMode     string   // Network mode: "bridge", "none", "host" (default: "bridge")
 }
 
 // DefaultConfig returns a Config with secure defaults applied
@@ -41,5 +43,6 @@ func DefaultConfig() Config {
 		TmpfsTmpSize:    "256m",
 		TmpfsHomeSize:   "512m",
 		SeccompProfile:  "",
+		NetworkMode:     "", // Empty means use Docker default (bridge)
 	}
 }

@@ -300,5 +300,10 @@ func (p *DockerProvider) addSecuritySettings(dockerArgs []string) []string {
 		// "default" means use Docker's default profile, no flag needed
 	}
 
+	// Network mode (none = completely isolated, no network access)
+	if sec.NetworkMode != "" {
+		dockerArgs = append(dockerArgs, "--network", sec.NetworkMode)
+	}
+
 	return dockerArgs
 }

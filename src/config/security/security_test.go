@@ -35,6 +35,9 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.TmpfsHomeSize != "512m" {
 		t.Errorf("TmpfsHomeSize = %q, want \"512m\"", cfg.TmpfsHomeSize)
 	}
+	if cfg.NetworkMode != "" {
+		t.Errorf("NetworkMode = %q, want \"\" (default)", cfg.NetworkMode)
+	}
 }
 
 func TestApplySettings(t *testing.T) {
@@ -49,6 +52,7 @@ func TestApplySettings(t *testing.T) {
 		CapAdd:          []string{"MKNOD"},
 		TmpfsTmpSize:    "100m",
 		TmpfsHomeSize:   "500m",
+		NetworkMode:     "none",
 	}
 
 	ApplySettings(&cfg, settings)
@@ -71,6 +75,9 @@ func TestApplySettings(t *testing.T) {
 	if cfg.TmpfsHomeSize != "500m" {
 		t.Errorf("TmpfsHomeSize = %q, want \"500m\"", cfg.TmpfsHomeSize)
 	}
+	if cfg.NetworkMode != "none" {
+		t.Errorf("NetworkMode = %q, want \"none\"", cfg.NetworkMode)
+	}
 	// Unchanged values should remain at defaults
 	if cfg.UlimitNofile != "4096:8192" {
 		t.Errorf("UlimitNofile = %q, want \"4096:8192\" (unchanged)", cfg.UlimitNofile)
@@ -87,6 +94,7 @@ func TestApplyEnvOverrides(t *testing.T) {
 	os.Setenv("ADDT_SECURITY_CAP_ADD", "MKNOD")
 	os.Setenv("ADDT_SECURITY_TMPFS_TMP_SIZE", "64m")
 	os.Setenv("ADDT_SECURITY_TMPFS_HOME_SIZE", "1g")
+	os.Setenv("ADDT_SECURITY_NETWORK_MODE", "none")
 	defer func() {
 		os.Unsetenv("ADDT_SECURITY_PIDS_LIMIT")
 		os.Unsetenv("ADDT_SECURITY_NO_NEW_PRIVILEGES")
@@ -94,6 +102,7 @@ func TestApplyEnvOverrides(t *testing.T) {
 		os.Unsetenv("ADDT_SECURITY_CAP_ADD")
 		os.Unsetenv("ADDT_SECURITY_TMPFS_TMP_SIZE")
 		os.Unsetenv("ADDT_SECURITY_TMPFS_HOME_SIZE")
+		os.Unsetenv("ADDT_SECURITY_NETWORK_MODE")
 	}()
 
 	ApplyEnvOverrides(&cfg)
@@ -115,6 +124,9 @@ func TestApplyEnvOverrides(t *testing.T) {
 	}
 	if cfg.TmpfsHomeSize != "1g" {
 		t.Errorf("TmpfsHomeSize = %q, want \"1g\" (from env)", cfg.TmpfsHomeSize)
+	}
+	if cfg.NetworkMode != "none" {
+		t.Errorf("NetworkMode = %q, want \"none\" (from env)", cfg.NetworkMode)
 	}
 }
 

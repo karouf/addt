@@ -345,6 +345,7 @@ Containers run with security defaults enabled:
 | `read_only_rootfs` | false | Read-only root filesystem |
 | `tmpfs_tmp_size` | 256m | Size of /tmp when read_only_rootfs is enabled |
 | `tmpfs_home_size` | 512m | Size of /home/addt when read_only_rootfs is enabled |
+| `network_mode` | bridge | Network mode: "bridge", "none" (air-gapped), "host" |
 
 Configure in `~/.addt/config.yaml`:
 ```yaml
@@ -358,6 +359,7 @@ security:
   read_only_rootfs: true
   tmpfs_tmp_size: "100m"
   tmpfs_home_size: "500m"
+  network_mode: none  # Completely disable networking (air-gapped)
 
 # Mount workspace as read-only (agent can't modify your files)
 workdir_readonly: true
@@ -369,6 +371,7 @@ export ADDT_SECURITY_PIDS_LIMIT=500
 export ADDT_SECURITY_READ_ONLY_ROOTFS=true
 export ADDT_SECURITY_TMPFS_TMP_SIZE=100m
 export ADDT_SECURITY_TMPFS_HOME_SIZE=500m
+export ADDT_SECURITY_NETWORK_MODE=none
 export ADDT_WORKDIR_READONLY=true
 ```
 
@@ -483,6 +486,7 @@ addt cli update                   # Update addt
 | `ADDT_SECURITY_READ_ONLY_ROOTFS` | false | Read-only root filesystem |
 | `ADDT_SECURITY_TMPFS_TMP_SIZE` | 256m | Size of /tmp tmpfs |
 | `ADDT_SECURITY_TMPFS_HOME_SIZE` | 512m | Size of /home/addt tmpfs |
+| `ADDT_SECURITY_NETWORK_MODE` | bridge | Network mode: bridge, none, host |
 
 ### Paths & Logging
 | Variable | Default | Description |
