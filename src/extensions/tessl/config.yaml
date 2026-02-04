@@ -4,11 +4,11 @@ entrypoint:
   - bash
   - -i
 default_version: latest
+env_vars:
+  - TESSL_TOKEN
 auto_mount: true
 dependencies:
   - claude
 mounts:
   - source: ~/.tessl
     target: /home/addt/.tessl
-  - source: ~/.config/tessl
-    target: /home/addt/.config/tessl
