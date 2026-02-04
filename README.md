@@ -105,17 +105,30 @@ export GH_TOKEN="ghp_..."
 
 ## Everyday Usage
 
-### Direct Commands (with symlinks)
+### Aliases (recommended)
 
-Create symlinks for convenience:
+Add to your `~/.bashrc` or `~/.zshrc`:
 ```bash
-ln -s /usr/local/bin/addt /usr/local/bin/claude
-ln -s /usr/local/bin/addt /usr/local/bin/codex
+alias claude='addt run claude'
+alias codex='addt run codex'
+alias gemini='addt run gemini'
 
 # Now use directly
 claude "Fix the bug"
-codex "Explain this"
 ```
+
+### Symlinks
+
+Alternatively, create symlinks. Use the `addt-` prefix to make it clear:
+```bash
+ln -s /usr/local/bin/addt /usr/local/bin/addt-claude
+ln -s /usr/local/bin/addt /usr/local/bin/addt-codex
+
+# Use with prefix
+addt-claude "Fix the bug"
+```
+
+You can also symlink directly to the agent name (e.g., `claude`), but the prefix avoids confusion with the real CLI if installed.
 
 ### Persistent Mode (faster startup)
 
