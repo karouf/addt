@@ -71,7 +71,7 @@ addt run claude --continue
 
 **Available agents:** `claude` `codex` `gemini` `copilot` `amp` `cursor` `kiro` `claude-flow` `gastown` `beads` `tessl` `openclaw` and more. Run `addt extensions list` for details.
 
-Your project is mounted at `/workspace` in the container. The agent can read and edit your files.
+When the agent starts, your current directory is auto-mounted at `/workspace` in the container.
 
 ---
 
