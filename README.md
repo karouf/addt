@@ -342,6 +342,9 @@ Containers run with security defaults enabled:
 | `no_new_privileges` | true | Prevents privilege escalation |
 | `cap_drop` | [ALL] | Linux capabilities to drop |
 | `cap_add` | [CHOWN, SETUID, SETGID] | Linux capabilities to add back |
+| `read_only_rootfs` | false | Read-only root filesystem |
+| `tmpfs_tmp_size` | 256m | Size of /tmp when read_only_rootfs is enabled |
+| `tmpfs_home_size` | 512m | Size of /home/addt when read_only_rootfs is enabled |
 
 Configure in `~/.addt/config.yaml`:
 ```yaml
@@ -352,15 +355,21 @@ security:
   no_new_privileges: true
   cap_drop: [ALL]
   cap_add: [CHOWN, SETUID, SETGID]
-  read_only_rootfs: false
+  read_only_rootfs: true
+  tmpfs_tmp_size: "100m"
+  tmpfs_home_size: "500m"
+
+# Mount workspace as read-only (agent can't modify your files)
+workdir_readonly: true
 ```
 
 Or via environment variables:
 ```bash
 export ADDT_SECURITY_PIDS_LIMIT=500
-export ADDT_SECURITY_NO_NEW_PRIVILEGES=false
-export ADDT_SECURITY_CAP_DROP=ALL
-export ADDT_SECURITY_CAP_ADD=CHOWN,SETUID,SETGID
+export ADDT_SECURITY_READ_ONLY_ROOTFS=true
+export ADDT_SECURITY_TMPFS_TMP_SIZE=100m
+export ADDT_SECURITY_TMPFS_HOME_SIZE=500m
+export ADDT_WORKDIR_READONLY=true
 ```
 
 ### Version Pinning
@@ -449,6 +458,7 @@ addt cli update                   # Update addt
 | `ADDT_DOCKER_CPUS` | - | CPU limit: `2` |
 | `ADDT_DOCKER_MEMORY` | - | Memory limit: `4g` |
 | `ADDT_WORKDIR` | `.` | Working directory to mount |
+| `ADDT_WORKDIR_READONLY` | false | Mount workspace as read-only |
 
 ### Forwarding
 | Variable | Default | Description |
@@ -471,6 +481,8 @@ addt cli update                   # Update addt
 | `ADDT_SECURITY_CAP_DROP` | ALL | Capabilities to drop (comma-separated) |
 | `ADDT_SECURITY_CAP_ADD` | CHOWN,SETUID,SETGID | Capabilities to add back |
 | `ADDT_SECURITY_READ_ONLY_ROOTFS` | false | Read-only root filesystem |
+| `ADDT_SECURITY_TMPFS_TMP_SIZE` | 256m | Size of /tmp tmpfs |
+| `ADDT_SECURITY_TMPFS_HOME_SIZE` | 512m | Size of /home/addt tmpfs |
 
 ### Paths & Logging
 | Variable | Default | Description |

@@ -63,6 +63,7 @@ func HandleShellCommand(args []string, version, defaultNodeVersion, defaultGoVer
 		LogFile:            cfg.LogFile,
 		Persistent:         cfg.Persistent,
 		WorkdirAutomount:   cfg.WorkdirAutomount,
+		WorkdirReadonly:    cfg.WorkdirReadonly,
 		Workdir:            cfg.Workdir,
 		FirewallEnabled:    cfg.FirewallEnabled,
 		FirewallMode:       cfg.FirewallMode,

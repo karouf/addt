@@ -32,6 +32,12 @@ func ApplySettings(cfg *Config, settings *Settings) {
 	if settings.ReadOnlyRootfs != nil {
 		cfg.ReadOnlyRootfs = *settings.ReadOnlyRootfs
 	}
+	if settings.TmpfsTmpSize != "" {
+		cfg.TmpfsTmpSize = settings.TmpfsTmpSize
+	}
+	if settings.TmpfsHomeSize != "" {
+		cfg.TmpfsHomeSize = settings.TmpfsHomeSize
+	}
 	if settings.SeccompProfile != "" {
 		cfg.SeccompProfile = settings.SeccompProfile
 	}
@@ -61,6 +67,12 @@ func ApplyEnvOverrides(cfg *Config) {
 	}
 	if v := os.Getenv("ADDT_SECURITY_READ_ONLY_ROOTFS"); v != "" {
 		cfg.ReadOnlyRootfs = v == "true"
+	}
+	if v := os.Getenv("ADDT_SECURITY_TMPFS_TMP_SIZE"); v != "" {
+		cfg.TmpfsTmpSize = v
+	}
+	if v := os.Getenv("ADDT_SECURITY_TMPFS_HOME_SIZE"); v != "" {
+		cfg.TmpfsHomeSize = v
 	}
 	if v := os.Getenv("ADDT_SECURITY_SECCOMP_PROFILE"); v != "" {
 		cfg.SeccompProfile = v

@@ -53,6 +53,7 @@ type Config struct {
 	ImageName          string
 	Persistent         bool
 	WorkdirAutomount   bool
+	WorkdirReadonly    bool
 	Workdir            string
 	FirewallEnabled    bool
 	FirewallMode       string

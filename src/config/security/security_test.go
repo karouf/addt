@@ -29,6 +29,12 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.ReadOnlyRootfs {
 		t.Error("ReadOnlyRootfs = true, want false")
 	}
+	if cfg.TmpfsTmpSize != "256m" {
+		t.Errorf("TmpfsTmpSize = %q, want \"256m\"", cfg.TmpfsTmpSize)
+	}
+	if cfg.TmpfsHomeSize != "512m" {
+		t.Errorf("TmpfsHomeSize = %q, want \"512m\"", cfg.TmpfsHomeSize)
+	}
 }
 
 func TestApplySettings(t *testing.T) {
@@ -41,6 +47,8 @@ func TestApplySettings(t *testing.T) {
 		NoNewPrivileges: &noNewPriv,
 		CapDrop:         []string{"NET_RAW"},
 		CapAdd:          []string{"MKNOD"},
+		TmpfsTmpSize:    "100m",
+		TmpfsHomeSize:   "500m",
 	}
 
 	ApplySettings(&cfg, settings)
@@ -57,6 +65,12 @@ func TestApplySettings(t *testing.T) {
 	if len(cfg.CapAdd) != 1 || cfg.CapAdd[0] != "MKNOD" {
 		t.Errorf("CapAdd = %v, want [MKNOD]", cfg.CapAdd)
 	}
+	if cfg.TmpfsTmpSize != "100m" {
+		t.Errorf("TmpfsTmpSize = %q, want \"100m\"", cfg.TmpfsTmpSize)
+	}
+	if cfg.TmpfsHomeSize != "500m" {
+		t.Errorf("TmpfsHomeSize = %q, want \"500m\"", cfg.TmpfsHomeSize)
+	}
 	// Unchanged values should remain at defaults
 	if cfg.UlimitNofile != "4096:8192" {
 		t.Errorf("UlimitNofile = %q, want \"4096:8192\" (unchanged)", cfg.UlimitNofile)
@@ -71,11 +85,15 @@ func TestApplyEnvOverrides(t *testing.T) {
 	os.Setenv("ADDT_SECURITY_NO_NEW_PRIVILEGES", "false")
 	os.Setenv("ADDT_SECURITY_CAP_DROP", "NET_RAW,SYS_ADMIN")
 	os.Setenv("ADDT_SECURITY_CAP_ADD", "MKNOD")
+	os.Setenv("ADDT_SECURITY_TMPFS_TMP_SIZE", "64m")
+	os.Setenv("ADDT_SECURITY_TMPFS_HOME_SIZE", "1g")
 	defer func() {
 		os.Unsetenv("ADDT_SECURITY_PIDS_LIMIT")
 		os.Unsetenv("ADDT_SECURITY_NO_NEW_PRIVILEGES")
 		os.Unsetenv("ADDT_SECURITY_CAP_DROP")
 		os.Unsetenv("ADDT_SECURITY_CAP_ADD")
+		os.Unsetenv("ADDT_SECURITY_TMPFS_TMP_SIZE")
+		os.Unsetenv("ADDT_SECURITY_TMPFS_HOME_SIZE")
 	}()
 
 	ApplyEnvOverrides(&cfg)
@@ -91,6 +109,12 @@ func TestApplyEnvOverrides(t *testing.T) {
 	}
 	if len(cfg.CapAdd) != 1 || cfg.CapAdd[0] != "MKNOD" {
 		t.Errorf("CapAdd = %v, want [MKNOD] (from env)", cfg.CapAdd)
+	}
+	if cfg.TmpfsTmpSize != "64m" {
+		t.Errorf("TmpfsTmpSize = %q, want \"64m\" (from env)", cfg.TmpfsTmpSize)
+	}
+	if cfg.TmpfsHomeSize != "1g" {
+		t.Errorf("TmpfsHomeSize = %q, want \"1g\" (from env)", cfg.TmpfsHomeSize)
 	}
 }
 

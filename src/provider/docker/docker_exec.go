@@ -284,8 +284,9 @@ func (p *DockerProvider) addSecuritySettings(dockerArgs []string) []string {
 	if sec.ReadOnlyRootfs {
 		dockerArgs = append(dockerArgs, "--read-only")
 		// Add tmpfs mounts for writable directories when using read-only rootfs
-		dockerArgs = append(dockerArgs, "--tmpfs", "/tmp:rw,noexec,nosuid,size=256m")
+		dockerArgs = append(dockerArgs, "--tmpfs", fmt.Sprintf("/tmp:rw,noexec,nosuid,size=%s", sec.TmpfsTmpSize))
 		dockerArgs = append(dockerArgs, "--tmpfs", "/var/tmp:rw,noexec,nosuid,size=128m")
+		dockerArgs = append(dockerArgs, "--tmpfs", fmt.Sprintf("/home/addt:rw,noexec,nosuid,size=%s", sec.TmpfsHomeSize))
 	}
 
 	// Seccomp profile

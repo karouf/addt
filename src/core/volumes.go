@@ -13,7 +13,7 @@ func BuildVolumes(cfg *provider.Config, cwd string) []provider.VolumeMount {
 		volumes = append(volumes, provider.VolumeMount{
 			Source:   cwd,
 			Target:   "/workspace",
-			ReadOnly: false,
+			ReadOnly: cfg.WorkdirReadonly,
 		})
 	}
 

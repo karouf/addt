@@ -151,6 +151,7 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 		ImageName:          cfg.ImageName,
 		Persistent:         cfg.Persistent,
 		WorkdirAutomount:   cfg.WorkdirAutomount,
+		WorkdirReadonly:    cfg.WorkdirReadonly,
 		Workdir:            cfg.Workdir,
 		FirewallEnabled:    cfg.FirewallEnabled,
 		FirewallMode:       cfg.FirewallMode,

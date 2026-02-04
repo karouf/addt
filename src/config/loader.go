@@ -149,6 +149,18 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 		cfg.WorkdirAutomount = v != "false"
 	}
 
+	// Workdir readonly: default (false) -> global -> project -> env
+	cfg.WorkdirReadonly = false
+	if globalCfg.WorkdirReadonly != nil {
+		cfg.WorkdirReadonly = *globalCfg.WorkdirReadonly
+	}
+	if projectCfg.WorkdirReadonly != nil {
+		cfg.WorkdirReadonly = *projectCfg.WorkdirReadonly
+	}
+	if v := os.Getenv("ADDT_WORKDIR_READONLY"); v != "" {
+		cfg.WorkdirReadonly = v == "true"
+	}
+
 	// Firewall: default (false) -> global -> project -> env
 	cfg.FirewallEnabled = false
 	if globalCfg.Firewall != nil {

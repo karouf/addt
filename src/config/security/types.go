@@ -9,6 +9,8 @@ type Settings struct {
 	CapDrop         []string `yaml:"cap_drop,omitempty"`          // Capabilities to drop (default: [ALL])
 	CapAdd          []string `yaml:"cap_add,omitempty"`           // Capabilities to add back (default: [CHOWN, SETUID, SETGID])
 	ReadOnlyRootfs  *bool    `yaml:"read_only_rootfs,omitempty"`  // Read-only root filesystem (default: false)
+	TmpfsTmpSize    string   `yaml:"tmpfs_tmp_size,omitempty"`    // Size of /tmp tmpfs (default: "256m")
+	TmpfsHomeSize   string   `yaml:"tmpfs_home_size,omitempty"`   // Size of /home/addt tmpfs (default: "512m")
 	SeccompProfile  string   `yaml:"seccomp_profile,omitempty"`   // Seccomp profile: "default", "unconfined", or path
 }
 
@@ -21,6 +23,8 @@ type Config struct {
 	CapDrop         []string // Capabilities to drop (default: [ALL])
 	CapAdd          []string // Capabilities to add back (default: [CHOWN, SETUID, SETGID])
 	ReadOnlyRootfs  bool     // Read-only root filesystem (default: false)
+	TmpfsTmpSize    string   // Size of /tmp tmpfs (default: "256m")
+	TmpfsHomeSize   string   // Size of /home/addt tmpfs (default: "512m")
 	SeccompProfile  string   // Seccomp profile (default: "")
 }
 
@@ -34,6 +38,8 @@ func DefaultConfig() Config {
 		CapDrop:         []string{"ALL"},
 		CapAdd:          []string{"CHOWN", "SETUID", "SETGID"},
 		ReadOnlyRootfs:  false,
+		TmpfsTmpSize:    "256m",
+		TmpfsHomeSize:   "512m",
 		SeccompProfile:  "",
 	}
 }

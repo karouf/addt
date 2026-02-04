@@ -32,6 +32,7 @@ type GlobalConfig struct {
 	UvVersion        string   `yaml:"uv_version,omitempty"`
 	Workdir          string   `yaml:"workdir,omitempty"`
 	WorkdirAutomount *bool    `yaml:"workdir_automount,omitempty"`
+	WorkdirReadonly  *bool    `yaml:"workdir_readonly,omitempty"`
 
 	// Per-extension configuration
 	Extensions map[string]*ExtensionSettings `yaml:"extensions,omitempty"`
@@ -59,6 +60,7 @@ type Config struct {
 	ImageName                string
 	Persistent               bool              // Enable persistent container mode
 	WorkdirAutomount         bool              // Auto-mount working directory
+	WorkdirReadonly          bool              // Mount working directory as read-only
 	Workdir                  string            // Override working directory (default: current directory)
 	FirewallEnabled          bool              // Enable network firewall
 	FirewallMode             string            // Firewall mode: strict, permissive, off
