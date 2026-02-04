@@ -324,5 +324,20 @@ func (p *DockerProvider) addSecuritySettings(dockerArgs []string) []string {
 		dockerArgs = append(dockerArgs, "-e", fmt.Sprintf("ADDT_TIME_LIMIT_SECONDS=%d", sec.TimeLimit*60))
 	}
 
+	// User namespace remapping (requires Docker daemon config for "host")
+	if sec.UserNamespace != "" {
+		dockerArgs = append(dockerArgs, "--userns", sec.UserNamespace)
+	}
+
+	// Block mknod capability (prevents creating device files)
+	if sec.DisableDevices {
+		dockerArgs = append(dockerArgs, "--cap-drop", "MKNOD")
+	}
+
+	// Memory swap limit (-1 = disable swap entirely)
+	if sec.MemorySwap != "" {
+		dockerArgs = append(dockerArgs, "--memory-swap", sec.MemorySwap)
+	}
+
 	return dockerArgs
 }

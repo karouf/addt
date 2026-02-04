@@ -50,6 +50,15 @@ func ApplySettings(cfg *Config, settings *Settings) {
 	if settings.TimeLimit > 0 {
 		cfg.TimeLimit = settings.TimeLimit
 	}
+	if settings.UserNamespace != "" {
+		cfg.UserNamespace = settings.UserNamespace
+	}
+	if settings.DisableDevices != nil {
+		cfg.DisableDevices = *settings.DisableDevices
+	}
+	if settings.MemorySwap != "" {
+		cfg.MemorySwap = settings.MemorySwap
+	}
 }
 
 // ApplyEnvOverrides applies environment variable overrides to a Config
@@ -96,6 +105,15 @@ func ApplyEnvOverrides(cfg *Config) {
 		if minutes, err := strconv.Atoi(v); err == nil && minutes > 0 {
 			cfg.TimeLimit = minutes
 		}
+	}
+	if v := os.Getenv("ADDT_SECURITY_USER_NAMESPACE"); v != "" {
+		cfg.UserNamespace = v
+	}
+	if v := os.Getenv("ADDT_SECURITY_DISABLE_DEVICES"); v != "" {
+		cfg.DisableDevices = v == "true"
+	}
+	if v := os.Getenv("ADDT_SECURITY_MEMORY_SWAP"); v != "" {
+		cfg.MemorySwap = v
 	}
 }
 

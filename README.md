@@ -349,6 +349,9 @@ Containers run with security defaults enabled:
 | `seccomp_profile` | default | Seccomp: "default", "restrictive", "unconfined", or path |
 | `disable_ipc` | false | Disable IPC namespace sharing (`--ipc=none`) |
 | `time_limit` | 0 | Auto-terminate after N minutes (0 = disabled) |
+| `user_namespace` | "" | User namespace: "host" or "private" |
+| `disable_devices` | false | Drop MKNOD capability (prevent device creation) |
+| `memory_swap` | "" | Memory swap limit: "-1" to disable swap |
 
 Configure in `~/.addt/config.yaml`:
 ```yaml
@@ -366,6 +369,8 @@ security:
   seccomp_profile: restrictive  # Use built-in restrictive syscall filter
   disable_ipc: true             # Isolate IPC namespace
   time_limit: 60                # Auto-terminate after 60 minutes
+  disable_devices: true         # Prevent device file creation
+  memory_swap: "-1"             # Disable swap entirely
 
 # Mount workspace as read-only (agent can't modify your files)
 workdir_readonly: true
@@ -496,6 +501,9 @@ addt cli update                   # Update addt
 | `ADDT_SECURITY_SECCOMP_PROFILE` | default | Seccomp profile to use |
 | `ADDT_SECURITY_DISABLE_IPC` | false | Disable IPC namespace sharing |
 | `ADDT_SECURITY_TIME_LIMIT` | 0 | Auto-terminate after N minutes |
+| `ADDT_SECURITY_USER_NAMESPACE` | "" | User namespace mode |
+| `ADDT_SECURITY_DISABLE_DEVICES` | false | Drop MKNOD capability |
+| `ADDT_SECURITY_MEMORY_SWAP` | "" | Memory swap limit |
 
 ### Paths & Logging
 | Variable | Default | Description |
