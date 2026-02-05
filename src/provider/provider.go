@@ -47,6 +47,7 @@ type Config struct {
 	SSHForward         string
 	SSHAllowedKeys     []string
 	TmuxForward        bool
+	HistoryPersist     bool
 	GPGForward         string   // "proxy", "agent", "keys", or "off"
 	GPGAllowedKeyIDs   []string // GPG key IDs (fingerprints) that are allowed
 	DindMode           string
@@ -88,6 +89,7 @@ type RunSpec struct {
 	SSHForward       string
 	SSHAllowedKeys   []string
 	TmuxForward      bool
+	HistoryPersist   bool
 	GPGForward       string   // "proxy", "agent", "keys", or "off"
 	GPGAllowedKeyIDs []string // GPG key IDs that are allowed
 	DindMode         string

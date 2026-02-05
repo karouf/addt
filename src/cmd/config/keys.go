@@ -35,6 +35,7 @@ func GetKeys() []KeyInfo {
 		{Key: "port_range_start", Description: "Starting port for auto allocation", Type: "int", EnvVar: "ADDT_PORT_RANGE_START"},
 		{Key: "ssh_forward", Description: "SSH forwarding mode: proxy, agent, or keys (default: proxy)", Type: "string", EnvVar: "ADDT_SSH_FORWARD"},
 		{Key: "ssh_allowed_keys", Description: "Key filters for proxy mode (comma-separated)", Type: "string", EnvVar: "ADDT_SSH_ALLOWED_KEYS"},
+		{Key: "history_persist", Description: "Persist shell history between sessions (default: false)", Type: "bool", EnvVar: "ADDT_HISTORY_PERSIST"},
 		{Key: "uv_version", Description: "UV Python package manager version", Type: "string", EnvVar: "ADDT_UV_VERSION"},
 		{Key: "workdir", Description: "Override working directory (default: current directory)", Type: "string", EnvVar: "ADDT_WORKDIR"},
 		{Key: "workdir_automount", Description: "Auto-mount working directory to /workspace", Type: "bool", EnvVar: "ADDT_WORKDIR_AUTOMOUNT"},
@@ -108,6 +109,8 @@ func GetDefaultValue(key string) string {
 		return "30000"
 	case "ssh_forward":
 		return "agent"
+	case "history_persist":
+		return "false"
 	case "uv_version":
 		return "latest"
 	case "workdir":
@@ -230,6 +233,10 @@ func GetValue(cfg *cfgtypes.GlobalConfig, key string) string {
 		}
 	case "ssh_forward":
 		return cfg.SSHForward
+	case "history_persist":
+		if cfg.HistoryPersist != nil {
+			return fmt.Sprintf("%v", *cfg.HistoryPersist)
+		}
 	case "uv_version":
 		return cfg.UvVersion
 	case "workdir":
@@ -351,6 +358,9 @@ func SetValue(cfg *cfgtypes.GlobalConfig, key, value string) {
 		cfg.PortRangeStart = &i
 	case "ssh_forward":
 		cfg.SSHForward = value
+	case "history_persist":
+		b := value == "true"
+		cfg.HistoryPersist = &b
 	case "uv_version":
 		cfg.UvVersion = value
 	case "workdir":
@@ -461,6 +471,8 @@ func UnsetValue(cfg *cfgtypes.GlobalConfig, key string) {
 		cfg.PortRangeStart = nil
 	case "ssh_forward":
 		cfg.SSHForward = ""
+	case "history_persist":
+		cfg.HistoryPersist = nil
 	case "uv_version":
 		cfg.UvVersion = ""
 	case "workdir":

@@ -32,6 +32,7 @@ type GlobalConfig struct {
 	SSHForward       string   `yaml:"ssh_forward,omitempty"`
 	SSHAllowedKeys   []string `yaml:"ssh_allowed_keys,omitempty"`
 	TmuxForward      *bool    `yaml:"tmux_forward,omitempty"`
+	HistoryPersist   *bool    `yaml:"history_persist,omitempty"` // Persist shell history between sessions
 	UvVersion        string   `yaml:"uv_version,omitempty"`
 	Workdir          string   `yaml:"workdir,omitempty"`
 	WorkdirAutomount *bool    `yaml:"workdir_automount,omitempty"`
@@ -57,6 +58,7 @@ type Config struct {
 	SSHForward               string
 	SSHAllowedKeys           []string
 	TmuxForward              bool
+	HistoryPersist           bool     // Persist shell history between sessions (default: false)
 	GPGForward               string   // "proxy", "agent", "keys", or "off"
 	GPGAllowedKeyIDs         []string // GPG key IDs allowed for signing
 	DindMode                 string

@@ -113,6 +113,9 @@ func (p *PodmanProvider) addContainerVolumesAndEnv(podmanArgs []string, spec *pr
 	// Tmux forwarding
 	podmanArgs = append(podmanArgs, p.HandleTmuxForwarding(spec.TmuxForward)...)
 
+	// History persistence
+	podmanArgs = append(podmanArgs, p.HandleHistoryPersist(spec.HistoryPersist, spec.WorkDir, ctx.username)...)
+
 	// Firewall configuration with pasta network backend
 	if p.config.FirewallEnabled {
 		// Use pasta network backend for better firewall support in rootless mode

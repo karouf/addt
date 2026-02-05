@@ -116,6 +116,9 @@ func (p *DockerProvider) addContainerVolumesAndEnv(dockerArgs []string, spec *pr
 	// Tmux forwarding
 	dockerArgs = append(dockerArgs, p.HandleTmuxForwarding(spec.TmuxForward)...)
 
+	// History persistence
+	dockerArgs = append(dockerArgs, p.HandleHistoryPersist(spec.HistoryPersist, spec.WorkDir, ctx.username)...)
+
 	// Firewall configuration
 	if p.config.FirewallEnabled {
 		// Requires NET_ADMIN capability for iptables

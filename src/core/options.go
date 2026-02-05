@@ -30,6 +30,7 @@ func BuildRunOptions(p provider.Provider, cfg *provider.Config, name string, arg
 		SSHForward:       cfg.SSHForward,
 		SSHAllowedKeys:   cfg.SSHAllowedKeys,
 		TmuxForward:      cfg.TmuxForward,
+		HistoryPersist:   cfg.HistoryPersist,
 		GPGForward:       cfg.GPGForward,
 		GPGAllowedKeyIDs: cfg.GPGAllowedKeyIDs,
 		DindMode:         cfg.DindMode,

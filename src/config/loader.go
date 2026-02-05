@@ -104,6 +104,18 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 		cfg.TmuxForward = v == "true"
 	}
 
+	// History persist: default (false) -> global -> project -> env
+	cfg.HistoryPersist = false
+	if globalCfg.HistoryPersist != nil {
+		cfg.HistoryPersist = *globalCfg.HistoryPersist
+	}
+	if projectCfg.HistoryPersist != nil {
+		cfg.HistoryPersist = *projectCfg.HistoryPersist
+	}
+	if v := os.Getenv("ADDT_HISTORY_PERSIST"); v != "" {
+		cfg.HistoryPersist = v == "true"
+	}
+
 	// GPG forward: default (off) -> global -> project -> env
 	cfg.GPGForward = ""
 	if globalCfg.GPGForward != "" {
