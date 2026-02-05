@@ -139,12 +139,18 @@ func EnsurePodmanMachineRunning() error {
 
 // GetPodmanPath returns the path to Podman binary (system or bundled)
 func GetPodmanPath() string {
-	// First check system Podman
+	// First check system Podman (installed via Homebrew, package manager, etc.)
 	if path, err := exec.LookPath("podman"); err == nil {
 		return path
 	}
 
-	// Check bundled Podman
+	// On macOS, the bundled binary is remote-only and can't run machines
+	// So we only use it on Linux
+	if runtime.GOOS == "darwin" {
+		return ""
+	}
+
+	// Check bundled Podman (Linux only)
 	bundledPath := GetBundledPodmanPath()
 	if bundledPath != "" {
 		if _, err := os.Stat(bundledPath); err == nil {

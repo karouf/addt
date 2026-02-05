@@ -15,12 +15,10 @@ import (
 	"github.com/jedi4ever/addt/util"
 )
 
-// PodmanDownloadURLs contains download URLs for Podman static builds
+// PodmanDownloadURLs contains download URLs for Podman static builds (Linux only)
 var PodmanDownloadURLs = map[string]string{
-	"linux/amd64":  "https://github.com/containers/podman/releases/download/v5.3.1/podman-remote-static-linux_amd64.tar.gz",
-	"linux/arm64":  "https://github.com/containers/podman/releases/download/v5.3.1/podman-remote-static-linux_arm64.tar.gz",
-	"darwin/amd64": "https://github.com/containers/podman/releases/download/v5.3.1/podman-remote-release-darwin_amd64.zip",
-	"darwin/arm64": "https://github.com/containers/podman/releases/download/v5.3.1/podman-remote-release-darwin_arm64.zip",
+	"linux/amd64": "https://github.com/containers/podman/releases/download/v5.3.1/podman-remote-static-linux_amd64.tar.gz",
+	"linux/arm64": "https://github.com/containers/podman/releases/download/v5.3.1/podman-remote-static-linux_arm64.tar.gz",
 }
 
 // GetBundledBinDir returns the path to bundled binaries directory
@@ -74,8 +72,14 @@ func EnsurePodman() (string, error) {
 	return "", fmt.Errorf("podman not found")
 }
 
-// DownloadPodman downloads and installs Podman to the bundled bin directory
+// DownloadPodman downloads and installs Podman
+// On macOS, uses Homebrew. On Linux, downloads static binary.
 func DownloadPodman() error {
+	// On macOS, use Homebrew
+	if runtime.GOOS == "darwin" {
+		return installPodmanWithHomebrew()
+	}
+
 	platform := fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
 	url, ok := PodmanDownloadURLs[platform]
 	if !ok {
@@ -123,17 +127,10 @@ func DownloadPodman() error {
 	spinner := util.NewSpinner("Extracting Podman...")
 	spinner.Start()
 
-	// Extract based on file type
-	if strings.HasSuffix(url, ".tar.gz") {
-		if err := extractTarGz(tmpFile.Name(), binDir); err != nil {
-			spinner.StopWithError("Extraction failed")
-			return fmt.Errorf("failed to extract Podman: %w", err)
-		}
-	} else if strings.HasSuffix(url, ".zip") {
-		if err := extractZip(tmpFile.Name(), binDir); err != nil {
-			spinner.StopWithError("Extraction failed")
-			return fmt.Errorf("failed to extract Podman: %w", err)
-		}
+	// Extract tar.gz (Linux only - macOS uses Homebrew)
+	if err := extractTarGz(tmpFile.Name(), binDir); err != nil {
+		spinner.StopWithError("Extraction failed")
+		return fmt.Errorf("failed to extract Podman: %w", err)
 	}
 
 	// Find and rename the podman binary
@@ -156,14 +153,43 @@ func DownloadPodman() error {
 	version := strings.TrimSpace(string(output))
 	spinner.StopWithSuccess(fmt.Sprintf("Podman installed: %s", version))
 
-	// On macOS, initialize and start the machine if needed
-	if runtime.GOOS == "darwin" {
-		if err := ensurePodmanMachine(podmanPath); err != nil {
-			return fmt.Errorf("podman machine setup failed: %w", err)
-		}
+	return nil
+}
+
+// installPodmanWithHomebrew installs Podman using Homebrew (macOS)
+func installPodmanWithHomebrew() error {
+	// Check if Homebrew is available
+	brewPath, err := exec.LookPath("brew")
+	if err != nil {
+		util.PrintError("Homebrew not found")
+		fmt.Println()
+		fmt.Println("To install Podman on macOS, first install Homebrew:")
+		fmt.Println("  /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"")
+		fmt.Println()
+		fmt.Println("Then run:")
+		fmt.Println("  brew install podman")
+		return fmt.Errorf("homebrew not found - install it first")
 	}
 
-	return nil
+	spinner := util.NewSpinner("Installing Podman via Homebrew...")
+	spinner.Start()
+
+	cmd := exec.Command(brewPath, "install", "podman")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		spinner.StopWithError("Installation failed")
+		fmt.Printf("\n%s\n", string(output))
+		return fmt.Errorf("brew install podman failed: %w", err)
+	}
+	spinner.StopWithSuccess("Podman installed via Homebrew")
+
+	// Initialize and start the machine
+	podmanPath, err := exec.LookPath("podman")
+	if err != nil {
+		return fmt.Errorf("podman not found after installation: %w", err)
+	}
+
+	return ensurePodmanMachine(podmanPath)
 }
 
 // ensurePodmanMachine ensures a Podman machine exists and is running (macOS only)
@@ -267,25 +293,6 @@ func extractTarGz(src, destDir string) error {
 
 	if !extracted {
 		return fmt.Errorf("podman binary not found in archive")
-	}
-
-	return nil
-}
-
-// extractZip extracts a .zip file (placeholder - needs archive/zip import)
-func extractZip(src, destDir string) error {
-	// For macOS, we need to handle zip files
-	// Using unzip command as a simple solution
-	cmd := exec.Command("unzip", "-o", "-j", src, "-d", destDir)
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("unzip failed: %w", err)
-	}
-
-	// Rename podman-remote to podman if needed
-	remotePath := filepath.Join(destDir, "podman-remote")
-	podmanPath := filepath.Join(destDir, "podman")
-	if _, err := os.Stat(remotePath); err == nil {
-		os.Rename(remotePath, podmanPath)
 	}
 
 	return nil
