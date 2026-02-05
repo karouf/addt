@@ -149,8 +149,13 @@ func (p *PodmanProvider) addContainerVolumesAndEnv(podmanArgs []string, spec *pr
 	}
 
 	// Handle OTEL: add host alias so container can reach host's OTEL collector
+	// Podman's host-gateway can fail on macOS; use detected host IP instead
 	if p.config.Otel.Enabled {
-		podmanArgs = append(podmanArgs, "--add-host=host.docker.internal:host-gateway")
+		if hostIP, err := getHostGatewayIP(); err == nil {
+			podmanArgs = append(podmanArgs, fmt.Sprintf("--add-host=host.docker.internal:%s", hostIP))
+		} else {
+			fmt.Fprintf(os.Stderr, "Warning: could not detect host IP for OTEL: %v\n", err)
+		}
 	}
 
 	// Add environment variables
