@@ -92,39 +92,36 @@ func DownloadPodman() error {
 		return fmt.Errorf("failed to create bin directory: %w", err)
 	}
 
-	spinner := util.NewSpinner("Downloading Podman...")
-	spinner.Start()
-
 	// Download the file
 	resp, err := http.Get(url)
 	if err != nil {
-		spinner.StopWithError("Download failed")
 		return fmt.Errorf("failed to download Podman: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		spinner.StopWithError("Download failed")
 		return fmt.Errorf("failed to download Podman: HTTP %d", resp.StatusCode)
 	}
 
 	// Create temp file
 	tmpFile, err := os.CreateTemp("", "podman-download-*")
 	if err != nil {
-		spinner.StopWithError("Download failed")
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
 	defer os.Remove(tmpFile.Name())
 
-	// Copy to temp file
-	_, err = io.Copy(tmpFile, resp.Body)
+	// Copy to temp file with progress tracking
+	progressReader := util.NewProgressReader(resp.Body, resp.ContentLength, "Downloading Podman")
+	_, err = io.Copy(tmpFile, progressReader)
 	tmpFile.Close()
 	if err != nil {
-		spinner.StopWithError("Download failed")
+		progressReader.Fail("Download failed")
 		return fmt.Errorf("failed to save download: %w", err)
 	}
+	progressReader.Complete()
 
-	spinner.UpdateMessage("Extracting Podman...")
+	spinner := util.NewSpinner("Extracting Podman...")
+	spinner.Start()
 
 	// Extract based on file type
 	if strings.HasSuffix(url, ".tar.gz") {
