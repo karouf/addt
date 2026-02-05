@@ -142,15 +142,10 @@ func (p *PodmanProvider) addContainerVolumesAndEnv(podmanArgs []string, spec *pr
 		podmanArgs = append(podmanArgs, "-p", fmt.Sprintf("%d:%d", port.Host, port.Container))
 	}
 
-	// Handle secrets_to_files: pass secrets via base64-encoded env var to tmpfs
-	// This approach works with Podman (which has VM path access issues)
+	// Handle secrets_to_files: add tmpfs mount for secrets
+	// Secrets are copied via podman cp after container starts (see runWithSecrets)
 	if p.config.Security.SecretsToFiles {
-		secretsB64, secretVarNames, err := p.prepareSecrets(spec.ImageName, spec.Env)
-		if err == nil && secretsB64 != "" {
-			podmanArgs = p.addTmpfsSecretsMount(podmanArgs)
-			p.filterSecretEnvVars(spec.Env, secretVarNames)
-			podmanArgs = append(podmanArgs, "-e", "ADDT_SECRETS_B64="+secretsB64)
-		}
+		podmanArgs = p.addTmpfsSecretsMount(podmanArgs)
 	}
 
 	// Add environment variables
@@ -188,6 +183,16 @@ func (p *PodmanProvider) Run(spec *provider.RunSpec) error {
 		return err
 	}
 
+	// Prepare secrets if enabled (before building args so we can filter env)
+	var secretsJSON string
+	if p.config.Security.SecretsToFiles && !ctx.useExistingContainer {
+		json, secretVarNames, err := p.prepareSecretsJSON(spec.ImageName, spec.Env)
+		if err == nil && json != "" {
+			secretsJSON = json
+			p.filterSecretEnvVars(spec.Env, secretVarNames)
+		}
+	}
+
 	podmanArgs := p.buildBasePodmanArgs(spec, ctx)
 
 	// Only add volumes and environment when creating a new container
@@ -197,18 +202,78 @@ func (p *PodmanProvider) Run(spec *provider.RunSpec) error {
 	}
 	defer cleanup()
 
-	// Handle shell mode or normal mode
+	// Handle existing container
 	if ctx.useExistingContainer {
 		podmanArgs = append(podmanArgs, spec.Name)
 		// Call entrypoint with args for existing containers
 		podmanArgs = append(podmanArgs, "/usr/local/bin/podman-entrypoint.sh")
 		podmanArgs = append(podmanArgs, spec.Args...)
-	} else {
-		podmanArgs = append(podmanArgs, spec.ImageName)
-		podmanArgs = append(podmanArgs, spec.Args...)
+		return p.executePodmanCommand(podmanArgs)
 	}
 
+	// New container with secrets: use two-step process
+	// 1. Start container detached with wait script
+	// 2. Copy secrets via podman cp
+	// 3. Signal container to continue and attach
+	if secretsJSON != "" {
+		return p.runWithSecrets(podmanArgs, spec, secretsJSON)
+	}
+
+	// Normal run without secrets
+	podmanArgs = append(podmanArgs, spec.ImageName)
+	podmanArgs = append(podmanArgs, spec.Args...)
 	return p.executePodmanCommand(podmanArgs)
+}
+
+// runWithSecrets starts a container, copies secrets, then runs entrypoint
+func (p *PodmanProvider) runWithSecrets(baseArgs []string, spec *provider.RunSpec, secretsJSON string) error {
+	// Remove -it flags from baseArgs for the initial detached run
+	// We'll add them back for the exec
+	var runArgs []string
+	interactive := false
+	for i := 0; i < len(baseArgs); i++ {
+		arg := baseArgs[i]
+		if arg == "-it" {
+			interactive = true
+			runArgs = append(runArgs, "-i") // Keep -i for stdin
+		} else if arg == "-t" {
+			interactive = true
+			// Skip standalone -t
+		} else {
+			runArgs = append(runArgs, arg)
+		}
+	}
+
+	// Start container detached, waiting for secrets
+	runArgs = append(runArgs, "-d")
+	runArgs = append(runArgs, "--entrypoint", "/bin/sh")
+	runArgs = append(runArgs, spec.ImageName)
+	// Wait loop: check for .secrets file or .ready signal
+	runArgs = append(runArgs, "-c", "while [ ! -f /run/secrets/.secrets ] && [ ! -f /run/secrets/.ready ]; do sleep 0.05; done; exec /usr/local/bin/podman-entrypoint.sh \"$@\"", "--")
+	runArgs = append(runArgs, spec.Args...)
+
+	// Start the container
+	cmd := exec.Command("podman", runArgs...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to start container: %w\n%s", err, string(output))
+	}
+
+	// Copy secrets to container
+	if err := p.copySecretsToContainer(spec.Name, secretsJSON); err != nil {
+		// Cleanup: stop and remove container
+		exec.Command("podman", "rm", "-f", spec.Name).Run()
+		return fmt.Errorf("failed to copy secrets: %w", err)
+	}
+
+	// Attach to container
+	attachArgs := []string{"attach"}
+	if interactive {
+		// Container already has -i, attach will work
+	}
+	attachArgs = append(attachArgs, spec.Name)
+
+	return p.executePodmanCommand(attachArgs)
 }
 
 // Shell opens a shell in a container

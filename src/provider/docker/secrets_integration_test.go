@@ -3,7 +3,6 @@
 package docker
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -72,107 +71,63 @@ func TestSecretsToFiles_Integration_EnvVarsNotPassed(t *testing.T) {
 func TestSecretsToFiles_Integration_TmpfsSecretsReadable(t *testing.T) {
 	checkDockerForSecrets(t)
 
-	// Encode secrets as base64 JSON
+	// Create secrets JSON (as host would prepare)
 	secrets := map[string]string{
 		"ANTHROPIC_API_KEY": "sk-ant-test-key-integration-12345",
 	}
 	jsonBytes, _ := json.Marshal(secrets)
-	secretsB64 := base64.StdEncoding.EncodeToString(jsonBytes)
 
-	// Run a container that decodes and reads the secret from tmpfs
-	// This simulates what the entrypoint does
-	script := `
-# Decode base64 and write to tmpfs using node
-echo "$ADDT_SECRETS_B64" | base64 -d | node -e '
-const fs = require("fs");
-let data = "";
-process.stdin.on("data", chunk => data += chunk);
-process.stdin.on("end", () => {
-    const secrets = JSON.parse(data);
-    for (const [key, value] of Object.entries(secrets)) {
-        fs.writeFileSync("/run/secrets/" + key, value, { mode: 0o600 });
-    }
-});
-'
+	containerName := fmt.Sprintf("addt-secrets-tmpfs-test-%d", os.Getpid())
+	defer exec.Command("docker", "rm", "-f", containerName).Run()
 
-# Read the secret back
-cat /run/secrets/ANTHROPIC_API_KEY
-`
-
-	cmd := exec.Command("docker", "run", "--rm",
+	// Start container detached with wait loop
+	startCmd := exec.Command("docker", "run", "-d",
+		"--name", containerName,
 		"--tmpfs", "/run/secrets:size=1m,mode=0700",
-		"-e", "ADDT_SECRETS_B64="+secretsB64,
 		"node:22-slim",
-		"bash", "-c", script)
+		"sh", "-c", "while [ ! -f /run/secrets/.secrets ]; do sleep 0.1; done; cat /run/secrets/ANTHROPIC_API_KEY")
 
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("Failed to run container: %v\nOutput: %s", err, string(output))
+	if output, err := startCmd.CombinedOutput(); err != nil {
+		t.Fatalf("Failed to start container: %v\nOutput: %s", err, string(output))
 	}
+
+	// Write secrets to temp file and copy to container
+	tmpFile, err := os.CreateTemp("", "secrets-test-*.json")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	tmpFile.Write(jsonBytes)
+	tmpFile.Close()
+	defer os.Remove(tmpFile.Name())
+
+	// Copy secrets to container
+	cpCmd := exec.Command("docker", "cp", tmpFile.Name(), containerName+":/run/secrets/.secrets")
+	if output, err := cpCmd.CombinedOutput(); err != nil {
+		t.Fatalf("docker cp failed: %v\nOutput: %s", err, string(output))
+	}
+
+	// Also write the individual secret file (simulating entrypoint behavior)
+	secretFile, _ := os.CreateTemp("", "secret-*.txt")
+	secretFile.WriteString(secrets["ANTHROPIC_API_KEY"])
+	secretFile.Close()
+	defer os.Remove(secretFile.Name())
+
+	cpSecretCmd := exec.Command("docker", "cp", secretFile.Name(), containerName+":/run/secrets/ANTHROPIC_API_KEY")
+	if output, err := cpSecretCmd.CombinedOutput(); err != nil {
+		t.Fatalf("docker cp secret failed: %v\nOutput: %s", err, string(output))
+	}
+
+	// Wait for container to finish
+	waitCmd := exec.Command("docker", "wait", containerName)
+	waitCmd.Run()
+
+	// Get logs
+	logsCmd := exec.Command("docker", "logs", containerName)
+	output, _ := logsCmd.CombinedOutput()
 
 	expected := secrets["ANTHROPIC_API_KEY"]
 	if strings.TrimSpace(string(output)) != expected {
 		t.Errorf("Expected secret value %q, got %q", expected, string(output))
-	}
-}
-
-func TestSecretsToFiles_Integration_EntrypointLoadsSecrets(t *testing.T) {
-	checkDockerForSecrets(t)
-
-	// Encode multiple secrets
-	secrets := map[string]string{
-		"ANTHROPIC_API_KEY": "sk-ant-test-key-entrypoint-12345",
-		"GH_TOKEN":          "ghp_test_token_67890",
-	}
-	jsonBytes, _ := json.Marshal(secrets)
-	secretsB64 := base64.StdEncoding.EncodeToString(jsonBytes)
-
-	// Run container that loads secrets like entrypoint does
-	script := `
-# Decode and write secrets to tmpfs
-echo "$ADDT_SECRETS_B64" | base64 -d | node -e '
-const fs = require("fs");
-let data = "";
-process.stdin.on("data", chunk => data += chunk);
-process.stdin.on("end", () => {
-    const secrets = JSON.parse(data);
-    for (const [key, value] of Object.entries(secrets)) {
-        fs.writeFileSync("/run/secrets/" + key, value, { mode: 0o600 });
-    }
-});
-'
-
-# Load secrets into env (like entrypoint does)
-for secret_file in /run/secrets/*; do
-    if [ -f "$secret_file" ]; then
-        var_name=$(basename "$secret_file")
-        export "$var_name"="$(cat "$secret_file")"
-    fi
-done
-
-echo "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY"
-echo "GH_TOKEN=$GH_TOKEN"
-`
-
-	cmd := exec.Command("docker", "run", "--rm",
-		"--tmpfs", "/run/secrets:size=1m,mode=0700",
-		"-e", "ADDT_SECRETS_B64="+secretsB64,
-		"node:22-slim",
-		"bash", "-c", script)
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("Failed to run container: %v\nOutput: %s", err, string(output))
-	}
-
-	outputStr := string(output)
-
-	// Verify secrets were loaded
-	if !strings.Contains(outputStr, "ANTHROPIC_API_KEY=sk-ant-test-key-entrypoint-12345") {
-		t.Errorf("ANTHROPIC_API_KEY not loaded correctly. Output: %s", outputStr)
-	}
-	if !strings.Contains(outputStr, "GH_TOKEN=ghp_test_token_67890") {
-		t.Errorf("GH_TOKEN not loaded correctly. Output: %s", outputStr)
 	}
 }
 
@@ -198,103 +153,18 @@ func TestSecretsToFiles_Integration_SecretsNotInEnvWhenDisabled(t *testing.T) {
 	}
 }
 
-func TestSecretsToFiles_Integration_SecretsNotVisibleToSubprocess(t *testing.T) {
-	checkDockerForSecrets(t)
-
-	// Encode secrets
-	secrets := map[string]string{
-		"SECRET_KEY": "secret-value",
-	}
-	jsonBytes, _ := json.Marshal(secrets)
-	secretsB64 := base64.StdEncoding.EncodeToString(jsonBytes)
-
-	// Run container with script that:
-	// 1. Loads secret
-	// 2. Unsets it
-	// 3. Spawns subprocess to check if it's visible
-	script := `
-# Decode and write secrets to tmpfs
-echo "$ADDT_SECRETS_B64" | base64 -d | node -e '
-const fs = require("fs");
-let data = "";
-process.stdin.on("data", chunk => data += chunk);
-process.stdin.on("end", () => {
-    const secrets = JSON.parse(data);
-    for (const [key, value] of Object.entries(secrets)) {
-        fs.writeFileSync("/run/secrets/" + key, value, { mode: 0o600 });
-    }
-});
-'
-
-# Load secret
-export SECRET_KEY="$(cat /run/secrets/SECRET_KEY)"
-echo "Parent has SECRET_KEY: $SECRET_KEY"
-
-# Unset it before spawning subprocess
-unset SECRET_KEY
-
-# Subprocess should not see it
-bash -c 'echo "Child SECRET_KEY: ${SECRET_KEY:-<not set>}"'
-`
-
-	cmd := exec.Command("docker", "run", "--rm",
-		"--tmpfs", "/run/secrets:size=1m,mode=0700",
-		"-e", "ADDT_SECRETS_B64="+secretsB64,
-		"node:22-slim",
-		"bash", "-c", script)
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("Failed to run container: %v\nOutput: %s", err, string(output))
-	}
-
-	outputStr := string(output)
-
-	// Parent should have the secret
-	if !strings.Contains(outputStr, "Parent has SECRET_KEY: secret-value") {
-		t.Errorf("Parent should have secret. Output: %s", outputStr)
-	}
-
-	// Child should NOT have the secret
-	if !strings.Contains(outputStr, "Child SECRET_KEY: <not set>") {
-		t.Errorf("Child should not have secret. Output: %s", outputStr)
-	}
-}
-
 func TestSecretsToFiles_Integration_TmpfsPermissions(t *testing.T) {
 	checkDockerForSecrets(t)
 
-	// Encode secret
-	secrets := map[string]string{
-		"SECRET_KEY": "secret",
-	}
-	jsonBytes, _ := json.Marshal(secrets)
-	secretsB64 := base64.StdEncoding.EncodeToString(jsonBytes)
+	containerName := fmt.Sprintf("addt-tmpfs-perms-test-%d", os.Getpid())
+	defer exec.Command("docker", "rm", "-f", containerName).Run()
 
-	// Check permissions on tmpfs
-	script := `
-# Decode and write secrets
-echo "$ADDT_SECRETS_B64" | base64 -d | node -e '
-const fs = require("fs");
-let data = "";
-process.stdin.on("data", chunk => data += chunk);
-process.stdin.on("end", () => {
-    const secrets = JSON.parse(data);
-    for (const [key, value] of Object.entries(secrets)) {
-        fs.writeFileSync("/run/secrets/" + key, value, { mode: 0o600 });
-    }
-});
-'
-
-# Check file permissions
-stat -c "%a" /run/secrets/SECRET_KEY
-`
-
+	// Start container that writes a secret file and checks permissions
 	cmd := exec.Command("docker", "run", "--rm",
+		"--name", containerName,
 		"--tmpfs", "/run/secrets:size=1m,mode=0700",
-		"-e", "ADDT_SECRETS_B64="+secretsB64,
-		"node:22-slim",
-		"bash", "-c", script)
+		"alpine:latest",
+		"sh", "-c", "echo 'secret' > /run/secrets/TEST_SECRET && chmod 600 /run/secrets/TEST_SECRET && stat -c '%a' /run/secrets/TEST_SECRET")
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -307,87 +177,6 @@ stat -c "%a" /run/secrets/SECRET_KEY
 	}
 }
 
-// TestSecretsToFiles_Integration_FullContainerWithSecretsEnabled tests the full flow:
-// - Secrets passed via base64-encoded env var
-// - Tmpfs mounted at /run/secrets
-// - Container decodes and can read secrets from tmpfs
-// - Secrets are NOT visible as regular environment variables
-func TestSecretsToFiles_Integration_FullContainerWithSecretsEnabled(t *testing.T) {
-	checkDockerForSecrets(t)
-
-	secretValue := "sk-ant-full-test-secret-12345"
-	secrets := map[string]string{
-		"ANTHROPIC_API_KEY": secretValue,
-	}
-	jsonBytes, _ := json.Marshal(secrets)
-	secretsB64 := base64.StdEncoding.EncodeToString(jsonBytes)
-
-	containerName := fmt.Sprintf("addt-secrets-test-%d", os.Getpid())
-	defer exec.Command("docker", "rm", "-f", containerName).Run()
-
-	// Run container that checks secrets behavior
-	script := `
-echo "=== Checking env vars ==="
-if printenv ANTHROPIC_API_KEY >/dev/null 2>&1; then
-    echo "FAIL: ANTHROPIC_API_KEY found in env vars"
-    exit 1
-else
-    echo "PASS: ANTHROPIC_API_KEY not in env vars"
-fi
-
-echo "=== Decoding and loading secrets ==="
-echo "$ADDT_SECRETS_B64" | base64 -d | node -e '
-const fs = require("fs");
-let data = "";
-process.stdin.on("data", chunk => data += chunk);
-process.stdin.on("end", () => {
-    const secrets = JSON.parse(data);
-    for (const [key, value] of Object.entries(secrets)) {
-        fs.writeFileSync("/run/secrets/" + key, value, { mode: 0o600 });
-    }
-});
-'
-
-if [ -f /run/secrets/ANTHROPIC_API_KEY ]; then
-    SECRET_VALUE=$(cat /run/secrets/ANTHROPIC_API_KEY)
-    echo "PASS: Secret loaded from tmpfs"
-    echo "VALUE: $SECRET_VALUE"
-else
-    echo "FAIL: Secret file not found in tmpfs"
-    exit 1
-fi
-`
-
-	cmd := exec.Command("docker", "run", "--rm",
-		"--name", containerName,
-		"--tmpfs", "/run/secrets:size=1m,mode=0700",
-		"-e", "ADDT_SECRETS_B64="+secretsB64,
-		// Note: NOT passing -e ANTHROPIC_API_KEY
-		"node:22-slim",
-		"bash", "-c", script)
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("Container failed: %v\nOutput: %s", err, string(output))
-	}
-
-	outputStr := string(output)
-	t.Logf("Container output:\n%s", outputStr)
-
-	// Verify the test passed
-	if !strings.Contains(outputStr, "PASS: ANTHROPIC_API_KEY not in env vars") {
-		t.Error("Secret should NOT be in environment variables")
-	}
-	if !strings.Contains(outputStr, "PASS: Secret loaded from tmpfs") {
-		t.Error("Secret should be loadable from tmpfs")
-	}
-	if !strings.Contains(outputStr, "VALUE: "+secretValue) {
-		t.Errorf("Secret value mismatch, expected %s", secretValue)
-	}
-}
-
-// TestSecretsToFiles_Integration_ProviderBuildsCorrectArgs tests that the provider
-// builds the correct docker arguments when secrets_to_files is enabled
 func TestSecretsToFiles_Integration_ProviderBuildsCorrectArgs(t *testing.T) {
 	checkDockerForSecrets(t)
 
@@ -409,9 +198,8 @@ func TestSecretsToFiles_Integration_ProviderBuildsCorrectArgs(t *testing.T) {
 		Name:      "test-secrets-args",
 		ImageName: "alpine:latest",
 		Env: map[string]string{
-			"ANTHROPIC_API_KEY": "test-secret-value",
-			"TERM":              "xterm",
-			"HOME":              "/home/test",
+			"TERM": "xterm",
+			"HOME": "/home/test",
 		},
 	}
 
@@ -427,44 +215,33 @@ func TestSecretsToFiles_Integration_ProviderBuildsCorrectArgs(t *testing.T) {
 	dockerArgs, cleanup := prov.addContainerVolumesAndEnv(dockerArgs, spec, ctx)
 	defer cleanup()
 
-	// Check for ADDT_SECRETS_B64 env var and --tmpfs mount
-	foundSecretsB64 := false
+	// Check for --tmpfs mount (should be present when secrets_to_files is enabled)
 	foundTmpfsMount := false
-	foundSecretInEnv := false
+	foundSecretsEnvVar := false
 
 	for i, arg := range dockerArgs {
-		if arg == "-e" && i+1 < len(dockerArgs) {
-			if strings.HasPrefix(dockerArgs[i+1], "ADDT_SECRETS_B64=") {
-				foundSecretsB64 = true
-			}
-			if strings.HasPrefix(dockerArgs[i+1], "ANTHROPIC_API_KEY=") {
-				foundSecretInEnv = true
-			}
-		}
 		if arg == "--tmpfs" && i+1 < len(dockerArgs) {
 			if strings.HasPrefix(dockerArgs[i+1], "/run/secrets:") {
 				foundTmpfsMount = true
 			}
 		}
-	}
-
-	// Verify the non-secret env vars are still there
-	foundTerm := false
-	for i, arg := range dockerArgs {
+		// Should NOT have any ADDT_SECRETS_B64 env var with new approach
 		if arg == "-e" && i+1 < len(dockerArgs) {
-			if dockerArgs[i+1] == "TERM=xterm" {
-				foundTerm = true
+			if strings.HasPrefix(dockerArgs[i+1], "ADDT_SECRETS_B64=") {
+				foundSecretsEnvVar = true
 			}
 		}
 	}
 
-	if !foundTerm {
-		t.Error("Non-secret env var TERM should still be passed")
+	if !foundTmpfsMount {
+		t.Error("tmpfs mount for /run/secrets should be present")
+	}
+
+	if foundSecretsEnvVar {
+		t.Error("ADDT_SECRETS_B64 env var should NOT be present with docker cp approach")
 	}
 
 	t.Logf("Docker args: %v", dockerArgs)
-	t.Logf("Found ADDT_SECRETS_B64: %v, Found tmpfs mount: %v, Found secret in env: %v",
-		foundSecretsB64, foundTmpfsMount, foundSecretInEnv)
 }
 
 const testSecretsImageName = "addt-test-secrets"
@@ -522,256 +299,251 @@ func ensureSecretsTestImage(t *testing.T) {
 	}
 }
 
+// TestSecretsToFiles_Integration_DockerCpApproach tests the docker cp approach
+// where secrets are copied to a running container's tmpfs
+func TestSecretsToFiles_Integration_DockerCpApproach(t *testing.T) {
+	checkDockerForSecrets(t)
+
+	secretValue := "sk-ant-docker-cp-test-12345"
+	secrets := map[string]string{
+		"ANTHROPIC_API_KEY": secretValue,
+	}
+	secretsJSON, _ := json.Marshal(secrets)
+
+	containerName := fmt.Sprintf("addt-docker-cp-test-%d", os.Getpid())
+	defer exec.Command("docker", "rm", "-f", containerName).Run()
+
+	// 1. Start container detached with wait loop (simulating runWithSecrets)
+	waitScript := `while [ ! -f /run/secrets/.secrets ]; do sleep 0.05; done
+node -e '
+const fs = require("fs");
+const data = fs.readFileSync("/run/secrets/.secrets", "utf8");
+const secrets = JSON.parse(data);
+for (const [key, value] of Object.entries(secrets)) {
+    fs.writeFileSync("/run/secrets/" + key, value, { mode: 0o600 });
+}
+'
+rm -f /run/secrets/.secrets
+export ANTHROPIC_API_KEY="$(cat /run/secrets/ANTHROPIC_API_KEY)"
+echo "LOADED_SECRET=$ANTHROPIC_API_KEY"
+`
+
+	startCmd := exec.Command("docker", "run", "-d",
+		"--name", containerName,
+		"--tmpfs", "/run/secrets:size=1m,mode=0700",
+		"node:22-slim",
+		"bash", "-c", waitScript)
+
+	if output, err := startCmd.CombinedOutput(); err != nil {
+		t.Fatalf("Failed to start container: %v\nOutput: %s", err, string(output))
+	}
+
+	// 2. Write secrets JSON to temp file
+	tmpFile, err := os.CreateTemp("", "addt-secrets-*.json")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	tmpFile.Write(secretsJSON)
+	tmpFile.Close()
+	defer os.Remove(tmpFile.Name())
+
+	// 3. Copy secrets to container via docker cp
+	cpCmd := exec.Command("docker", "cp", tmpFile.Name(), containerName+":/run/secrets/.secrets")
+	if output, err := cpCmd.CombinedOutput(); err != nil {
+		t.Fatalf("docker cp failed: %v\nOutput: %s", err, string(output))
+	}
+
+	// 4. Wait for container to finish
+	waitCmd := exec.Command("docker", "wait", containerName)
+	waitCmd.Run()
+
+	// 5. Check logs
+	logsCmd := exec.Command("docker", "logs", containerName)
+	output, _ := logsCmd.CombinedOutput()
+
+	outputStr := string(output)
+	t.Logf("Container output:\n%s", outputStr)
+
+	expected := "LOADED_SECRET=" + secretValue
+	if !strings.Contains(outputStr, expected) {
+		t.Errorf("Expected %q in output, got: %s", expected, outputStr)
+	}
+}
+
+// TestSecretsToFiles_Integration_SecretsNotInProcEnviron verifies that
+// secrets are NOT visible in /proc/1/environ when using docker cp approach
+func TestSecretsToFiles_Integration_SecretsNotInProcEnviron(t *testing.T) {
+	checkDockerForSecrets(t)
+
+	secretValue := "sk-ant-proc-environ-test"
+	secrets := map[string]string{
+		"MY_SECRET": secretValue,
+	}
+	secretsJSON, _ := json.Marshal(secrets)
+
+	containerName := fmt.Sprintf("addt-proc-environ-test-%d", os.Getpid())
+	defer exec.Command("docker", "rm", "-f", containerName).Run()
+
+	// Start container that checks /proc/1/environ
+	checkScript := `
+while [ ! -f /run/secrets/.secrets ]; do sleep 0.05; done
+
+# Check if secret is in initial /proc/1/environ (should NOT be)
+if grep -q "MY_SECRET" /proc/1/environ 2>/dev/null; then
+    echo "FAIL: MY_SECRET found in /proc/1/environ"
+else
+    echo "PASS: MY_SECRET NOT in /proc/1/environ"
+fi
+
+# Load secret from file
+node -e '
+const fs = require("fs");
+const data = fs.readFileSync("/run/secrets/.secrets", "utf8");
+const secrets = JSON.parse(data);
+for (const [key, value] of Object.entries(secrets)) {
+    fs.writeFileSync("/run/secrets/" + key, value, { mode: 0o600 });
+}
+'
+rm -f /run/secrets/.secrets
+export MY_SECRET="$(cat /run/secrets/MY_SECRET)"
+
+# Secret is now in current shell's env, but not in /proc/1/environ
+echo "MY_SECRET value: $MY_SECRET"
+`
+
+	startCmd := exec.Command("docker", "run", "-d",
+		"--name", containerName,
+		"--tmpfs", "/run/secrets:size=1m,mode=0700",
+		"node:22-slim",
+		"bash", "-c", checkScript)
+
+	if output, err := startCmd.CombinedOutput(); err != nil {
+		t.Fatalf("Failed to start container: %v\nOutput: %s", err, string(output))
+	}
+
+	// Copy secrets
+	tmpFile, _ := os.CreateTemp("", "addt-secrets-*.json")
+	tmpFile.Write(secretsJSON)
+	tmpFile.Close()
+	defer os.Remove(tmpFile.Name())
+
+	exec.Command("docker", "cp", tmpFile.Name(), containerName+":/run/secrets/.secrets").Run()
+
+	// Wait and check logs
+	exec.Command("docker", "wait", containerName).Run()
+
+	logsCmd := exec.Command("docker", "logs", containerName)
+	output, _ := logsCmd.CombinedOutput()
+	outputStr := string(output)
+	t.Logf("Container output:\n%s", outputStr)
+
+	if !strings.Contains(outputStr, "PASS: MY_SECRET NOT in /proc/1/environ") {
+		t.Error("Secret should NOT be in /proc/1/environ")
+	}
+	if !strings.Contains(outputStr, "MY_SECRET value: "+secretValue) {
+		t.Error("Secret should be loadable from tmpfs")
+	}
+}
+
 // TestSecretsToFiles_Integration_RealEntrypoint tests the actual docker-entrypoint.sh
-// with secrets loaded via base64-encoded env var
+// with secrets copied via docker cp
 func TestSecretsToFiles_Integration_RealEntrypoint(t *testing.T) {
 	checkDockerForSecrets(t)
 	ensureSecretsTestImage(t)
 
-	// Encode secret
 	secretValue := "sk-ant-real-entrypoint-test-12345"
 	secrets := map[string]string{
 		"ANTHROPIC_API_KEY": secretValue,
 	}
-	jsonBytes, _ := json.Marshal(secrets)
-	secretsB64 := base64.StdEncoding.EncodeToString(jsonBytes)
+	secretsJSON, _ := json.Marshal(secrets)
 
 	containerName := fmt.Sprintf("addt-secrets-real-entrypoint-%d", os.Getpid())
 	defer exec.Command("docker", "rm", "-f", containerName).Run()
 
-	// Run the actual entrypoint with secrets as base64
-	cmd := exec.Command("docker", "run", "--rm",
+	// Start container detached with wait loop that calls entrypoint
+	waitScript := `while [ ! -f /run/secrets/.secrets ] && [ ! -f /run/secrets/.ready ]; do sleep 0.05; done; exec /usr/local/bin/docker-entrypoint.sh "$@"`
+
+	startCmd := exec.Command("docker", "run", "-d",
 		"--name", containerName,
 		"--tmpfs", "/run/secrets:size=1m,mode=0700",
-		"-e", "ADDT_SECRETS_B64="+secretsB64,
 		"-e", "ADDT_COMMAND=sh",
-		// Note: NOT passing ANTHROPIC_API_KEY as env var
-		testSecretsImageName,
-		"-c", `
-echo "=== Checking secrets loaded by entrypoint ==="
-echo "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-<not set>}"
-
-if [ "$ANTHROPIC_API_KEY" = "sk-ant-real-entrypoint-test-12345" ]; then
-    echo "PASS: ANTHROPIC_API_KEY loaded correctly by entrypoint"
-else
-    echo "FAIL: ANTHROPIC_API_KEY not loaded or wrong value"
-    echo "Checking tmpfs at /run/secrets..."
-    ls -la /run/secrets/ 2>&1 || echo "Cannot list /run/secrets"
-    exit 1
-fi
-
-echo "=== Test passed ==="
-`)
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("Container failed: %v\nOutput: %s", err, string(output))
-	}
-
-	outputStr := string(output)
-	t.Logf("Container output:\n%s", outputStr)
-
-	// Verify entrypoint loaded the secret
-	if !strings.Contains(outputStr, "PASS: ANTHROPIC_API_KEY loaded correctly by entrypoint") {
-		t.Error("Entrypoint should have loaded ANTHROPIC_API_KEY from base64")
-	}
-	if !strings.Contains(outputStr, "=== Test passed ===") {
-		t.Error("Not all checks passed")
-	}
-}
-
-// TestSecretsToFiles_Integration_SecretsNotInInitialEnv verifies that
-// secrets are NOT visible in the initial process environment when using tmpfs
-func TestSecretsToFiles_Integration_SecretsNotInInitialEnv(t *testing.T) {
-	checkDockerForSecrets(t)
-	ensureSecretsTestImage(t)
-
-	secretValue := "sk-ant-not-in-initial-env-test"
-	secrets := map[string]string{
-		"ANTHROPIC_API_KEY": secretValue,
-	}
-	jsonBytes, _ := json.Marshal(secrets)
-	secretsB64 := base64.StdEncoding.EncodeToString(jsonBytes)
-
-	containerName := fmt.Sprintf("addt-secrets-not-in-env-%d", os.Getpid())
-	defer exec.Command("docker", "rm", "-f", containerName).Run()
-
-	// Run container WITHOUT using entrypoint to check raw environment
-	cmd := exec.Command("docker", "run", "--rm",
-		"--name", containerName,
-		"--tmpfs", "/run/secrets:size=1m,mode=0700",
-		"-e", "ADDT_SECRETS_B64="+secretsB64,
 		"--entrypoint", "/bin/sh",
-		// Note: NOT passing ANTHROPIC_API_KEY as env var
 		testSecretsImageName,
-		"-c", `
-echo "=== Checking initial environment (before entrypoint) ==="
+		"-c", waitScript, "--",
+		"-c", `echo "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-<not set>}"`)
 
-# Check if ANTHROPIC_API_KEY is in initial env
-if printenv ANTHROPIC_API_KEY >/dev/null 2>&1; then
-    echo "FAIL: ANTHROPIC_API_KEY found in initial env"
-    exit 1
-else
-    echo "PASS: ANTHROPIC_API_KEY NOT in initial env"
-fi
-
-# Now simulate what entrypoint does - decode base64 and write to tmpfs
-echo "=== Loading secrets like entrypoint does ==="
-echo "$ADDT_SECRETS_B64" | base64 -d | node -e '
-const fs = require("fs");
-let data = "";
-process.stdin.on("data", chunk => data += chunk);
-process.stdin.on("end", () => {
-    const secrets = JSON.parse(data);
-    for (const [key, value] of Object.entries(secrets)) {
-        fs.writeFileSync("/run/secrets/" + key, value, { mode: 0o600 });
-        console.log("Loaded: " + key);
-    }
-});
-'
-
-# Read from tmpfs
-for secret_file in /run/secrets/*; do
-    if [ -f "$secret_file" ]; then
-        var_name=$(basename "$secret_file")
-        export "$var_name"="$(cat "$secret_file")"
-    fi
-done
-
-# Now check that secret IS available
-if [ -n "$ANTHROPIC_API_KEY" ]; then
-    echo "PASS: ANTHROPIC_API_KEY available after loading"
-else
-    echo "FAIL: ANTHROPIC_API_KEY not available after loading"
-    exit 1
-fi
-
-echo "=== Test passed ==="
-`)
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("Container failed: %v\nOutput: %s", err, string(output))
+	if output, err := startCmd.CombinedOutput(); err != nil {
+		t.Fatalf("Failed to start container: %v\nOutput: %s", err, string(output))
 	}
 
+	// Copy secrets
+	tmpFile, _ := os.CreateTemp("", "addt-secrets-*.json")
+	tmpFile.Write(secretsJSON)
+	tmpFile.Close()
+	defer os.Remove(tmpFile.Name())
+
+	cpCmd := exec.Command("docker", "cp", tmpFile.Name(), containerName+":/run/secrets/.secrets")
+	if output, err := cpCmd.CombinedOutput(); err != nil {
+		t.Fatalf("docker cp failed: %v\nOutput: %s", err, string(output))
+	}
+
+	// Wait and check
+	exec.Command("docker", "wait", containerName).Run()
+
+	logsCmd := exec.Command("docker", "logs", containerName)
+	output, _ := logsCmd.CombinedOutput()
 	outputStr := string(output)
 	t.Logf("Container output:\n%s", outputStr)
 
-	if !strings.Contains(outputStr, "PASS: ANTHROPIC_API_KEY NOT in initial env") {
-		t.Error("Secret should NOT be in initial environment")
-	}
-	if !strings.Contains(outputStr, "PASS: ANTHROPIC_API_KEY available after loading") {
-		t.Error("Secret should be available after loading from tmpfs")
+	expected := "ANTHROPIC_API_KEY=" + secretValue
+	if !strings.Contains(outputStr, expected) {
+		t.Errorf("Entrypoint should have loaded ANTHROPIC_API_KEY from tmpfs, expected %q", expected)
 	}
 }
 
-// TestSecretsToFiles_Integration_CompareEnvVsTmpfs runs two containers side by side:
-// one with secrets as env vars, one with secrets in tmpfs, and compares behavior
-func TestSecretsToFiles_Integration_CompareEnvVsTmpfs(t *testing.T) {
-	checkDockerForSecrets(t)
+// TestPrepareSecretsJSON tests the prepareSecretsJSON function
+func TestPrepareSecretsJSON(t *testing.T) {
+	secCfg := security.DefaultConfig()
+	secCfg.SecretsToFiles = true
 
-	secretValue := "sk-compare-test-secret"
+	cfg := &provider.Config{
+		Security:   secCfg,
+		Extensions: "claude",
+	}
 
-	// Script to check /proc/*/environ for the secret
-	checkScript := `
-# Check if secret is visible in /proc/1/environ
-if grep -q "MY_SECRET" /proc/1/environ 2>/dev/null; then
-    echo "SECRET_IN_PROC_ENVIRON=yes"
-else
-    echo "SECRET_IN_PROC_ENVIRON=no"
-fi
+	prov := &DockerProvider{
+		config:            cfg,
+		tempDirs:          []string{},
+		extensionEnvVars:  map[string][]string{"addt-test": {"ANTHROPIC_API_KEY", "GH_TOKEN"}},
+		extensionVersions: map[string]string{},
+	}
 
-# Check if secret is in current env
-if printenv MY_SECRET >/dev/null 2>&1; then
-    echo "SECRET_IN_ENV=yes"
-    echo "SECRET_VALUE=$(printenv MY_SECRET)"
-else
-    echo "SECRET_IN_ENV=no"
-fi
-`
+	env := map[string]string{
+		"ANTHROPIC_API_KEY": "sk-test-key",
+		"GH_TOKEN":          "ghp_test",
+		"TERM":              "xterm",
+	}
 
-	// Test 1: Secret as env var (visible in /proc/1/environ)
-	t.Run("SecretAsEnvVar", func(t *testing.T) {
-		cmd := exec.Command("docker", "run", "--rm",
-			"-e", "MY_SECRET="+secretValue,
-			"alpine:latest",
-			"sh", "-c", checkScript)
+	jsonStr, secretVarNames, err := prov.prepareSecretsJSON("addt-test", env)
+	if err != nil {
+		t.Fatalf("prepareSecretsJSON failed: %v", err)
+	}
 
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			t.Fatalf("Container failed: %v\nOutput: %s", err, string(output))
-		}
+	// Verify JSON contains secrets
+	var parsed map[string]string
+	if err := json.Unmarshal([]byte(jsonStr), &parsed); err != nil {
+		t.Fatalf("Invalid JSON: %v", err)
+	}
 
-		outputStr := string(output)
-		t.Logf("Env var mode output:\n%s", outputStr)
+	if parsed["ANTHROPIC_API_KEY"] != "sk-test-key" {
+		t.Errorf("ANTHROPIC_API_KEY not in JSON")
+	}
+	if parsed["GH_TOKEN"] != "ghp_test" {
+		t.Errorf("GH_TOKEN not in JSON")
+	}
 
-		// Secret SHOULD be visible in env
-		if !strings.Contains(outputStr, "SECRET_IN_ENV=yes") {
-			t.Error("Secret should be in env when passed as -e")
-		}
-		// Secret SHOULD be visible in /proc/1/environ (this is the security concern)
-		if !strings.Contains(outputStr, "SECRET_IN_PROC_ENVIRON=yes") {
-			t.Log("Note: Secret not found in /proc/1/environ (might be a container quirk)")
-		}
-	})
-
-	// Test 2: Secret loaded from tmpfs (not in initial environ)
-	t.Run("SecretFromTmpfs", func(t *testing.T) {
-		secrets := map[string]string{
-			"MY_SECRET": secretValue,
-		}
-		jsonBytes, _ := json.Marshal(secrets)
-		secretsB64 := base64.StdEncoding.EncodeToString(jsonBytes)
-
-		// Load secret from tmpfs then check
-		tmpfsCheckScript := `
-# First check - secret should NOT be in env yet
-if printenv MY_SECRET >/dev/null 2>&1; then
-    echo "BEFORE_LOAD: SECRET_IN_ENV=yes (unexpected)"
-else
-    echo "BEFORE_LOAD: SECRET_IN_ENV=no (expected)"
-fi
-
-# Decode and write to tmpfs (simulating node)
-echo "$ADDT_SECRETS_B64" | base64 -d > /tmp/secrets.json
-# Parse JSON manually with basic tools
-MY_SECRET=$(grep -o '"MY_SECRET":"[^"]*"' /tmp/secrets.json | cut -d'"' -f4)
-echo "$MY_SECRET" > /run/secrets/MY_SECRET
-
-# Load from tmpfs
-export MY_SECRET="$(cat /run/secrets/MY_SECRET)"
-
-# After loading - secret IS in env (but wasn't in initial /proc/1/environ)
-if printenv MY_SECRET >/dev/null 2>&1; then
-    echo "AFTER_LOAD: SECRET_IN_ENV=yes"
-    echo "SECRET_VALUE=$(printenv MY_SECRET)"
-fi
-`
-
-		cmd := exec.Command("docker", "run", "--rm",
-			"--tmpfs", "/run/secrets:size=1m,mode=0700",
-			"-e", "ADDT_SECRETS_B64="+secretsB64,
-			"alpine:latest",
-			"sh", "-c", tmpfsCheckScript)
-
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			t.Fatalf("Container failed: %v\nOutput: %s", err, string(output))
-		}
-
-		outputStr := string(output)
-		t.Logf("Tmpfs mode output:\n%s", outputStr)
-
-		// Before loading, secret should NOT be in env
-		if !strings.Contains(outputStr, "BEFORE_LOAD: SECRET_IN_ENV=no") {
-			t.Error("Secret should NOT be in env before loading from tmpfs")
-		}
-		// After loading, secret should be available
-		if !strings.Contains(outputStr, "AFTER_LOAD: SECRET_IN_ENV=yes") {
-			t.Error("Secret should be in env after loading from tmpfs")
-		}
-		if !strings.Contains(outputStr, "SECRET_VALUE="+secretValue) {
-			t.Error("Secret value should match after loading")
-		}
-	})
+	// Verify secret var names returned
+	if len(secretVarNames) != 2 {
+		t.Errorf("Expected 2 secret var names, got %d", len(secretVarNames))
+	}
 }

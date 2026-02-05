@@ -1,37 +1,30 @@
 #!/bin/bash
 set -e
 
-# Load secrets from base64-encoded JSON if present
-# Secrets are decoded and written to tmpfs at /run/secrets
-# This approach works with Podman (which has VM path access issues)
-if [ -n "$ADDT_SECRETS_B64" ]; then
-    # Decode base64 and write secrets to tmpfs using Node.js
-    echo "$ADDT_SECRETS_B64" | base64 -d | node -e '
+# Load secrets from file if present (copied via docker cp to tmpfs)
+# Secrets are written to tmpfs at /run/secrets/.secrets by the host
+# This approach keeps secrets out of environment variables entirely
+if [ -f /run/secrets/.secrets ]; then
+    # Parse JSON and write individual secret files using Node.js
+    node -e '
         const fs = require("fs");
-        let data = "";
-        process.stdin.on("data", chunk => data += chunk);
-        process.stdin.on("end", () => {
-            const secrets = JSON.parse(data);
-            for (const [key, value] of Object.entries(secrets)) {
-                fs.writeFileSync("/run/secrets/" + key, value, { mode: 0o600 });
-                console.log(key);
-            }
-        });
-    ' | while read -r var_name; do
-        # Export each secret from the file
-        export "$var_name"="$(cat /run/secrets/$var_name)"
-    done
+        const data = fs.readFileSync("/run/secrets/.secrets", "utf8");
+        const secrets = JSON.parse(data);
+        for (const [key, value] of Object.entries(secrets)) {
+            fs.writeFileSync("/run/secrets/" + key, value, { mode: 0o600 });
+        }
+    '
 
-    # Re-read secrets in current shell (the while loop runs in a subshell)
+    # Delete the secrets file immediately after parsing
+    rm -f /run/secrets/.secrets
+
+    # Load secrets into environment from individual files
     for secret_file in /run/secrets/*; do
         if [ -f "$secret_file" ]; then
             var_name=$(basename "$secret_file")
             export "$var_name"="$(cat "$secret_file")"
         fi
     done
-
-    # Clear the env var so secrets aren't visible in /proc/*/environ
-    unset ADDT_SECRETS_B64
 fi
 
 # Start Docker daemon if in DinD mode
