@@ -7,6 +7,15 @@ import (
 	"github.com/jedi4ever/addt/extensions"
 )
 
+// ListExtensions returns all available extensions for programmatic use
+func ListExtensions() []extensions.ExtensionConfig {
+	exts, err := extensions.GetExtensions()
+	if err != nil {
+		return nil
+	}
+	return exts
+}
+
 // List prints all available extensions
 func List() {
 	exts, err := extensions.GetExtensions()
