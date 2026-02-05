@@ -44,9 +44,10 @@ func isDockerRunning() bool {
 }
 
 // isPodmanAvailable checks if Podman is available (no daemon needed)
+// Checks both system Podman and bundled Podman
 func isPodmanAvailable() bool {
-	podmanPath, err := exec.LookPath("podman")
-	if err != nil {
+	podmanPath := GetPodmanPath()
+	if podmanPath == "" {
 		return false
 	}
 
@@ -55,6 +56,24 @@ func isPodmanAvailable() bool {
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	return cmd.Run() == nil
+}
+
+// GetPodmanPath returns the path to Podman binary (system or bundled)
+func GetPodmanPath() string {
+	// First check system Podman
+	if path, err := exec.LookPath("podman"); err == nil {
+		return path
+	}
+
+	// Check bundled Podman
+	bundledPath := GetBundledPodmanPath()
+	if bundledPath != "" {
+		if _, err := os.Stat(bundledPath); err == nil {
+			return bundledPath
+		}
+	}
+
+	return ""
 }
 
 // GetRuntimeInfo returns information about the detected runtime
@@ -84,7 +103,11 @@ func getDockerVersion() string {
 }
 
 func getPodmanVersion() string {
-	cmd := exec.Command("podman", "version", "--format", "{{.Version}}")
+	podmanPath := GetPodmanPath()
+	if podmanPath == "" {
+		return "unknown"
+	}
+	cmd := exec.Command(podmanPath, "version", "--format", "{{.Version}}")
 	output, err := cmd.Output()
 	if err != nil {
 		return "unknown"

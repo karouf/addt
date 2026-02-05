@@ -23,7 +23,7 @@ Commands:
   addt config [global|project|extension]  Manage configuration
   addt completion [bash|zsh|fish]    Generate shell completions
   addt doctor                        Check system health
-  addt cli [update]                  Manage addt CLI
+  addt cli [update|install-podman]   Manage addt CLI
   addt version                       Show version info
 
 Examples:

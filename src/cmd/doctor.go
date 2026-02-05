@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/jedi4ever/addt/config"
 )
 
 // DoctorCheck represents a single health check result
@@ -140,12 +142,12 @@ func checkDocker() DoctorCheck {
 func checkPodman() DoctorCheck {
 	check := DoctorCheck{Name: "Podman"}
 
-	// Check if podman is installed
-	podmanPath, err := exec.LookPath("podman")
-	if err != nil {
+	// Check for system Podman first, then bundled
+	podmanPath := config.GetPodmanPath()
+	if podmanPath == "" {
 		check.Status = "warn"
 		check.Message = "not installed (optional)"
-		check.Fix = "Install Podman from https://podman.io/getting-started/installation"
+		check.Fix = "Run: addt cli install-podman"
 		return check
 	}
 
@@ -160,8 +162,12 @@ func checkPodman() DoctorCheck {
 	}
 
 	version := strings.TrimSpace(string(output))
+	source := "system"
+	if config.IsPodmanBundled() && podmanPath == config.GetBundledPodmanPath() {
+		source = "bundled"
+	}
 	check.Status = "ok"
-	check.Message = fmt.Sprintf("available (v%s)", version)
+	check.Message = fmt.Sprintf("available (v%s, %s)", version, source)
 
 	// Check if pasta is available for podman
 	if _, err := exec.LookPath("pasta"); err == nil {
