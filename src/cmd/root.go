@@ -60,7 +60,7 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 		// Check if first arg is a known addt command (matches switch cases below)
 		switch args[0] {
 		case "run", "build", "shell", "containers", "firewall",
-			"extensions", "cli", "config", "version":
+			"extensions", "cli", "config", "version", "completion", "doctor":
 			// Known command, continue processing
 		default:
 			// Unknown command, show help
@@ -74,6 +74,12 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 		switch args[0] {
 		case "version":
 			PrintVersion(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion)
+			return
+		case "completion":
+			HandleCompletionCommand(args[1:])
+			return
+		case "doctor":
+			HandleDoctorCommand(args[1:])
 			return
 		case "cli":
 			handleCliCommand(args[1:], version)

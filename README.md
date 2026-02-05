@@ -457,6 +457,11 @@ addt extensions list              # List available agents
 addt extensions info <name>       # Show agent details
 addt extensions new <name>        # Create custom agent
 
+# Developer tools
+addt doctor                       # Check system health
+addt completion bash              # Generate bash completions
+addt completion zsh               # Generate zsh completions
+
 # Meta
 addt version                      # Show version
 addt cli update                   # Update addt
@@ -482,7 +487,7 @@ addt cli update                   # Update addt
 ### Container Behavior
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ADDT_PROVIDER` | docker | Container runtime: `docker`, `podman`, or `daytona` |
+| `ADDT_PROVIDER` | auto | Container runtime: `docker`, `podman`, or `daytona` (auto-detected) |
 | `ADDT_PERSISTENT` | false | Keep container running |
 | `ADDT_PORTS` | - | Ports to expose: `3000,8080` |
 | `ADDT_DOCKER_CPUS` | - | CPU limit: `2` |
@@ -540,6 +545,26 @@ addt cli update                   # Update addt
 ---
 
 ## Troubleshooting
+
+### Quick diagnostics
+Run the built-in health check:
+```bash
+addt doctor
+```
+This checks Docker/Podman, API keys, disk space, and network connectivity.
+
+### Shell completions
+Enable tab completion for commands and extensions:
+```bash
+# Bash (add to ~/.bashrc)
+eval "$(addt completion bash)"
+
+# Zsh (add to ~/.zshrc)
+eval "$(addt completion zsh)"
+
+# Fish
+addt completion fish > ~/.config/fish/completions/addt.fish
+```
 
 ### macOS: "Killed: 9"
 Binary needs code-signing:

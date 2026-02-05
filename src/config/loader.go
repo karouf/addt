@@ -236,7 +236,8 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 	cfg.EnvVars = strings.Split(getEnvOrDefault("ADDT_ENV_VARS", "ANTHROPIC_API_KEY,GH_TOKEN"), ",")
 	cfg.EnvFile = os.Getenv("ADDT_ENV_FILE")
 	cfg.Mode = getEnvOrDefault("ADDT_MODE", "container")
-	cfg.Provider = getEnvOrDefault("ADDT_PROVIDER", "docker")
+	// Auto-detect container runtime (Docker > Podman) if not explicitly set
+	cfg.Provider = DetectContainerRuntime()
 	cfg.Extensions = os.Getenv("ADDT_EXTENSIONS")
 	cfg.Command = os.Getenv("ADDT_COMMAND")
 

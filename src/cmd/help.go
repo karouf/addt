@@ -21,6 +21,8 @@ Commands:
   addt firewall [list|add|rm|reset]  Manage firewall
   addt extensions [list|info|new]    Manage extensions
   addt config [global|project|extension]  Manage configuration
+  addt completion [bash|zsh|fish]    Generate shell completions
+  addt doctor                        Check system health
   addt cli [update]                  Manage addt CLI
   addt version                       Show version info
 
@@ -87,7 +89,7 @@ Environment Variables:
     ADDT_UV_VERSION        UV Python version (default: latest)
 
   Other:
-    ADDT_PROVIDER          Provider: docker or daytona (default: docker)
+    ADDT_PROVIDER          Provider: docker, podman, or daytona (auto-detected)
     ADDT_CONFIG_DIR        Global config directory (default: ~/.addt)
     ADDT_GITHUB_DETECT     Auto-detect GitHub token from gh CLI (default: false)
     ADDT_PORTS             Comma-separated container ports to expose
