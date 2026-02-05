@@ -62,7 +62,13 @@ func (p *PodmanProvider) DetermineImageName() string {
 	}
 	sort.Strings(validExts)
 
-	// Build tag parts: ext1-version1_ext2-version2
+	// First, check if we already have a matching image (avoids npm lookups)
+	// This prevents rebuilds when npm version changes or network is flaky
+	if existingImage := p.findExistingImage(validExts); existingImage != "" {
+		return existingImage
+	}
+
+	// No existing image found, resolve versions and build image name
 	var tagParts []string
 	for _, ext := range validExts {
 		version := p.resolveExtensionVersion(ext)
@@ -76,13 +82,73 @@ func (p *PodmanProvider) DetermineImageName() string {
 	}
 
 	// Prefix with addt version so images are rebuilt when addt is updated
-	// Check if image already exists with this exact tag
 	imageName := fmt.Sprintf("addt:v%s_%s", p.config.AddtVersion, tag)
-	if p.ImageExists(imageName) {
-		return imageName
+	return imageName
+}
+
+// findExistingImage looks for an existing image matching the extensions
+// This avoids npm lookups when we already have a usable image
+func (p *PodmanProvider) findExistingImage(extensions []string) string {
+	if len(extensions) == 0 {
+		// Check for base image
+		baseImage := fmt.Sprintf("addt:v%s_base", p.config.AddtVersion)
+		if p.ImageExists(baseImage) {
+			return baseImage
+		}
+		return ""
 	}
 
-	return imageName
+	// Build a pattern to find images: addt:v{version}_{ext1}-*_{ext2}-*
+	prefix := fmt.Sprintf("addt:v%s_", p.config.AddtVersion)
+
+	// List all addt images
+	cmd := exec.Command("podman", "images", "--format", "{{.Repository}}:{{.Tag}}", "addt")
+	output, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+
+	// Parse output and find matching images
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	for _, line := range lines {
+		if line == "" || !strings.HasPrefix(line, prefix) {
+			continue
+		}
+
+		// Check if this image has all required extensions
+		tag := strings.TrimPrefix(line, prefix)
+		if p.imageTagMatchesExtensions(tag, extensions) {
+			return line
+		}
+	}
+
+	return ""
+}
+
+// imageTagMatchesExtensions checks if an image tag contains all required extensions
+func (p *PodmanProvider) imageTagMatchesExtensions(tag string, extensions []string) bool {
+	// Tag format: ext1-version1_ext2-version2
+	parts := strings.Split(tag, "_")
+
+	// Build a set of extensions in the tag
+	tagExts := make(map[string]bool)
+	for _, part := range parts {
+		// Extract extension name (everything before the last dash)
+		if idx := strings.LastIndex(part, "-"); idx > 0 {
+			extName := part[:idx]
+			tagExts[extName] = true
+		}
+	}
+
+	// Check all required extensions are present
+	for _, ext := range extensions {
+		if !tagExts[ext] {
+			return false
+		}
+	}
+
+	// Also ensure we don't have extra extensions
+	return len(tagExts) == len(extensions)
 }
 
 // resolveExtensionVersion resolves the version for an extension, handling dist-tags
