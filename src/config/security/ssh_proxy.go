@@ -39,8 +39,19 @@ func NewSSHProxyAgent(upstreamSocket string, allowedKeys []string) (*SSHProxyAge
 		return nil, fmt.Errorf("upstream SSH_AUTH_SOCK not set")
 	}
 
-	// Create temp directory for proxy socket with restrictive permissions
-	tmpDir, err := os.MkdirTemp("", "ssh-proxy-*")
+	// Create socket directory in ~/.addt/sockets/ so Podman machine can access it
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get home dir: %w", err)
+	}
+
+	socketsDir := filepath.Join(homeDir, ".addt", "sockets")
+	if err := os.MkdirAll(socketsDir, 0700); err != nil {
+		return nil, fmt.Errorf("failed to create sockets dir: %w", err)
+	}
+
+	// Create unique subdirectory for this proxy instance
+	tmpDir, err := os.MkdirTemp(socketsDir, "ssh-proxy-*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp dir: %w", err)
 	}
