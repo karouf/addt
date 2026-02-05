@@ -146,6 +146,7 @@ func (p *DockerProvider) GetExtensionFlags(imageName, command string) []extensio
 }
 
 // GetExtensionEnvVars returns all unique environment variables needed by installed extensions
+// This includes both regular env_vars and otel_vars from extension configs
 func (p *DockerProvider) GetExtensionEnvVars(imageName string) []string {
 	metadata := p.GetExtensionMetadata(imageName)
 	if metadata == nil {
@@ -157,6 +158,10 @@ func (p *DockerProvider) GetExtensionEnvVars(imageName string) []string {
 	for _, ext := range metadata {
 		for _, envVar := range ext.EnvVars {
 			envVarSet[envVar] = true
+		}
+		// Also include OTEL vars
+		for _, otelVar := range ext.OtelVars {
+			envVarSet[otelVar] = true
 		}
 	}
 

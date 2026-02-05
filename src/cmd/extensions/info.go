@@ -50,6 +50,13 @@ func ShowInfo(name string) {
 				}
 			}
 
+			if len(ext.OtelVars) > 0 {
+				fmt.Println("\nOpenTelemetry Variables:")
+				for _, env := range ext.OtelVars {
+					fmt.Printf("  - %s\n", env)
+				}
+			}
+
 			if len(ext.Mounts) > 0 {
 				fmt.Println("\nMounts:")
 				for _, m := range ext.Mounts {
