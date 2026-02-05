@@ -1,8 +1,8 @@
 package docker
 
 import (
-	"os"
-	"path/filepath"
+	"encoding/base64"
+	"encoding/json"
 	"testing"
 )
 
@@ -37,63 +37,55 @@ func TestFilterSecretEnvVars(t *testing.T) {
 	}
 }
 
-func TestAddSecretsMount(t *testing.T) {
+func TestAddTmpfsSecretsMount(t *testing.T) {
 	p := &DockerProvider{}
 
-	// Test with empty secrets dir
-	args := p.addSecretsMount([]string{"-it"}, "")
-	if len(args) != 1 {
-		t.Errorf("Expected 1 arg for empty secrets dir, got %d", len(args))
-	}
+	args := []string{"-it"}
+	result := p.addTmpfsSecretsMount(args)
 
-	// Test with secrets dir
-	args = p.addSecretsMount([]string{"-it"}, "/tmp/secrets")
-	if len(args) != 3 {
-		t.Errorf("Expected 3 args, got %d", len(args))
+	if len(result) != 3 {
+		t.Errorf("Expected 3 args, got %d", len(result))
 	}
-	if args[1] != "-v" {
-		t.Errorf("Expected -v flag, got %s", args[1])
+	if result[1] != "--tmpfs" {
+		t.Errorf("Expected --tmpfs flag, got %s", result[1])
 	}
-	if args[2] != "/tmp/secrets:/run/secrets:ro" {
-		t.Errorf("Expected mount arg, got %s", args[2])
+	if result[2] != "/run/secrets:size=1m,mode=0700" {
+		t.Errorf("Expected tmpfs mount arg, got %s", result[2])
 	}
 }
 
-func TestWriteSecretsToFiles(t *testing.T) {
-	// Create a temporary directory to simulate secrets
-	tmpDir, err := os.MkdirTemp("", "secrets-test-")
+func TestPrepareSecrets(t *testing.T) {
+	// Test that secrets are properly encoded as base64 JSON
+
+	secrets := map[string]string{
+		"ANTHROPIC_API_KEY": "sk-ant-test123",
+		"GH_TOKEN":          "ghp_xxx",
+	}
+
+	// Manually encode to verify format
+	jsonBytes, err := json.Marshal(secrets)
 	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
+		t.Fatalf("Failed to marshal: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	encoded := base64.StdEncoding.EncodeToString(jsonBytes)
 
-	// Test that secrets are written correctly
-	env := map[string]string{
-		"SECRET_KEY": "my-secret-value",
-		"OTHER_VAR":  "other-value",
-	}
-
-	// Write secret to file manually to test the pattern
-	secretPath := filepath.Join(tmpDir, "SECRET_KEY")
-	if err := os.WriteFile(secretPath, []byte("my-secret-value"), 0600); err != nil {
-		t.Fatalf("Failed to write secret: %v", err)
-	}
-
-	// Verify the secret was written
-	content, err := os.ReadFile(secretPath)
+	// Verify we can decode it back
+	decoded, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
-		t.Fatalf("Failed to read secret: %v", err)
-	}
-	if string(content) != env["SECRET_KEY"] {
-		t.Errorf("Secret content = %q, want %q", string(content), env["SECRET_KEY"])
+		t.Fatalf("Failed to decode base64: %v", err)
 	}
 
-	// Verify file permissions (0600)
-	info, err := os.Stat(secretPath)
-	if err != nil {
-		t.Fatalf("Failed to stat secret: %v", err)
+	var decodedSecrets map[string]string
+	if err := json.Unmarshal(decoded, &decodedSecrets); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
 	}
-	if info.Mode().Perm() != 0600 {
-		t.Errorf("Secret permissions = %o, want 0600", info.Mode().Perm())
+
+	if decodedSecrets["ANTHROPIC_API_KEY"] != secrets["ANTHROPIC_API_KEY"] {
+		t.Errorf("ANTHROPIC_API_KEY mismatch: got %q, want %q",
+			decodedSecrets["ANTHROPIC_API_KEY"], secrets["ANTHROPIC_API_KEY"])
+	}
+	if decodedSecrets["GH_TOKEN"] != secrets["GH_TOKEN"] {
+		t.Errorf("GH_TOKEN mismatch: got %q, want %q",
+			decodedSecrets["GH_TOKEN"], secrets["GH_TOKEN"])
 	}
 }

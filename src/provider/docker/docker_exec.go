@@ -139,15 +139,14 @@ func (p *DockerProvider) addContainerVolumesAndEnv(dockerArgs []string, spec *pr
 		dockerArgs = append(dockerArgs, "-p", fmt.Sprintf("%d:%d", port.Host, port.Container))
 	}
 
-	// Handle secrets_to_files: write extension env vars to files instead of passing as -e
+	// Handle secrets_to_files: pass secrets via base64-encoded env var to tmpfs
+	// This approach works with Podman (which has VM path access issues)
 	if p.config.Security.SecretsToFiles {
-		secretsDir, secretVarNames, err := p.writeSecretsToFiles(spec.ImageName, spec.Env)
-		if err == nil && secretsDir != "" {
-			dockerArgs = p.addSecretsMount(dockerArgs, secretsDir)
+		secretsB64, secretVarNames, err := p.prepareSecrets(spec.ImageName, spec.Env)
+		if err == nil && secretsB64 != "" {
+			dockerArgs = p.addTmpfsSecretsMount(dockerArgs)
 			p.filterSecretEnvVars(spec.Env, secretVarNames)
-			dockerArgs = append(dockerArgs, "-e", "ADDT_SECRETS_DIR=/run/secrets")
-			// Set cleanup to remove secrets directory after container exits
-			cleanup = func() { os.RemoveAll(secretsDir) }
+			dockerArgs = append(dockerArgs, "-e", "ADDT_SECRETS_B64="+secretsB64)
 		}
 	}
 

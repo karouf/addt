@@ -62,94 +62,54 @@ func (p *DockerProvider) DetermineImageName() string {
 	}
 	sort.Strings(validExts)
 
-	// First, check if we already have a matching image (avoids npm lookups)
-	// This prevents rebuilds when npm version changes or network is flaky
-	if existingImage := p.findExistingImage(validExts); existingImage != "" {
-		return existingImage
+	// Handle base image case (no extensions)
+	if len(validExts) == 0 {
+		baseImage := fmt.Sprintf("addt:v%s_base", p.config.AddtVersion)
+		if p.ImageExists(baseImage) {
+			return baseImage
+		}
+		return baseImage
 	}
 
-	// No existing image found, resolve versions and build image name
+	// Check if all extensions have explicit versions (not dist-tags)
+	// If so, we can skip npm lookups and check for exact image match
+	allExplicitVersions := true
+	for _, ext := range validExts {
+		version := p.getExtensionVersion(ext)
+		if version == "latest" || version == "stable" || version == "next" {
+			allExplicitVersions = false
+			break
+		}
+	}
+
+	// Build image name with resolved versions
 	var tagParts []string
 	for _, ext := range validExts {
-		version := p.resolveExtensionVersion(ext)
+		var version string
+		if allExplicitVersions {
+			// Use explicit version directly (no npm lookup needed)
+			version = p.getExtensionVersion(ext)
+		} else {
+			// Resolve version (may do npm lookup for dist-tags)
+			version = p.resolveExtensionVersion(ext)
+		}
 		tagParts = append(tagParts, fmt.Sprintf("%s-%s", ext, version))
 	}
 
 	// Join with underscore
 	tag := strings.Join(tagParts, "_")
-	if tag == "" {
-		tag = "base"
-	}
 
 	// Prefix with addt version so images are rebuilt when addt is updated
 	imageName := fmt.Sprintf("addt:v%s_%s", p.config.AddtVersion, tag)
+
+	// Check if this exact image exists
+	if p.ImageExists(imageName) {
+		return imageName
+	}
+
 	return imageName
 }
 
-// findExistingImage looks for an existing image matching the extensions
-// This avoids npm lookups when we already have a usable image
-func (p *DockerProvider) findExistingImage(extensions []string) string {
-	if len(extensions) == 0 {
-		// Check for base image
-		baseImage := fmt.Sprintf("addt:v%s_base", p.config.AddtVersion)
-		if p.ImageExists(baseImage) {
-			return baseImage
-		}
-		return ""
-	}
-
-	// Build a pattern to find images: addt:v{version}_{ext1}-*_{ext2}-*
-	prefix := fmt.Sprintf("addt:v%s_", p.config.AddtVersion)
-
-	// List all addt images
-	cmd := exec.Command("docker", "images", "--format", "{{.Repository}}:{{.Tag}}", "addt")
-	output, err := cmd.Output()
-	if err != nil {
-		return ""
-	}
-
-	// Parse output and find matching images
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	for _, line := range lines {
-		if line == "" || !strings.HasPrefix(line, prefix) {
-			continue
-		}
-
-		// Check if this image has all required extensions
-		tag := strings.TrimPrefix(line, prefix)
-		if p.imageTagMatchesExtensions(tag, extensions) {
-			return line
-		}
-	}
-
-	return ""
-}
-
-// imageTagMatchesExtensions checks if an image tag contains all required extensions
-func (p *DockerProvider) imageTagMatchesExtensions(tag string, extensions []string) bool {
-	// Tag format: ext1-version1_ext2-version2
-	parts := strings.Split(tag, "_")
-
-	// Build a set of extensions in the tag
-	tagExts := make(map[string]bool)
-	for _, part := range parts {
-		// Extract extension name (everything before the last dash)
-		if idx := strings.LastIndex(part, "-"); idx > 0 {
-			extName := part[:idx]
-			tagExts[extName] = true
-		}
-	}
-
-	// Check all required extensions are present
-	for _, ext := range extensions {
-		if !tagExts[ext] {
-			return false
-		}
-	}
-
-	// Also ensure we don't have extra extensions
-	return len(tagExts) == len(extensions)
-}
 
 // resolveExtensionVersion resolves the version for an extension, handling dist-tags
 func (p *DockerProvider) resolveExtensionVersion(extName string) string {

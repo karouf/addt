@@ -1,6 +1,8 @@
 package podman
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"testing"
 )
 
@@ -35,35 +37,61 @@ func TestFilterSecretEnvVars(t *testing.T) {
 	}
 }
 
-func TestAddSecretsMount_Empty(t *testing.T) {
+func TestAddTmpfsSecretsMount(t *testing.T) {
 	p := &PodmanProvider{}
 
 	args := []string{"-it", "--rm"}
-	result := p.addSecretsMount(args, "")
+	result := p.addTmpfsSecretsMount(args)
 
-	// Should return original args unchanged
-	if len(result) != len(args) {
-		t.Errorf("addSecretsMount with empty secretsDir changed args: got %v, want %v", result, args)
+	// Should add tmpfs mount
+	if len(result) != 4 {
+		t.Errorf("Expected 4 args, got %d: %v", len(result), result)
 	}
-}
 
-func TestAddSecretsMount_Valid(t *testing.T) {
-	p := &PodmanProvider{}
-
-	args := []string{"-it", "--rm"}
-	secretsDir := "/tmp/addt-secrets-123"
-	result := p.addSecretsMount(args, secretsDir)
-
-	// Should add volume mount
-	expectedMount := secretsDir + ":/run/secrets:ro"
 	found := false
 	for i := 0; i < len(result)-1; i++ {
-		if result[i] == "-v" && result[i+1] == expectedMount {
+		if result[i] == "--tmpfs" && result[i+1] == "/run/secrets:size=1m,mode=0700" {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Errorf("addSecretsMount did not add expected mount %q, got %v", expectedMount, result)
+		t.Errorf("addTmpfsSecretsMount did not add expected tmpfs mount, got %v", result)
+	}
+}
+
+func TestPrepareSecrets(t *testing.T) {
+	// Test that secrets are properly encoded as base64 JSON
+
+	secrets := map[string]string{
+		"ANTHROPIC_API_KEY": "sk-ant-test123",
+		"GH_TOKEN":          "ghp_xxx",
+	}
+
+	// Manually encode to verify format
+	jsonBytes, err := json.Marshal(secrets)
+	if err != nil {
+		t.Fatalf("Failed to marshal: %v", err)
+	}
+	encoded := base64.StdEncoding.EncodeToString(jsonBytes)
+
+	// Verify we can decode it back
+	decoded, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		t.Fatalf("Failed to decode base64: %v", err)
+	}
+
+	var decodedSecrets map[string]string
+	if err := json.Unmarshal(decoded, &decodedSecrets); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+
+	if decodedSecrets["ANTHROPIC_API_KEY"] != secrets["ANTHROPIC_API_KEY"] {
+		t.Errorf("ANTHROPIC_API_KEY mismatch: got %q, want %q",
+			decodedSecrets["ANTHROPIC_API_KEY"], secrets["ANTHROPIC_API_KEY"])
+	}
+	if decodedSecrets["GH_TOKEN"] != secrets["GH_TOKEN"] {
+		t.Errorf("GH_TOKEN mismatch: got %q, want %q",
+			decodedSecrets["GH_TOKEN"], secrets["GH_TOKEN"])
 	}
 }

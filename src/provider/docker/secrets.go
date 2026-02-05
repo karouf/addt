@@ -1,87 +1,54 @@
 package docker
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
-
-	"github.com/jedi4ever/addt/config/security"
 )
 
-// writeSecretsToFiles writes secret environment variables to files and returns the secrets directory
-// The directory should be mounted as /run/secrets:ro in the container
-func (p *DockerProvider) writeSecretsToFiles(imageName string, env map[string]string) (string, []string, error) {
+// prepareSecrets collects secret environment variables and returns them as base64-encoded JSON
+// Returns the base64 string and the list of secret variable names
+func (p *DockerProvider) prepareSecrets(imageName string, env map[string]string) (string, []string, error) {
 	// Get extension env vars (these are the "secrets")
 	secretVarNames := p.GetExtensionEnvVars(imageName)
 	if len(secretVarNames) == 0 {
 		return "", nil, nil
 	}
 
-	// Create secrets directory in ~/.addt/secrets/ for consistency with Podman
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to get home dir: %w", err)
-	}
-
-	secretsBaseDir := filepath.Join(homeDir, ".addt", "secrets")
-	if err := os.MkdirAll(secretsBaseDir, 0700); err != nil {
-		return "", nil, fmt.Errorf("failed to create secrets base dir: %w", err)
-	}
-
-	// Create unique subdirectory for this session
-	secretsDir, err := os.MkdirTemp(secretsBaseDir, "session-")
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to create secrets directory: %w", err)
-	}
-
-	// Set restrictive permissions on secrets directory
-	if err := os.Chmod(secretsDir, 0700); err != nil {
-		os.RemoveAll(secretsDir)
-		return "", nil, fmt.Errorf("failed to set secrets directory permissions: %w", err)
-	}
-
-	// Write PID file for cleanup to identify orphaned directories
-	if err := security.WritePIDFile(secretsDir); err != nil {
-		os.RemoveAll(secretsDir)
-		return "", nil, fmt.Errorf("failed to write PID file: %w", err)
-	}
-
-	// Write each secret to a file
+	// Collect secrets that have values
+	secrets := make(map[string]string)
 	writtenSecrets := []string{}
 	for _, varName := range secretVarNames {
 		value, exists := env[varName]
 		if !exists || value == "" {
 			continue
 		}
-
-		secretPath := filepath.Join(secretsDir, varName)
-		if err := os.WriteFile(secretPath, []byte(value), 0600); err != nil {
-			os.RemoveAll(secretsDir)
-			return "", nil, fmt.Errorf("failed to write secret %s: %w", varName, err)
-		}
+		secrets[varName] = value
 		writtenSecrets = append(writtenSecrets, varName)
 	}
 
 	if len(writtenSecrets) == 0 {
-		// No secrets to write, clean up
-		os.RemoveAll(secretsDir)
 		return "", nil, nil
 	}
 
-	return secretsDir, writtenSecrets, nil
-}
-
-// addSecretsMount adds the secrets directory mount to docker args
-func (p *DockerProvider) addSecretsMount(dockerArgs []string, secretsDir string) []string {
-	if secretsDir == "" {
-		return dockerArgs
+	// Encode as JSON then base64
+	jsonBytes, err := json.Marshal(secrets)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to marshal secrets: %w", err)
 	}
-	// Mount as read-only
-	return append(dockerArgs, "-v", secretsDir+":/run/secrets:ro")
+
+	encoded := base64.StdEncoding.EncodeToString(jsonBytes)
+	return encoded, writtenSecrets, nil
 }
 
-// filterSecretEnvVars removes secret env vars from the env map and returns new args
-// This prevents secrets from being passed as -e flags when secrets_to_files is enabled
+// addTmpfsSecretsMount adds a tmpfs mount for secrets at /run/secrets
+// The entrypoint will decode secrets from env var and write to this tmpfs
+func (p *DockerProvider) addTmpfsSecretsMount(dockerArgs []string) []string {
+	return append(dockerArgs, "--tmpfs", "/run/secrets:size=1m,mode=0700")
+}
+
+// filterSecretEnvVars removes secret env vars from the env map
+// This prevents secrets from being passed as -e flags
 func (p *DockerProvider) filterSecretEnvVars(env map[string]string, secretVarNames []string) {
 	for _, varName := range secretVarNames {
 		delete(env, varName)
