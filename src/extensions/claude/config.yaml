@@ -7,10 +7,19 @@ dependencies: []
 credential_script: credentials.sh
 env_vars:
   - ANTHROPIC_API_KEY
+  # OpenTelemetry - Claude Code specific
+  - CLAUDE_CODE_ENABLE_TELEMETRY
+  - OTEL_LOG_USER_PROMPTS
+  - OTEL_LOG_TOOL_DETAILS
+  # OpenTelemetry - Standard OTEL vars
   - OTEL_EXPORTER_OTLP_ENDPOINT
   - OTEL_EXPORTER_OTLP_PROTOCOL
   - OTEL_EXPORTER_OTLP_HEADERS
   - OTEL_SERVICE_NAME
+  - OTEL_METRICS_EXPORTER
+  - OTEL_LOGS_EXPORTER
+  - OTEL_METRIC_EXPORT_INTERVAL
+  - OTEL_LOGS_EXPORT_INTERVAL
 mounts:
   - source: ~/.claude
     target: /home/addt/.claude

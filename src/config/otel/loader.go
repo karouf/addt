@@ -66,15 +66,19 @@ func applyEnvOverrides(cfg *Config) {
 
 // GetEnvVars returns a map of OTEL environment variables to pass to containers.
 // These follow the OpenTelemetry specification for SDK configuration.
+// Also includes Claude Code specific variables for enabling telemetry.
 func GetEnvVars(cfg Config) map[string]string {
 	if !cfg.Enabled {
 		return nil
 	}
 
 	env := map[string]string{
+		// Standard OTEL configuration
 		"OTEL_EXPORTER_OTLP_ENDPOINT": cfg.Endpoint,
 		"OTEL_EXPORTER_OTLP_PROTOCOL": cfg.Protocol,
 		"OTEL_SERVICE_NAME":           cfg.ServiceName,
+		// Claude Code specific - enable telemetry export
+		"CLAUDE_CODE_ENABLE_TELEMETRY": "1",
 	}
 
 	if cfg.Headers != "" {

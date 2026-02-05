@@ -138,6 +138,9 @@ func TestGetEnvVars(t *testing.T) {
 	if env["OTEL_EXPORTER_OTLP_HEADERS"] != cfg.Headers {
 		t.Errorf("Expected OTEL_EXPORTER_OTLP_HEADERS=%s, got %s", cfg.Headers, env["OTEL_EXPORTER_OTLP_HEADERS"])
 	}
+	if env["CLAUDE_CODE_ENABLE_TELEMETRY"] != "1" {
+		t.Errorf("Expected CLAUDE_CODE_ENABLE_TELEMETRY=1, got %s", env["CLAUDE_CODE_ENABLE_TELEMETRY"])
+	}
 
 	// Test without headers
 	cfg.Headers = ""

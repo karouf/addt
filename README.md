@@ -534,13 +534,27 @@ export ADDT_OTEL_ENABLED=true
 export ADDT_OTEL_SERVICE_NAME=my-project
 ```
 
-When enabled, the following OTEL environment variables are passed to the container:
+When enabled, the following environment variables are passed to the container:
+- `CLAUDE_CODE_ENABLE_TELEMETRY=1` (enables Claude Code telemetry)
 - `OTEL_EXPORTER_OTLP_ENDPOINT`
 - `OTEL_EXPORTER_OTLP_PROTOCOL`
 - `OTEL_SERVICE_NAME`
 - `OTEL_EXPORTER_OTLP_HEADERS` (if configured)
 
 The container can reach the host via `host.docker.internal` (automatically configured when OTEL is enabled).
+
+Additional Claude Code telemetry options can be passed through from the host:
+```bash
+# Enable logging of user prompts (redacted by default)
+export OTEL_LOG_USER_PROMPTS=1
+
+# Enable logging of tool/MCP server names
+export OTEL_LOG_TOOL_DETAILS=1
+
+# Configure exporters
+export OTEL_METRICS_EXPORTER=otlp
+export OTEL_LOGS_EXPORTER=otlp
+```
 
 #### addt-otel: Simple OTEL Collector
 
