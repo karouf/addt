@@ -9,7 +9,7 @@ import (
 )
 
 // HandleBuildCommand handles the build command
-func HandleBuildCommand(prov provider.Provider, cfg *provider.Config, args []string, noCache bool) {
+func HandleBuildCommand(prov provider.Provider, cfg *provider.Config, args []string, noCache bool, rebuildBase bool) {
 	// Parse --build-arg flags
 	for i := 0; i < len(args); i++ {
 		if args[i] == "--build-arg" && i+1 < len(args) {
@@ -46,8 +46,8 @@ func HandleBuildCommand(prov provider.Provider, cfg *provider.Config, args []str
 	cfg.NoCache = noCache
 
 	// Always rebuild extension image when using build command
-	// Base image is only rebuilt if it doesn't exist
-	if err := prov.BuildIfNeeded(true, false); err != nil {
+	// Base image is rebuilt if --rebuild-base flag is set
+	if err := prov.BuildIfNeeded(true, rebuildBase); err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
@@ -60,6 +60,7 @@ func printBuildHelp() {
 	fmt.Println()
 	fmt.Println("Options:")
 	fmt.Println("  --no-cache              Build without using cache")
+	fmt.Println("  --rebuild-base          Rebuild the base image before building extension image")
 	fmt.Println("  --build-arg KEY=VALUE   Set build-time variables")
 	fmt.Println()
 	fmt.Println("Build arguments:")
@@ -72,6 +73,8 @@ func printBuildHelp() {
 	fmt.Println("Examples:")
 	fmt.Println("  addt build")
 	fmt.Println("  addt build --no-cache")
+	fmt.Println("  addt build --rebuild-base")
+	fmt.Println("  addt build --rebuild-base --no-cache")
 	fmt.Println("  addt build --build-arg ADDT_EXTENSIONS=claude,codex")
 	fmt.Println("  addt build --build-arg CLAUDE_VERSION=1.0.5")
 }
