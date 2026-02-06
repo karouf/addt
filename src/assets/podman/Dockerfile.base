@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     ipset \
     nftables \
     dnsutils \
+    socat \
     supervisor \
     fuse-overlayfs \
     slirp4netns \
@@ -82,6 +83,10 @@ USER root
 # Copy entrypoint wrapper
 COPY podman-entrypoint.sh /usr/local/bin/podman-entrypoint.sh
 RUN chmod +x /usr/local/bin/podman-entrypoint.sh
+
+# SSH agent TCP bridge setup (for macOS + podman where Unix sockets can't be mounted)
+# Added to /etc/bash.bashrc so it runs in any bash session (shell mode, podman exec, etc.)
+RUN echo '\n# SSH agent TCP bridge (macOS + podman)\nif [ -n "$ADDT_SSH_PROXY_HOST" ] && [ -n "$ADDT_SSH_PROXY_PORT" ]; then\n    if [ ! -S /tmp/ssh-agent.sock ]; then\n        socat UNIX-LISTEN:/tmp/ssh-agent.sock,fork,mode=600 \\\n              TCP:"$ADDT_SSH_PROXY_HOST":"$ADDT_SSH_PROXY_PORT" &\n    fi\n    export SSH_AUTH_SOCK=/tmp/ssh-agent.sock\nfi' >> /etc/bash.bashrc
 
 # Copy firewall initialization script
 COPY init-firewall.sh /usr/local/bin/init-firewall.sh

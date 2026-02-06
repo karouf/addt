@@ -31,6 +31,8 @@ type SSHProxyAgent struct {
 	running        bool
 	allowedBlobs   map[string]bool   // cached key blobs that are allowed
 	blobComments   map[string]string // maps blob to comment for audit logging
+	useTCP         bool              // listen on TCP instead of Unix socket (macOS + podman)
+	tcpPort        int               // TCP port when useTCP is true
 }
 
 // NewSSHProxyAgent creates a new SSH proxy agent
@@ -79,6 +81,27 @@ func NewSSHProxyAgent(upstreamSocket string, allowedKeys []string) (*SSHProxyAge
 	}, nil
 }
 
+// NewSSHProxyAgentTCP creates an SSH proxy agent that listens on TCP.
+// Used on macOS where podman can't mount Unix sockets from the host.
+func NewSSHProxyAgentTCP(upstreamSocket string, allowedKeys []string) (*SSHProxyAgent, error) {
+	if upstreamSocket == "" {
+		return nil, fmt.Errorf("upstream SSH_AUTH_SOCK not set")
+	}
+
+	return &SSHProxyAgent{
+		upstreamSocket: upstreamSocket,
+		allowedKeys:    allowedKeys,
+		allowedBlobs:   make(map[string]bool),
+		blobComments:   make(map[string]string),
+		useTCP:         true,
+	}, nil
+}
+
+// TCPPort returns the TCP port the proxy is listening on (only valid after Start with useTCP)
+func (p *SSHProxyAgent) TCPPort() int {
+	return p.tcpPort
+}
+
 // Start starts the proxy agent listener
 func (p *SSHProxyAgent) Start() error {
 	p.mu.Lock()
@@ -88,15 +111,26 @@ func (p *SSHProxyAgent) Start() error {
 		return nil
 	}
 
-	listener, err := net.Listen("unix", p.proxySocket)
-	if err != nil {
-		return fmt.Errorf("failed to listen on proxy socket: %w", err)
-	}
-
-	// Set restrictive permissions on socket (owner only)
-	if err := os.Chmod(p.proxySocket, 0600); err != nil {
-		listener.Close()
-		return fmt.Errorf("failed to set socket permissions: %w", err)
+	var listener net.Listener
+	if p.useTCP {
+		// TCP mode: listen on all interfaces so podman VM can reach us
+		l, err := net.Listen("tcp", "0.0.0.0:0")
+		if err != nil {
+			return fmt.Errorf("failed to listen on TCP: %w", err)
+		}
+		p.tcpPort = l.Addr().(*net.TCPAddr).Port
+		listener = l
+	} else {
+		l, err := net.Listen("unix", p.proxySocket)
+		if err != nil {
+			return fmt.Errorf("failed to listen on proxy socket: %w", err)
+		}
+		// Set restrictive permissions on socket (owner only)
+		if err := os.Chmod(p.proxySocket, 0600); err != nil {
+			l.Close()
+			return fmt.Errorf("failed to set socket permissions: %w", err)
+		}
+		listener = l
 	}
 
 	p.listener = listener
@@ -127,8 +161,10 @@ func (p *SSHProxyAgent) Stop() error {
 		p.listener.Close()
 	}
 
-	// Clean up socket file and directory
-	os.RemoveAll(filepath.Dir(p.proxySocket))
+	// Clean up socket file and directory (Unix socket mode only)
+	if !p.useTCP && p.proxySocket != "" {
+		os.RemoveAll(filepath.Dir(p.proxySocket))
+	}
 
 	return nil
 }

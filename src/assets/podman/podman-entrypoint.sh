@@ -26,6 +26,20 @@ debug_log "ADDT_LOG_LEVEL=${ADDT_LOG_LEVEL:-INFO}"
 debug_log "ADDT_COMMAND=${ADDT_COMMAND:-not set}"
 debug_log "Arguments: $*"
 
+# Set up SSH agent proxy via TCP (macOS + podman: Unix sockets can't be mounted)
+# The host runs an SSH proxy on TCP; socat bridges it to a local Unix socket.
+if [ -n "$ADDT_SSH_PROXY_HOST" ] && [ -n "$ADDT_SSH_PROXY_PORT" ]; then
+    debug_log "Setting up SSH agent TCP bridge to $ADDT_SSH_PROXY_HOST:$ADDT_SSH_PROXY_PORT"
+    if command -v socat >/dev/null 2>&1; then
+        socat UNIX-LISTEN:/tmp/ssh-agent.sock,fork,mode=600 \
+              TCP:"$ADDT_SSH_PROXY_HOST":"$ADDT_SSH_PROXY_PORT" &
+        export SSH_AUTH_SOCK=/tmp/ssh-agent.sock
+        debug_log "SSH agent bridge started at $SSH_AUTH_SOCK"
+    else
+        echo "Warning: socat not found, SSH agent forwarding unavailable"
+    fi
+fi
+
 # Load secrets from file if present (copied via podman cp to tmpfs)
 # Secrets are written to tmpfs at /run/secrets/.secrets by the host
 # This approach keeps secrets out of environment variables entirely
