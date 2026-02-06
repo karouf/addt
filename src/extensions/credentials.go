@@ -2,12 +2,18 @@ package extensions
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/jedi4ever/addt/util"
 )
+
+var logger = util.Log("credentials")
 
 // RunCredentialScript runs an extension's credential script and returns env vars
 // The script runs on the host and outputs KEY=value pairs to stdout
@@ -20,20 +26,34 @@ func RunCredentialScript(ext *ExtensionConfig) (map[string]string, error) {
 	// Find the script path
 	scriptPath, err := findCredentialScript(ext)
 	if err != nil {
+		logger.Warning("script for %s: %v", ext.Name, err)
 		return nil, err
 	}
 
 	if scriptPath == "" {
+		logger.Debugf("no script found for %s", ext.Name)
 		return nil, nil
 	}
 
-	// Run the script
-	cmd := exec.Command("/bin/bash", scriptPath)
+	logger.Debug("running script for %s", ext.Name)
+
+	// Create context with timeout to prevent hangs
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Run the script with timeout
+	cmd := exec.CommandContext(ctx, "/bin/bash", scriptPath)
 	cmd.Stderr = os.Stderr // Show errors to user
+	cmd.Stdin = nil        // Don't connect stdin - prevent prompts from hanging
 
 	output, err := cmd.Output()
 	if err != nil {
-		// Script failure is not fatal - might just mean no credentials available
+		if ctx.Err() == context.DeadlineExceeded {
+			logger.Warning("script for %s timed out after 5 seconds", ext.Name)
+		} else {
+			// Script failure is not fatal - might just mean no credentials available
+			logger.Warning("script for %s failed: %v", ext.Name, err)
+		}
 		return nil, nil
 	}
 
@@ -58,6 +78,16 @@ func RunCredentialScript(ext *ExtensionConfig) (map[string]string, error) {
 				envVars[key] = value
 			}
 		}
+	}
+
+	if len(envVars) > 0 {
+		keys := make([]string, 0, len(envVars))
+		for k := range envVars {
+			keys = append(keys, k)
+		}
+		logger.Info("script for %s set: %s", ext.Name, strings.Join(keys, ", "))
+	} else {
+		logger.Warning("script for %s returned no variables", ext.Name)
 	}
 
 	return envVars, nil
