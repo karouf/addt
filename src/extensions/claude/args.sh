@@ -22,6 +22,21 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# If ADDT_EXTENSION_CLAUDE_YOLO is set via config/env and --dangerously-skip-permissions
+# wasn't already added by a --yolo CLI flag, inject it now
+if [ "${ADDT_EXTENSION_CLAUDE_YOLO}" = "true" ]; then
+    already_set=false
+    for arg in "${ARGS[@]}"; do
+        if [ "$arg" = "--dangerously-skip-permissions" ]; then
+            already_set=true
+            break
+        fi
+    done
+    if [ "$already_set" = "false" ]; then
+        ARGS+=(--dangerously-skip-permissions)
+    fi
+fi
+
 # Add system prompt if set (for port mappings, etc.)
 if [ -n "$ADDT_SYSTEM_PROMPT" ]; then
     ARGS+=(--append-system-prompt "$ADDT_SYSTEM_PROMPT")
