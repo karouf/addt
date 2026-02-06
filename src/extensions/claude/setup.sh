@@ -16,12 +16,15 @@ fi
 # Continuining with setup as no $ClAUDE dir exists
 echo "Setup [claude]: No $CLAUDE_DIR found, creating it"
 mkdir -p "$CLAUDE_DIR"
+
+# TODO -   "bypassPermissionsModeAccepted": true,
 # if no config file, create it
 echo "Setup [claude]: Creating $CLAUDE_JSON"
 cat > "$CLAUDE_JSON" << EOF
 {
   "hasCompletedOnboarding": true,
   "hasTrustDialogAccepted": true,
+  "bypassPermissionsModeAccepted": true,
   "projects": {
     "/workspace": {
       "allowedTools": [],

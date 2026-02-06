@@ -11,9 +11,13 @@ credential_script: credentials.sh
 
 # export DISABLE_AUTOUPDATER=1
 # https://code.claude.com/docs/en/setup#auto-updates
+# IS_SANDBOX=1 - for sandbox mode
+# https://github.com/anthropics/claude-code/issues/927
+
 env_vars:
   - ANTHROPIC_API_KEY
   - DISABLE_AUTOUPDATER=1
+  - IS_SANDBOX=1
 otel_vars:
   # Claude Code specific - enable telemetry by default when OTEL is active
   - CLAUDE_CODE_ENABLE_TELEMETRY=1

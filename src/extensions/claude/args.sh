@@ -4,6 +4,10 @@
 
 ARGS=()
 
+#??
+#   "bypassPermissionsModeAccepted": true,
+# IS_SANDBOX=1 - for sandbox mode
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --yolo)
