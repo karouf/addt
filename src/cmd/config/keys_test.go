@@ -13,7 +13,8 @@ func TestKeyValidation(t *testing.T) {
 	validKeys := []string{
 		"docker.cpus", "docker.memory", "docker.dind.enable", "docker.dind.mode",
 		"firewall", "firewall_mode", "node_version", "go_version",
-		"persistent", "workdir", "workdir_automount",
+		"persistent", "ports.forward", "ports.expose", "ports.range_start",
+		"workdir", "workdir_automount",
 	}
 
 	for _, key := range validKeys {
@@ -109,13 +110,18 @@ func TestAvailableExtensionKeyNames(t *testing.T) {
 func TestGetValue(t *testing.T) {
 	persistent := true
 	portStart := 35000
+	portsForward := true
 	cfg := &cfgtypes.GlobalConfig{
 		NodeVersion: "20",
 		Docker: &cfgtypes.DockerSettings{
 			CPUs: "4",
 		},
-		Persistent:     &persistent,
-		PortRangeStart: &portStart,
+		Persistent: &persistent,
+		Ports: &cfgtypes.PortsSettings{
+			Forward:    &portsForward,
+			Expose:     []string{"3000", "8080"},
+			RangeStart: &portStart,
+		},
 	}
 
 	tests := []struct {
@@ -125,7 +131,9 @@ func TestGetValue(t *testing.T) {
 		{"node_version", "20"},
 		{"docker.cpus", "4"},
 		{"persistent", "true"},
-		{"port_range_start", "35000"},
+		{"ports.forward", "true"},
+		{"ports.expose", "3000,8080"},
+		{"ports.range_start", "35000"},
 		{"go_version", ""}, // not set
 	}
 
@@ -150,17 +158,32 @@ func TestSetValue(t *testing.T) {
 		t.Errorf("Persistent = %v, want true", cfg.Persistent)
 	}
 
-	SetValue(cfg, "port_range_start", "40000")
-	if cfg.PortRangeStart == nil || *cfg.PortRangeStart != 40000 {
-		t.Errorf("PortRangeStart = %v, want 40000", cfg.PortRangeStart)
+	SetValue(cfg, "ports.expose", "3000, 8080")
+	if cfg.Ports == nil || len(cfg.Ports.Expose) != 2 || cfg.Ports.Expose[0] != "3000" || cfg.Ports.Expose[1] != "8080" {
+		t.Errorf("Ports.Expose = %v, want [3000 8080]", cfg.Ports)
+	}
+
+	SetValue(cfg, "ports.range_start", "40000")
+	if cfg.Ports == nil || cfg.Ports.RangeStart == nil || *cfg.Ports.RangeStart != 40000 {
+		t.Errorf("Ports.RangeStart = %v, want 40000", cfg.Ports)
+	}
+
+	SetValue(cfg, "ports.forward", "true")
+	if cfg.Ports == nil || cfg.Ports.Forward == nil || *cfg.Ports.Forward != true {
+		t.Errorf("Ports.Forward not set correctly")
 	}
 }
 
 func TestUnsetValue(t *testing.T) {
 	persistent := true
+	portsForward := true
 	cfg := &cfgtypes.GlobalConfig{
 		NodeVersion: "20",
 		Persistent:  &persistent,
+		Ports: &cfgtypes.PortsSettings{
+			Forward: &portsForward,
+			Expose:  []string{"3000", "8080"},
+		},
 	}
 
 	UnsetValue(cfg, "node_version")
@@ -171,6 +194,16 @@ func TestUnsetValue(t *testing.T) {
 	UnsetValue(cfg, "persistent")
 	if cfg.Persistent != nil {
 		t.Errorf("Persistent = %v, want nil", cfg.Persistent)
+	}
+
+	UnsetValue(cfg, "ports.expose")
+	if cfg.Ports.Expose != nil {
+		t.Errorf("Ports.Expose = %v, want nil", cfg.Ports.Expose)
+	}
+
+	UnsetValue(cfg, "ports.forward")
+	if cfg.Ports.Forward != nil {
+		t.Errorf("Ports.Forward = %v, want nil", cfg.Ports.Forward)
 	}
 }
 
@@ -183,8 +216,10 @@ func TestGetDefaultValue(t *testing.T) {
 		{"firewall", "false"},
 		{"firewall_mode", "strict"},
 		{"persistent", "false"},
+		{"ports.forward", "true"},
+		{"ports.expose", ""},
+		{"ports.range_start", "30000"},
 		{"workdir_automount", "true"},
-		{"port_range_start", "30000"},
 		{"ssh.forward_keys", "true"},
 		{"ssh.forward_mode", "proxy"},
 		{"ssh.allowed_keys", ""},

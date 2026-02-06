@@ -30,12 +30,13 @@ func GetKeys() []KeyInfo {
 		{Key: "log_file", Description: "Log file path", Type: "string", EnvVar: "ADDT_LOG_FILE"},
 		{Key: "node_version", Description: "Node.js version", Type: "string", EnvVar: "ADDT_NODE_VERSION"},
 		{Key: "persistent", Description: "Enable persistent container mode", Type: "bool", EnvVar: "ADDT_PERSISTENT"},
-		{Key: "port_range_start", Description: "Starting port for auto allocation", Type: "int", EnvVar: "ADDT_PORT_RANGE_START"},
 		{Key: "history_persist", Description: "Persist shell history between sessions (default: false)", Type: "bool", EnvVar: "ADDT_HISTORY_PERSIST"},
 		{Key: "uv_version", Description: "UV Python package manager version", Type: "string", EnvVar: "ADDT_UV_VERSION"},
 		{Key: "workdir", Description: "Override working directory (default: current directory)", Type: "string", EnvVar: "ADDT_WORKDIR"},
 		{Key: "workdir_automount", Description: "Auto-mount working directory to /workspace", Type: "bool", EnvVar: "ADDT_WORKDIR_AUTOMOUNT"},
 	}
+	// Add ports keys
+	keys = append(keys, GetPortsKeys()...)
 	// Add SSH keys
 	keys = append(keys, GetSSHKeys()...)
 	// Add docker keys
@@ -45,6 +46,15 @@ func GetKeys() []KeyInfo {
 	// Add OTEL keys
 	keys = append(keys, GetOtelKeys()...)
 	return keys
+}
+
+// GetPortsKeys returns all valid ports config keys
+func GetPortsKeys() []KeyInfo {
+	return []KeyInfo{
+		{Key: "ports.forward", Description: "Enable port forwarding (default: true)", Type: "bool", EnvVar: "ADDT_PORTS_FORWARD"},
+		{Key: "ports.expose", Description: "Container ports to expose (comma-separated)", Type: "string", EnvVar: "ADDT_PORTS"},
+		{Key: "ports.range_start", Description: "Starting port for auto allocation", Type: "int", EnvVar: "ADDT_PORT_RANGE_START"},
+	}
 }
 
 // GetDockerKeys returns all valid Docker config keys
@@ -128,7 +138,11 @@ func GetDefaultValue(key string) string {
 		return "22"
 	case "persistent":
 		return "false"
-	case "port_range_start":
+	case "ports.forward":
+		return "true"
+	case "ports.expose":
+		return ""
+	case "ports.range_start":
 		return "30000"
 	case "ssh.forward_keys":
 		return "true"
@@ -311,10 +325,6 @@ func GetValue(cfg *cfgtypes.GlobalConfig, key string) string {
 		if cfg.Persistent != nil {
 			return fmt.Sprintf("%v", *cfg.Persistent)
 		}
-	case "port_range_start":
-		if cfg.PortRangeStart != nil {
-			return fmt.Sprintf("%d", *cfg.PortRangeStart)
-		}
 	case "history_persist":
 		if cfg.HistoryPersist != nil {
 			return fmt.Sprintf("%v", *cfg.HistoryPersist)
@@ -327,6 +337,10 @@ func GetValue(cfg *cfgtypes.GlobalConfig, key string) string {
 		if cfg.WorkdirAutomount != nil {
 			return fmt.Sprintf("%v", *cfg.WorkdirAutomount)
 		}
+	}
+	// Check ports keys
+	if strings.HasPrefix(key, "ports.") {
+		return GetPortsValue(cfg.Ports, key)
 	}
 	// Check SSH keys
 	if strings.HasPrefix(key, "ssh.") {
@@ -489,10 +503,6 @@ func SetValue(cfg *cfgtypes.GlobalConfig, key, value string) {
 	case "persistent":
 		b := value == "true"
 		cfg.Persistent = &b
-	case "port_range_start":
-		var i int
-		fmt.Sscanf(value, "%d", &i)
-		cfg.PortRangeStart = &i
 	case "history_persist":
 		b := value == "true"
 		cfg.HistoryPersist = &b
@@ -504,6 +514,13 @@ func SetValue(cfg *cfgtypes.GlobalConfig, key, value string) {
 		b := value == "true"
 		cfg.WorkdirAutomount = &b
 	default:
+		// Check ports keys
+		if strings.HasPrefix(key, "ports.") {
+			if cfg.Ports == nil {
+				cfg.Ports = &cfgtypes.PortsSettings{}
+			}
+			SetPortsValue(cfg.Ports, key, value)
+		}
 		// Check SSH keys
 		if strings.HasPrefix(key, "ssh.") {
 			if cfg.SSH == nil {
@@ -653,8 +670,6 @@ func UnsetValue(cfg *cfgtypes.GlobalConfig, key string) {
 		cfg.NodeVersion = ""
 	case "persistent":
 		cfg.Persistent = nil
-	case "port_range_start":
-		cfg.PortRangeStart = nil
 	case "history_persist":
 		cfg.HistoryPersist = nil
 	case "uv_version":
@@ -664,6 +679,10 @@ func UnsetValue(cfg *cfgtypes.GlobalConfig, key string) {
 	case "workdir_automount":
 		cfg.WorkdirAutomount = nil
 	default:
+		// Check ports keys
+		if strings.HasPrefix(key, "ports.") && cfg.Ports != nil {
+			UnsetPortsValue(cfg.Ports, key)
+		}
 		// Check SSH keys
 		if strings.HasPrefix(key, "ssh.") && cfg.SSH != nil {
 			UnsetSSHValue(cfg.SSH, key)
@@ -754,6 +773,61 @@ func UnsetDockerValue(d *cfgtypes.DockerSettings, key string) {
 		if d.Dind != nil {
 			d.Dind.Mode = ""
 		}
+	}
+}
+
+// GetPortsValue retrieves a ports config value
+func GetPortsValue(p *cfgtypes.PortsSettings, key string) string {
+	if p == nil {
+		return ""
+	}
+	switch key {
+	case "ports.forward":
+		if p.Forward != nil {
+			return fmt.Sprintf("%v", *p.Forward)
+		}
+	case "ports.expose":
+		return strings.Join(p.Expose, ",")
+	case "ports.range_start":
+		if p.RangeStart != nil {
+			return fmt.Sprintf("%d", *p.RangeStart)
+		}
+	}
+	return ""
+}
+
+// SetPortsValue sets a ports config value
+func SetPortsValue(p *cfgtypes.PortsSettings, key, value string) {
+	switch key {
+	case "ports.forward":
+		b := value == "true"
+		p.Forward = &b
+	case "ports.expose":
+		if value == "" {
+			p.Expose = nil
+		} else {
+			parts := strings.Split(value, ",")
+			for i := range parts {
+				parts[i] = strings.TrimSpace(parts[i])
+			}
+			p.Expose = parts
+		}
+	case "ports.range_start":
+		var i int
+		fmt.Sscanf(value, "%d", &i)
+		p.RangeStart = &i
+	}
+}
+
+// UnsetPortsValue clears a ports config value
+func UnsetPortsValue(p *cfgtypes.PortsSettings, key string) {
+	switch key {
+	case "ports.forward":
+		p.Forward = nil
+	case "ports.expose":
+		p.Expose = nil
+	case "ports.range_start":
+		p.RangeStart = nil
 	}
 }
 

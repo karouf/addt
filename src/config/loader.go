@@ -60,13 +60,25 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 		cfg.UvVersion = v
 	}
 
+	// Ports forward: default (true) -> global -> project -> env
+	portsForward := true
+	if globalCfg.Ports != nil && globalCfg.Ports.Forward != nil {
+		portsForward = *globalCfg.Ports.Forward
+	}
+	if projectCfg.Ports != nil && projectCfg.Ports.Forward != nil {
+		portsForward = *projectCfg.Ports.Forward
+	}
+	if v := os.Getenv("ADDT_PORTS_FORWARD"); v != "" {
+		portsForward = v == "true"
+	}
+
 	// Port range start: default -> global -> project -> env
 	cfg.PortRangeStart = defaultPortRangeStart
-	if globalCfg.PortRangeStart != nil {
-		cfg.PortRangeStart = *globalCfg.PortRangeStart
+	if globalCfg.Ports != nil && globalCfg.Ports.RangeStart != nil {
+		cfg.PortRangeStart = *globalCfg.Ports.RangeStart
 	}
-	if projectCfg.PortRangeStart != nil {
-		cfg.PortRangeStart = *projectCfg.PortRangeStart
+	if projectCfg.Ports != nil && projectCfg.Ports.RangeStart != nil {
+		cfg.PortRangeStart = *projectCfg.Ports.RangeStart
 	}
 	if v := os.Getenv("ADDT_PORT_RANGE_START"); v != "" {
 		if i, err := strconv.Atoi(v); err == nil {
@@ -399,12 +411,23 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 		cfg.ExtensionVersions["claude"] = "stable"
 	}
 
-	// Parse ports
+	// Ports expose: global -> project -> env
+	if globalCfg.Ports != nil && len(globalCfg.Ports.Expose) > 0 {
+		cfg.Ports = globalCfg.Ports.Expose
+	}
+	if projectCfg.Ports != nil && len(projectCfg.Ports.Expose) > 0 {
+		cfg.Ports = projectCfg.Ports.Expose
+	}
 	if ports := os.Getenv("ADDT_PORTS"); ports != "" {
 		cfg.Ports = strings.Split(ports, ",")
 		for i := range cfg.Ports {
 			cfg.Ports[i] = strings.TrimSpace(cfg.Ports[i])
 		}
+	}
+
+	// If ports.forward is false, clear ports so downstream sees no ports
+	if !portsForward {
+		cfg.Ports = nil
 	}
 
 	// Trim env vars

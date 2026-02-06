@@ -27,6 +27,13 @@ type DockerSettings struct {
 	Memory string        `yaml:"memory,omitempty"`
 }
 
+// PortsSettings holds port forwarding configuration
+type PortsSettings struct {
+	Forward    *bool    `yaml:"forward,omitempty"`
+	Expose     []string `yaml:"expose,omitempty"`
+	RangeStart *int     `yaml:"range_start,omitempty"`
+}
+
 // SSHSettings holds SSH forwarding configuration
 type SSHSettings struct {
 	ForwardKeys *bool    `yaml:"forward_keys,omitempty"`
@@ -51,7 +58,7 @@ type GlobalConfig struct {
 	LogFile          string          `yaml:"log_file,omitempty"`
 	NodeVersion      string          `yaml:"node_version,omitempty"`
 	Persistent       *bool           `yaml:"persistent,omitempty"`
-	PortRangeStart   *int            `yaml:"port_range_start,omitempty"`
+	Ports            *PortsSettings  `yaml:"ports,omitempty"`
 	SSH              *SSHSettings    `yaml:"ssh,omitempty"`
 	TmuxForward      *bool           `yaml:"tmux_forward,omitempty"`
 	HistoryPersist   *bool           `yaml:"history_persist,omitempty"` // Persist shell history between sessions

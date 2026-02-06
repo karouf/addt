@@ -97,6 +97,7 @@ Environment Variables:
     ADDT_PROVIDER          Provider: docker, podman, or daytona (auto-detected)
     ADDT_CONFIG_DIR        Global config directory (default: ~/.addt)
     ADDT_GITHUB_DETECT     Auto-detect GitHub token from gh CLI (default: false)
+    ADDT_PORTS_FORWARD     Enable port forwarding (default: true)
     ADDT_PORTS             Comma-separated container ports to expose
     ADDT_PORT_RANGE_START  Starting port for allocation (default: 30000)
     ADDT_ENV_VARS          Env vars to pass (default: ANTHROPIC_API_KEY,GH_TOKEN)

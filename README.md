@@ -208,6 +208,23 @@ addt run claude "Create an Express server on port 8080"
 # Agent tells you: "Visit http://localhost:30000"
 ```
 
+Or configure via YAML (`~/.addt/config.yaml` or `.addt.yaml`):
+```yaml
+ports:
+  forward: true
+  expose:
+    - "3000"
+    - "8080"
+  range_start: 30000
+```
+
+Or via CLI:
+```bash
+addt config global set ports.expose "3000,8080"
+addt config global set ports.range_start 40000
+addt config global set ports.forward false   # disable port forwarding
+```
+
 ### GitHub Access (private repos, PRs)
 
 ```bash
@@ -320,6 +337,7 @@ addt config extension claude set version 1.0.5
 | Variable | Description |
 |----------|-------------|
 | `ADDT_PERSISTENT=true` | Keep container running between sessions |
+| `ADDT_PORTS_FORWARD=true` | Enable port forwarding (default: true) |
 | `ADDT_PORTS=3000,8080` | Expose container ports |
 | `ADDT_SSH_FORWARD_KEYS=true` | Enable SSH key forwarding (default: true) |
 | `ADDT_SSH_FORWARD_MODE=proxy` | SSH forwarding mode: proxy, agent, or keys |
@@ -699,6 +717,7 @@ addt cli update                   # Update addt
 |----------|---------|-------------|
 | `ADDT_PROVIDER` | podman | Container runtime: `podman` (default), `docker`, or `daytona` |
 | `ADDT_PERSISTENT` | false | Keep container running |
+| `ADDT_PORTS_FORWARD` | true | Enable port forwarding |
 | `ADDT_PORTS` | - | Ports to expose: `3000,8080` |
 | `ADDT_DOCKER_CPUS` | - | CPU limit: `2` |
 | `ADDT_DOCKER_MEMORY` | - | Memory limit: `4g` |
