@@ -7,6 +7,7 @@ import (
 
 	"github.com/jedi4ever/addt/config/otel"
 	"github.com/jedi4ever/addt/config/security"
+	"github.com/jedi4ever/addt/extensions"
 )
 
 // LoadConfig loads configuration with precedence: defaults < global config < project config < env vars
@@ -17,9 +18,10 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 
 	// Start with defaults, then apply global config, then project config, then env vars
 	cfg := &Config{
-		AddtVersion:        addtVersion,
-		ExtensionVersions:  make(map[string]string),
-		ExtensionAutomount: make(map[string]bool),
+		AddtVersion:           addtVersion,
+		ExtensionVersions:     make(map[string]string),
+		ExtensionAutomount:    make(map[string]bool),
+		ExtensionFlagSettings: make(map[string]map[string]bool),
 	}
 
 	// Node version: default -> global -> project -> env
@@ -328,6 +330,10 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 		}
 	}
 
+	// Load per-extension flag settings from config files
+	// Precedence: global config < project config < env vars
+	resolveExtensionFlagSettings(cfg, globalCfg, projectCfg)
+
 	// Load extension-specific firewall rules based on ADDT_EXTENSIONS
 	// Extension firewall rules are stored in global config under extensions.<name>
 	currentExt := os.Getenv("ADDT_EXTENSIONS")
@@ -404,6 +410,57 @@ func getEnvOrDefault(key, defaultVal string) string {
 		return val
 	}
 	return defaultVal
+}
+
+// resolveExtensionFlagSettings resolves flag settings from config files and env vars
+// into cfg.ExtensionFlagSettings. Precedence: global config < project config < env vars
+func resolveExtensionFlagSettings(cfg *Config, globalCfg, projectCfg *GlobalConfig) {
+	allExts, err := extensions.GetExtensions()
+	if err != nil {
+		return
+	}
+
+	for _, ext := range allExts {
+		for _, flag := range ext.Flags {
+			if flag.EnvVar == "" {
+				continue
+			}
+			flagKey := strings.TrimPrefix(flag.Flag, "--")
+
+			// Check global config
+			if globalCfg.Extensions != nil {
+				if extCfg, ok := globalCfg.Extensions[ext.Name]; ok && extCfg.Flags != nil {
+					if v, ok := extCfg.Flags[flagKey]; ok && v != nil {
+						if cfg.ExtensionFlagSettings[ext.Name] == nil {
+							cfg.ExtensionFlagSettings[ext.Name] = make(map[string]bool)
+						}
+						cfg.ExtensionFlagSettings[ext.Name][flagKey] = *v
+					}
+				}
+			}
+
+			// Check project config (overrides global)
+			if projectCfg.Extensions != nil {
+				if extCfg, ok := projectCfg.Extensions[ext.Name]; ok && extCfg.Flags != nil {
+					if v, ok := extCfg.Flags[flagKey]; ok && v != nil {
+						if cfg.ExtensionFlagSettings[ext.Name] == nil {
+							cfg.ExtensionFlagSettings[ext.Name] = make(map[string]bool)
+						}
+						cfg.ExtensionFlagSettings[ext.Name][flagKey] = *v
+					}
+				}
+			}
+
+			// Check env var (overrides config) — pattern: ADDT_EXTENSION_<EXT>_<FLAG>
+			envVar := flag.EnvVar
+			if v := os.Getenv(envVar); v != "" {
+				if cfg.ExtensionFlagSettings[ext.Name] == nil {
+					cfg.ExtensionFlagSettings[ext.Name] = make(map[string]bool)
+				}
+				cfg.ExtensionFlagSettings[ext.Name][flagKey] = v == "true"
+			}
+		}
+	}
 }
 
 // mergeStringSlices merges two string slices, removing duplicates

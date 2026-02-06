@@ -14,6 +14,7 @@ type ExtensionMount struct {
 type ExtensionFlag struct {
 	Flag        string `yaml:"flag" json:"flag"`
 	Description string `yaml:"description" json:"description"`
+	EnvVar      string `yaml:"env_var,omitempty" json:"env_var,omitempty"` // Set this env var to "true" when flag is present
 }
 
 // Entrypoint can be either a string or an array of strings

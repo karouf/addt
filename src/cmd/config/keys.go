@@ -7,6 +7,7 @@ import (
 	cfgtypes "github.com/jedi4ever/addt/config"
 	"github.com/jedi4ever/addt/config/otel"
 	"github.com/jedi4ever/addt/config/security"
+	"github.com/jedi4ever/addt/extensions"
 )
 
 // KeyInfo holds metadata about a config key
@@ -201,9 +202,65 @@ func GetKeyInfo(key string) *KeyInfo {
 	return nil
 }
 
-// IsValidExtensionKey checks if a key is a valid extension config key
-func IsValidExtensionKey(key string) bool {
-	for _, k := range GetExtensionKeys() {
+// GetExtensionFlagKeys returns dynamic extension keys derived from an extension's config.yaml flags
+func GetExtensionFlagKeys(extName string) []KeyInfo {
+	exts, err := extensions.GetExtensions()
+	if err != nil {
+		return nil
+	}
+	var keys []KeyInfo
+	for _, ext := range exts {
+		if ext.Name != extName {
+			continue
+		}
+		for _, flag := range ext.Flags {
+			if flag.EnvVar == "" {
+				continue
+			}
+			// Strip leading "--" from the flag name to get the key
+			key := strings.TrimPrefix(flag.Flag, "--")
+			keys = append(keys, KeyInfo{
+				Key:         key,
+				Description: flag.Description,
+				Type:        "bool",
+				EnvVar:      flag.EnvVar,
+			})
+		}
+		break
+	}
+	return keys
+}
+
+// GetAllExtensionKeys returns both static and dynamic (flag) keys for an extension
+func GetAllExtensionKeys(extName string) []KeyInfo {
+	keys := GetExtensionKeys()
+	keys = append(keys, GetExtensionFlagKeys(extName)...)
+	return keys
+}
+
+// AvailableExtensionKeyNames returns a comma-separated list of all valid extension key names
+func AvailableExtensionKeyNames(extName string) string {
+	keys := GetAllExtensionKeys(extName)
+	names := make([]string, len(keys))
+	for i, k := range keys {
+		names[i] = k.Key
+	}
+	return strings.Join(names, ", ")
+}
+
+// IsValidExtensionKey checks if a key is a valid extension config key (static or dynamic flag)
+func IsValidExtensionKey(key string, extName string) bool {
+	for _, k := range GetAllExtensionKeys(extName) {
+		if k.Key == key {
+			return true
+		}
+	}
+	return false
+}
+
+// IsFlagKey checks if a key corresponds to a dynamic flag key for the given extension
+func IsFlagKey(key string, extName string) bool {
+	for _, k := range GetExtensionFlagKeys(extName) {
 		if k.Key == key {
 			return true
 		}

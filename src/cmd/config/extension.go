@@ -29,7 +29,7 @@ func listExtension(extName string, useGlobal bool) {
 	}
 	fmt.Printf("Extension: %s (%s)\n\n", extName, scope)
 
-	keys := GetExtensionKeys()
+	keys := GetAllExtensionKeys(extName)
 
 	// Load the appropriate config
 	var cfg *cfgtypes.GlobalConfig
@@ -53,7 +53,12 @@ func listExtension(extName string, useGlobal bool) {
 	fmt.Printf("  %s   %s   %s\n", strings.Repeat("-", 10), strings.Repeat("-", 15), "--------")
 
 	for _, k := range keys {
-		envVar := fmt.Sprintf(k.EnvVar, extNameUpper)
+		var envVar string
+		if strings.Contains(k.EnvVar, "%s") {
+			envVar = fmt.Sprintf(k.EnvVar, extNameUpper)
+		} else {
+			envVar = k.EnvVar
+		}
 		envValue := os.Getenv(envVar)
 
 		var configValue, defaultValue string
@@ -67,6 +72,13 @@ func listExtension(extName string, useGlobal bool) {
 				if extCfg.Automount != nil {
 					configValue = fmt.Sprintf("%v", *extCfg.Automount)
 				}
+			default:
+				// Check flag keys
+				if IsFlagKey(k.Key, extName) && extCfg.Flags != nil {
+					if v, ok := extCfg.Flags[k.Key]; ok && v != nil {
+						configValue = fmt.Sprintf("%v", *v)
+					}
+				}
 			}
 		}
 
@@ -77,6 +89,11 @@ func listExtension(extName string, useGlobal bool) {
 				defaultValue = extDefaults.DefaultVersion
 			case "automount":
 				defaultValue = fmt.Sprintf("%v", extDefaults.AutoMount)
+			default:
+				// Flag keys default to "false"
+				if IsFlagKey(k.Key, extName) {
+					defaultValue = "false"
+				}
 			}
 		}
 
@@ -105,9 +122,9 @@ func listExtension(extName string, useGlobal bool) {
 }
 
 func getExtension(extName, key string, useGlobal bool) {
-	if !IsValidExtensionKey(key) {
+	if !IsValidExtensionKey(key, extName) {
 		fmt.Printf("Unknown extension config key: %s\n", key)
-		fmt.Println("Available keys: version, automount")
+		fmt.Printf("Available keys: %s\n", AvailableExtensionKeyNames(extName))
 		os.Exit(1)
 	}
 
@@ -141,6 +158,13 @@ func getExtension(extName, key string, useGlobal bool) {
 		if extCfg.Automount != nil {
 			val = fmt.Sprintf("%v", *extCfg.Automount)
 		}
+	default:
+		// Check flag keys
+		if IsFlagKey(key, extName) && extCfg.Flags != nil {
+			if v, ok := extCfg.Flags[key]; ok && v != nil {
+				val = fmt.Sprintf("%v", *v)
+			}
+		}
 	}
 
 	if val == "" {
@@ -151,14 +175,14 @@ func getExtension(extName, key string, useGlobal bool) {
 }
 
 func setExtension(extName, key, value string, useGlobal bool) {
-	if !IsValidExtensionKey(key) {
+	if !IsValidExtensionKey(key, extName) {
 		fmt.Printf("Unknown extension config key: %s\n", key)
-		fmt.Println("Available keys: version, automount")
+		fmt.Printf("Available keys: %s\n", AvailableExtensionKeyNames(extName))
 		os.Exit(1)
 	}
 
-	// Validate bool values
-	if key == "automount" {
+	// Validate bool values for automount and flag keys
+	if key == "automount" || IsFlagKey(key, extName) {
 		value = strings.ToLower(value)
 		if value != "true" && value != "false" {
 			fmt.Printf("Invalid value for %s: must be 'true' or 'false'\n", key)
@@ -195,6 +219,15 @@ func setExtension(extName, key, value string, useGlobal bool) {
 	case "automount":
 		b := value == "true"
 		extCfg.Automount = &b
+	default:
+		// Handle flag keys
+		if IsFlagKey(key, extName) {
+			if extCfg.Flags == nil {
+				extCfg.Flags = make(map[string]*bool)
+			}
+			b := value == "true"
+			extCfg.Flags[key] = &b
+		}
 	}
 
 	scope := "project"
@@ -214,9 +247,9 @@ func setExtension(extName, key, value string, useGlobal bool) {
 }
 
 func unsetExtension(extName, key string, useGlobal bool) {
-	if !IsValidExtensionKey(key) {
+	if !IsValidExtensionKey(key, extName) {
 		fmt.Printf("Unknown extension config key: %s\n", key)
-		fmt.Println("Available keys: version, automount")
+		fmt.Printf("Available keys: %s\n", AvailableExtensionKeyNames(extName))
 		os.Exit(1)
 	}
 
@@ -248,10 +281,18 @@ func unsetExtension(extName, key string, useGlobal bool) {
 		extCfg.Version = ""
 	case "automount":
 		extCfg.Automount = nil
+	default:
+		// Handle flag keys
+		if IsFlagKey(key, extName) && extCfg.Flags != nil {
+			delete(extCfg.Flags, key)
+			if len(extCfg.Flags) == 0 {
+				extCfg.Flags = nil
+			}
+		}
 	}
 
 	// Clean up empty extension config
-	if extCfg.Version == "" && extCfg.Automount == nil {
+	if extCfg.Version == "" && extCfg.Automount == nil && len(extCfg.Flags) == 0 {
 		delete(cfg.Extensions, extName)
 	}
 

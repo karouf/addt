@@ -169,6 +169,108 @@ func TestBuildEnvironment_OtelDisabled(t *testing.T) {
 	}
 }
 
+func TestAddFlagEnvVars_FlagPresent(t *testing.T) {
+	env := make(map[string]string)
+	cfg := &provider.Config{Extensions: "claude"}
+	args := []string{"--yolo", "do something"}
+
+	addFlagEnvVars(env, cfg, args)
+
+	if env["ADDT_EXTENSION_CLAUDE_YOLO"] != "true" {
+		t.Errorf("ADDT_EXTENSION_CLAUDE_YOLO = %q, want 'true'", env["ADDT_EXTENSION_CLAUDE_YOLO"])
+	}
+}
+
+func TestAddFlagEnvVars_FlagAbsent(t *testing.T) {
+	env := make(map[string]string)
+	cfg := &provider.Config{Extensions: "claude"}
+	args := []string{"do something"}
+
+	addFlagEnvVars(env, cfg, args)
+
+	if _, ok := env["ADDT_EXTENSION_CLAUDE_YOLO"]; ok {
+		t.Error("ADDT_EXTENSION_CLAUDE_YOLO should not be set when --yolo is not passed")
+	}
+}
+
+func TestAddFlagEnvVars_WrongExtension(t *testing.T) {
+	env := make(map[string]string)
+	cfg := &provider.Config{Extensions: "codex"}
+	args := []string{"--yolo"}
+
+	addFlagEnvVars(env, cfg, args)
+
+	if _, ok := env["ADDT_EXTENSION_CLAUDE_YOLO"]; ok {
+		t.Error("ADDT_EXTENSION_CLAUDE_YOLO should not be set for non-claude extension")
+	}
+}
+
+func TestAddFlagEnvVars_ConfigSetting(t *testing.T) {
+	env := make(map[string]string)
+	cfg := &provider.Config{
+		Extensions: "claude",
+		ExtensionFlagSettings: map[string]map[string]bool{
+			"claude": {"yolo": true},
+		},
+	}
+	args := []string{"do something"} // no --yolo flag
+
+	addFlagEnvVars(env, cfg, args)
+
+	if env["ADDT_EXTENSION_CLAUDE_YOLO"] != "true" {
+		t.Errorf("ADDT_EXTENSION_CLAUDE_YOLO = %q, want 'true' (from config)", env["ADDT_EXTENSION_CLAUDE_YOLO"])
+	}
+}
+
+func TestAddFlagEnvVars_ConfigSettingFalse(t *testing.T) {
+	env := make(map[string]string)
+	cfg := &provider.Config{
+		Extensions: "claude",
+		ExtensionFlagSettings: map[string]map[string]bool{
+			"claude": {"yolo": false},
+		},
+	}
+	args := []string{"do something"}
+
+	addFlagEnvVars(env, cfg, args)
+
+	if _, ok := env["ADDT_EXTENSION_CLAUDE_YOLO"]; ok {
+		t.Error("ADDT_EXTENSION_CLAUDE_YOLO should not be set when config value is false")
+	}
+}
+
+func TestAddFlagEnvVars_CLIOverridesConfig(t *testing.T) {
+	env := make(map[string]string)
+	cfg := &provider.Config{
+		Extensions: "claude",
+		ExtensionFlagSettings: map[string]map[string]bool{
+			"claude": {"yolo": false}, // config says false
+		},
+	}
+	args := []string{"--yolo", "do something"} // CLI says true
+
+	addFlagEnvVars(env, cfg, args)
+
+	if env["ADDT_EXTENSION_CLAUDE_YOLO"] != "true" {
+		t.Errorf("ADDT_EXTENSION_CLAUDE_YOLO = %q, want 'true' (CLI should override config)", env["ADDT_EXTENSION_CLAUDE_YOLO"])
+	}
+}
+
+func TestAddFlagEnvVars_NilExtensionFlagSettings(t *testing.T) {
+	env := make(map[string]string)
+	cfg := &provider.Config{
+		Extensions:            "claude",
+		ExtensionFlagSettings: nil,
+	}
+	args := []string{"do something"}
+
+	addFlagEnvVars(env, cfg, args)
+
+	if _, ok := env["ADDT_EXTENSION_CLAUDE_YOLO"]; ok {
+		t.Error("ADDT_EXTENSION_CLAUDE_YOLO should not be set when no config settings")
+	}
+}
+
 func TestParseEnvVarSpec(t *testing.T) {
 	tests := []struct {
 		spec        string

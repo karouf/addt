@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"testing"
 
 	cfgtypes "github.com/jedi4ever/addt/config"
@@ -30,18 +31,78 @@ func TestKeyValidation(t *testing.T) {
 }
 
 func TestExtensionKeyValidation(t *testing.T) {
+	// Static keys are valid for any extension
 	validKeys := []string{"version", "automount"}
 	for _, key := range validKeys {
-		if !IsValidExtensionKey(key) {
-			t.Errorf("IsValidExtensionKey(%q) = false, want true", key)
+		if !IsValidExtensionKey(key, "claude") {
+			t.Errorf("IsValidExtensionKey(%q, \"claude\") = false, want true", key)
 		}
 	}
 
 	invalidKeys := []string{"invalid", "foo", "node_version"}
 	for _, key := range invalidKeys {
-		if IsValidExtensionKey(key) {
-			t.Errorf("IsValidExtensionKey(%q) = true, want false", key)
+		if IsValidExtensionKey(key, "claude") {
+			t.Errorf("IsValidExtensionKey(%q, \"claude\") = true, want false", key)
 		}
+	}
+}
+
+func TestExtensionFlagKeyValidation(t *testing.T) {
+	// "yolo" is a flag key defined in claude's config.yaml
+	if !IsValidExtensionKey("yolo", "claude") {
+		t.Error("IsValidExtensionKey(\"yolo\", \"claude\") = false, want true")
+	}
+
+	// "yolo" should NOT be valid for an extension that doesn't define it
+	if IsValidExtensionKey("yolo", "nonexistent") {
+		t.Error("IsValidExtensionKey(\"yolo\", \"nonexistent\") = true, want false")
+	}
+
+	// IsFlagKey should identify flag keys
+	if !IsFlagKey("yolo", "claude") {
+		t.Error("IsFlagKey(\"yolo\", \"claude\") = false, want true")
+	}
+
+	// Static keys should NOT be flag keys
+	if IsFlagKey("version", "claude") {
+		t.Error("IsFlagKey(\"version\", \"claude\") = true, want false")
+	}
+}
+
+func TestGetExtensionFlagKeys(t *testing.T) {
+	keys := GetExtensionFlagKeys("claude")
+	if len(keys) == 0 {
+		t.Fatal("GetExtensionFlagKeys(\"claude\") returned no keys, expected at least 'yolo'")
+	}
+
+	found := false
+	for _, k := range keys {
+		if k.Key == "yolo" {
+			found = true
+			if k.Type != "bool" {
+				t.Errorf("yolo key type = %q, want \"bool\"", k.Type)
+			}
+			if k.EnvVar != "ADDT_EXTENSION_CLAUDE_YOLO" {
+				t.Errorf("yolo key EnvVar = %q, want \"ADDT_EXTENSION_CLAUDE_YOLO\"", k.EnvVar)
+			}
+		}
+	}
+	if !found {
+		t.Error("GetExtensionFlagKeys(\"claude\") missing 'yolo' key")
+	}
+}
+
+func TestAvailableExtensionKeyNames(t *testing.T) {
+	names := AvailableExtensionKeyNames("claude")
+	if names == "" {
+		t.Fatal("AvailableExtensionKeyNames returned empty string")
+	}
+	// Should contain both static and flag keys
+	if !strings.Contains(names, "version") {
+		t.Errorf("AvailableExtensionKeyNames missing 'version': %s", names)
+	}
+	if !strings.Contains(names, "yolo") {
+		t.Errorf("AvailableExtensionKeyNames missing 'yolo': %s", names)
 	}
 }
 

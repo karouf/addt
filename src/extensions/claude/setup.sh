@@ -17,14 +17,18 @@ fi
 echo "Setup [claude]: No $CLAUDE_DIR found, creating it"
 mkdir -p "$CLAUDE_DIR"
 
-# TODO -   "bypassPermissionsModeAccepted": true,
 # if no config file, create it
 echo "Setup [claude]: Creating $CLAUDE_JSON"
+
+# bypassPermissionsModeAccepted controlled by ADDT_EXTENSION_CLAUDE_YOLO (default: false)
+BYPASS="${ADDT_EXTENSION_CLAUDE_YOLO:-false}"
+echo "Setup [claude]: bypassPermissionsModeAccepted=$BYPASS"
+
 cat > "$CLAUDE_JSON" << EOF
 {
   "hasCompletedOnboarding": true,
   "hasTrustDialogAccepted": true,
-  "bypassPermissionsModeAccepted": true,
+  "bypassPermissionsModeAccepted": $BYPASS,
   "projects": {
     "/workspace": {
       "allowedTools": [],

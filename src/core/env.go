@@ -130,6 +130,54 @@ func contains(slice []string, val string) bool {
 	return false
 }
 
+// addFlagEnvVars sets env vars for flags from CLI args and config settings.
+// Precedence: CLI flags > config settings (config settings fill in the rest).
+func addFlagEnvVars(env map[string]string, cfg *provider.Config, args []string) {
+	extNames := getActiveExtensionNames(cfg)
+
+	allExts, err := extensions.GetExtensions()
+	if err != nil {
+		return
+	}
+
+	for _, ext := range allExts {
+		if !contains(extNames, ext.Name) {
+			continue
+		}
+
+		for _, flag := range ext.Flags {
+			if flag.EnvVar == "" {
+				continue
+			}
+
+			flagKey := strings.TrimPrefix(flag.Flag, "--")
+
+			// Check CLI args first (highest precedence)
+			cliSet := false
+			for _, arg := range args {
+				if arg == flag.Flag {
+					env[flag.EnvVar] = "true"
+					envLogger.Debugf("Flag %s (CLI) sets %s=true", flag.Flag, flag.EnvVar)
+					cliSet = true
+					break
+				}
+			}
+
+			// If not set by CLI, check config settings
+			if !cliSet {
+				if cfg.ExtensionFlagSettings != nil {
+					if flagSettings, ok := cfg.ExtensionFlagSettings[ext.Name]; ok {
+						if val, ok := flagSettings[flagKey]; ok && val {
+							env[flag.EnvVar] = "true"
+							envLogger.Debugf("Flag %s (config) sets %s=true", flag.Flag, flag.EnvVar)
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
 // addUserEnvVars adds user-configured environment variables
 func addUserEnvVars(env map[string]string, cfg *provider.Config) {
 	for _, varName := range cfg.EnvVars {
