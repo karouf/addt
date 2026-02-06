@@ -374,38 +374,17 @@ func (p *PodmanProvider) Shell(spec *provider.RunSpec) error {
 	// Open shell
 	fmt.Println("Opening bash shell in container...")
 	if ctx.useExistingContainer {
-		podmanArgs = append(podmanArgs, spec.Name, "/bin/bash")
+		// Run through entrypoint so socat bridges and debug logging work
+		podmanArgs = append(podmanArgs, "-e", "ADDT_COMMAND=/bin/bash")
+		podmanArgs = append(podmanArgs, spec.Name, "/usr/local/bin/podman-entrypoint.sh")
 		podmanArgs = append(podmanArgs, spec.Args...)
 	} else {
-		// Override entrypoint to bash for shell mode
-		// Need to handle firewall initialization and nested Podman initialization
-		needsInit := spec.DindMode == "isolated" || spec.DindMode == "true" || p.config.FirewallEnabled
-
-		if needsInit {
-			// Create initialization script that runs before bash
-			script := `
-# Initialize firewall if enabled
-if [ "${ADDT_FIREWALL_ENABLED}" = "true" ] && [ -f /usr/local/bin/init-firewall.sh ]; then
-    sudo /usr/local/bin/init-firewall.sh
-fi
-
-# Start nested Podman if in isolated mode (Podman-in-Podman)
-if [ "$ADDT_DIND" = "true" ]; then
-    echo 'Nested Podman mode enabled'
-    # Podman doesn't need a daemon, but we ensure socket is available
-    if [ -S /run/podman/podman.sock ]; then
-        echo '✓ Podman socket available'
-    fi
-fi
-
-exec /bin/bash "$@"
-`
-			podmanArgs = append(podmanArgs, "--entrypoint", "/bin/bash", spec.ImageName, "-c", script, "bash")
-			podmanArgs = append(podmanArgs, spec.Args...)
-		} else {
-			podmanArgs = append(podmanArgs, "--entrypoint", "/bin/bash", spec.ImageName)
-			podmanArgs = append(podmanArgs, spec.Args...)
-		}
+		// Use default entrypoint with ADDT_COMMAND override to bash
+		// The entrypoint handles all initialization: socat bridges, secrets,
+		// firewall, DinD, extensions, and debug logging.
+		podmanArgs = append(podmanArgs, "-e", "ADDT_COMMAND=/bin/bash")
+		podmanArgs = append(podmanArgs, spec.ImageName)
+		podmanArgs = append(podmanArgs, spec.Args...)
 	}
 
 	return p.executePodmanCommand(podmanArgs)
