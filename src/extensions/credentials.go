@@ -53,6 +53,8 @@ func RunCredentialScript(ext *ExtensionConfig) (map[string]string, error) {
 		} else {
 			// Script failure is not fatal - might just mean no credentials available
 			logger.Warning("script for %s failed: %v", ext.Name, err)
+			// stop the container
+			os.Exit(1)
 		}
 		return nil, nil
 	}
