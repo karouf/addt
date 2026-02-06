@@ -12,6 +12,7 @@ import (
 	"github.com/jedi4ever/addt/config"
 	"github.com/jedi4ever/addt/core"
 	"github.com/jedi4ever/addt/provider"
+	"github.com/jedi4ever/addt/util"
 )
 
 // Execute is the main entry point for the CLI
@@ -136,6 +137,10 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 	// Load configuration
 	cfg := config.LoadConfig(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
 
+	// Initialize logger
+	util.InitLogger(cfg.LogFile, cfg.LogEnabled)
+	logger := util.Log("root")
+	logger.Debugf("Initializing logger with file: %s, enabled: %v", cfg.LogFile, cfg.LogEnabled)
 	// Note: --yolo and other agent-specific arg transformations are handled
 	// by each extension's args.sh script in the container
 
@@ -225,12 +230,15 @@ func handleSubcommand(subCmd string, subArgs []string, version, defaultNodeVersi
 
 	switch subCmd {
 	case "build":
-		// Check for --force flag
+		// Check for --force and --rebuild-base flags
 		forceNoCache := false
+		rebuildBase := false
 		var filteredArgs []string
 		for _, arg := range subArgs {
 			if arg == "--force" {
 				forceNoCache = true
+			} else if arg == "--rebuild-base" {
+				rebuildBase = true
 			} else {
 				filteredArgs = append(filteredArgs, arg)
 			}
@@ -246,15 +254,18 @@ func handleSubcommand(subCmd string, subArgs []string, version, defaultNodeVersi
 		if cfg.Extensions == "" {
 			fmt.Println("Error: No extension specified")
 			fmt.Println()
-			fmt.Println("Usage: addt build <extension> [--force]")
+			fmt.Println("Usage: addt build <extension> [--force] [--rebuild-base]")
 			fmt.Println("       ADDT_EXTENSIONS=claude addt build")
 			fmt.Println()
 			fmt.Println("Options:")
-			fmt.Println("  --force    Rebuild without using Docker cache")
+			fmt.Println("  --force         Rebuild without using Docker cache")
+			fmt.Println("  --rebuild-base  Rebuild the base image before building extension image")
 			fmt.Println()
 			fmt.Println("Examples:")
 			fmt.Println("  addt build claude")
 			fmt.Println("  addt build claude --force")
+			fmt.Println("  addt build claude --rebuild-base")
+			fmt.Println("  addt build claude --force --rebuild-base")
 			fmt.Println("  addt build claude,codex")
 			os.Exit(1)
 		}
@@ -273,7 +284,7 @@ func handleSubcommand(subCmd string, subArgs []string, version, defaultNodeVersi
 			fmt.Printf("Error: %v\n", err)
 			os.Exit(1)
 		}
-		HandleBuildCommand(prov, providerCfg, subArgs, forceNoCache)
+		HandleBuildCommand(prov, providerCfg, subArgs, forceNoCache, rebuildBase)
 
 	case "shell":
 		HandleShellCommand(subArgs, version, defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)

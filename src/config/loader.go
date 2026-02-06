@@ -154,8 +154,25 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 		cfg.DindMode = v
 	}
 
+	// Log file: default -> global -> project -> env
+	// Check this first because setting ADDT_LOG_FILE should auto-enable logging
+	cfg.LogFile = "addt.log"
+	if globalCfg.LogFile != "" {
+		cfg.LogFile = globalCfg.LogFile
+	}
+	if projectCfg.LogFile != "" {
+		cfg.LogFile = projectCfg.LogFile
+	}
+	// Check if ADDT_LOG_FILE is set (even if empty, to allow stderr logging)
+	logFileEnvSet := false
+	if v, ok := os.LookupEnv("ADDT_LOG_FILE"); ok {
+		cfg.LogFile = v // Empty string means stderr, non-empty means file
+		logFileEnvSet = true
+	}
+
 	// Log enabled: default (false) -> global -> project -> env
-	cfg.LogEnabled = false
+	// Auto-enable if ADDT_LOG_FILE is set (even if empty)
+	cfg.LogEnabled = logFileEnvSet
 	if globalCfg.Log != nil {
 		cfg.LogEnabled = *globalCfg.Log
 	}
@@ -164,18 +181,6 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 	}
 	if v := os.Getenv("ADDT_LOG"); v != "" {
 		cfg.LogEnabled = v == "true"
-	}
-
-	// Log file: default -> global -> project -> env
-	cfg.LogFile = "addt.log"
-	if globalCfg.LogFile != "" {
-		cfg.LogFile = globalCfg.LogFile
-	}
-	if projectCfg.LogFile != "" {
-		cfg.LogFile = projectCfg.LogFile
-	}
-	if v := os.Getenv("ADDT_LOG_FILE"); v != "" {
-		cfg.LogFile = v
 	}
 
 	// Persistent: default (false) -> global -> project -> env
