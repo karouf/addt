@@ -46,7 +46,7 @@ func TestHandleBuildCommand_Basic(t *testing.T) {
 	mock := &mockProvider{}
 	cfg := &provider.Config{}
 
-	HandleBuildCommand(mock, cfg, []string{}, false)
+	HandleBuildCommand(mock, cfg, []string{}, false, false)
 
 	if !mock.buildCalled {
 		t.Error("BuildIfNeeded was not called")
@@ -69,7 +69,7 @@ func TestHandleBuildCommand_NoCache(t *testing.T) {
 	mock := &mockProvider{}
 	cfg := &provider.Config{}
 
-	HandleBuildCommand(mock, cfg, []string{}, true)
+	HandleBuildCommand(mock, cfg, []string{}, true, false)
 
 	if !cfg.NoCache {
 		t.Error("NoCache should be true when noCache=true")
@@ -80,7 +80,7 @@ func TestHandleBuildCommand_BuildArgExtensions(t *testing.T) {
 	mock := &mockProvider{}
 	cfg := &provider.Config{}
 
-	HandleBuildCommand(mock, cfg, []string{"--build-arg", "ADDT_EXTENSIONS=claude,codex"}, false)
+	HandleBuildCommand(mock, cfg, []string{"--build-arg", "ADDT_EXTENSIONS=claude,codex"}, false, false)
 
 	if cfg.Extensions != "claude,codex" {
 		t.Errorf("Extensions = %q, want %q", cfg.Extensions, "claude,codex")
@@ -91,7 +91,7 @@ func TestHandleBuildCommand_BuildArgNodeVersion(t *testing.T) {
 	mock := &mockProvider{}
 	cfg := &provider.Config{}
 
-	HandleBuildCommand(mock, cfg, []string{"--build-arg", "NODE_VERSION=20"}, false)
+	HandleBuildCommand(mock, cfg, []string{"--build-arg", "NODE_VERSION=20"}, false, false)
 
 	if cfg.NodeVersion != "20" {
 		t.Errorf("NodeVersion = %q, want %q", cfg.NodeVersion, "20")
@@ -102,7 +102,7 @@ func TestHandleBuildCommand_BuildArgGoVersion(t *testing.T) {
 	mock := &mockProvider{}
 	cfg := &provider.Config{}
 
-	HandleBuildCommand(mock, cfg, []string{"--build-arg", "GO_VERSION=1.22"}, false)
+	HandleBuildCommand(mock, cfg, []string{"--build-arg", "GO_VERSION=1.22"}, false, false)
 
 	if cfg.GoVersion != "1.22" {
 		t.Errorf("GoVersion = %q, want %q", cfg.GoVersion, "1.22")
@@ -113,7 +113,7 @@ func TestHandleBuildCommand_BuildArgUvVersion(t *testing.T) {
 	mock := &mockProvider{}
 	cfg := &provider.Config{}
 
-	HandleBuildCommand(mock, cfg, []string{"--build-arg", "UV_VERSION=0.2.0"}, false)
+	HandleBuildCommand(mock, cfg, []string{"--build-arg", "UV_VERSION=0.2.0"}, false, false)
 
 	if cfg.UvVersion != "0.2.0" {
 		t.Errorf("UvVersion = %q, want %q", cfg.UvVersion, "0.2.0")
@@ -124,7 +124,7 @@ func TestHandleBuildCommand_BuildArgExtensionVersion(t *testing.T) {
 	mock := &mockProvider{}
 	cfg := &provider.Config{}
 
-	HandleBuildCommand(mock, cfg, []string{"--build-arg", "CLAUDE_VERSION=1.0.5"}, false)
+	HandleBuildCommand(mock, cfg, []string{"--build-arg", "CLAUDE_VERSION=1.0.5"}, false, false)
 
 	if cfg.ExtensionVersions == nil {
 		t.Fatal("ExtensionVersions is nil")
@@ -146,7 +146,7 @@ func TestHandleBuildCommand_MultipleBuildArgs(t *testing.T) {
 		"--build-arg", "CLAUDE_VERSION=2.0.0",
 	}
 
-	HandleBuildCommand(mock, cfg, args, false)
+	HandleBuildCommand(mock, cfg, args, false, false)
 
 	if cfg.NodeVersion != "18" {
 		t.Errorf("NodeVersion = %q, want %q", cfg.NodeVersion, "18")
@@ -169,9 +169,28 @@ func TestHandleBuildCommand_SetsImageName(t *testing.T) {
 	mock := &mockProvider{}
 	cfg := &provider.Config{}
 
-	HandleBuildCommand(mock, cfg, []string{}, false)
+	HandleBuildCommand(mock, cfg, []string{}, false, false)
 
 	if cfg.ImageName != "test-image" {
 		t.Errorf("ImageName = %q, want %q", cfg.ImageName, "test-image")
+	}
+}
+
+func TestHandleBuildCommand_RebuildBase(t *testing.T) {
+	mock := &mockProvider{}
+	cfg := &provider.Config{}
+
+	HandleBuildCommand(mock, cfg, []string{}, false, true)
+
+	if !mock.buildCalled {
+		t.Error("BuildIfNeeded was not called")
+	}
+
+	if !mock.rebuildArg {
+		t.Error("rebuild should be true for build command")
+	}
+
+	if !mock.rebuildBaseArg {
+		t.Error("rebuildBase should be true when rebuildBase=true")
 	}
 }
