@@ -52,19 +52,19 @@ func TestSSH_Addt_ProxyMode(t *testing.T) {
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
-			dir, cleanup := setupAddtDir(t, prov, `
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
 ssh:
   forward_keys: true
   forward_mode: "proxy"
 `)
 			defer cleanup()
-			ensureAddtImage(t, dir, "claude")
+			ensureAddtImage(t, dir, "debug")
 
 			// Check safe SSH files are present
-			output, err := runShellCommand(t, dir,
-				"claude", "-c", "ls -la /home/addt/.ssh/")
+			output, err := runRunSubcommand(t, dir, "debug",
+				"-c", "ls -la /home/addt/.ssh/")
 			if err != nil {
-				t.Fatalf("shell ls .ssh failed: %v\nOutput: %s", err, output)
+				t.Fatalf("run ls .ssh failed: %v\nOutput: %s", err, output)
 			}
 
 			if !strings.Contains(output, ".pub") &&
@@ -75,10 +75,10 @@ ssh:
 			}
 
 			// Check SSH_AUTH_SOCK is set
-			output2, err := runShellCommand(t, dir,
-				"claude", "-c", "printenv SSH_AUTH_SOCK")
+			output2, err := runRunSubcommand(t, dir, "debug",
+				"-c", "printenv SSH_AUTH_SOCK")
 			if err != nil {
-				t.Fatalf("shell printenv SSH_AUTH_SOCK failed: %v\nOutput: %s", err, output2)
+				t.Fatalf("run printenv SSH_AUTH_SOCK failed: %v\nOutput: %s", err, output2)
 			}
 
 			// Find the socket path in the output (filter test framework noise)
@@ -103,18 +103,18 @@ func TestSSH_Addt_KeysMode(t *testing.T) {
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
-			dir, cleanup := setupAddtDir(t, prov, `
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
 ssh:
   forward_keys: true
   forward_mode: "keys"
 `)
 			defer cleanup()
-			ensureAddtImage(t, dir, "claude")
+			ensureAddtImage(t, dir, "debug")
 
-			output, err := runShellCommand(t, dir,
-				"claude", "-c", "ls -la /home/addt/.ssh/")
+			output, err := runRunSubcommand(t, dir, "debug",
+				"-c", "ls -la /home/addt/.ssh/")
 			if err != nil {
-				t.Fatalf("shell ls .ssh failed: %v\nOutput: %s", err, output)
+				t.Fatalf("run ls .ssh failed: %v\nOutput: %s", err, output)
 			}
 
 			if strings.Contains(output, "No such file") || strings.Contains(output, "cannot access") {
@@ -137,16 +137,16 @@ func TestSSH_Addt_AgentMode(t *testing.T) {
 				t.Skip("podman on macOS cannot forward Unix sockets (use proxy mode)")
 			}
 
-			dir, cleanup := setupAddtDir(t, prov, `
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
 ssh:
   forward_keys: true
   forward_mode: "agent"
 `)
 			defer cleanup()
-			ensureAddtImage(t, dir, "claude")
+			ensureAddtImage(t, dir, "debug")
 
-			output, err := runShellCommand(t, dir,
-				"claude", "-c", "printenv SSH_AUTH_SOCK")
+			output, err := runRunSubcommand(t, dir, "debug",
+				"-c", "printenv SSH_AUTH_SOCK")
 			if err != nil {
 				t.Skipf("agent mode may not be supported on this platform: %v\nOutput: %s", err, output)
 			}
@@ -168,18 +168,17 @@ func TestSSH_Addt_Disabled(t *testing.T) {
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
-			dir, cleanup := setupAddtDir(t, prov, `
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
 ssh:
   forward_keys: false
 `)
 			defer cleanup()
-			ensureAddtImage(t, dir, "claude")
+			ensureAddtImage(t, dir, "debug")
 
-			output, err := runShellCommand(t, dir,
-				"claude", "-c",
-				"test -d /home/addt/.ssh && echo exists || echo missing")
+			output, err := runRunSubcommand(t, dir, "debug",
+				"-c", "test -d /home/addt/.ssh && echo exists || echo missing")
 			if err != nil {
-				t.Fatalf("shell test .ssh failed: %v\nOutput: %s", err, output)
+				t.Fatalf("run test .ssh failed: %v\nOutput: %s", err, output)
 			}
 
 			if !strings.Contains(output, "missing") {
@@ -224,18 +223,17 @@ func TestSSH_Addt_GithubConnect(t *testing.T) {
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
-			dir, cleanup := setupAddtDir(t, prov, `
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
 ssh:
   forward_keys: true
   forward_mode: "proxy"
 `)
 			defer cleanup()
-			ensureAddtImage(t, dir, "claude")
+			ensureAddtImage(t, dir, "debug")
 
 			// ssh -T git@github.com returns exit code 1 with "successfully authenticated"
-			output, _ := runShellCommand(t, dir,
-				"claude", "-c",
-				"ssh -T -o StrictHostKeyChecking=no -o ConnectTimeout=10 git@github.com")
+			output, _ := runRunSubcommand(t, dir, "debug",
+				"-c", "ssh -T -o StrictHostKeyChecking=no -o ConnectTimeout=10 git@github.com")
 
 			outputLower := strings.ToLower(output)
 			if !strings.Contains(outputLower, "successfully authenticated") {

@@ -4,36 +4,12 @@ package addt
 
 import (
 	"os"
-	"strings"
 	"testing"
 )
 
-// extractApiKeyResult extracts the value after "API_KEY_RESULT:" from output.
-func extractApiKeyResult(output string) string {
-	for _, line := range strings.Split(output, "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "API_KEY_RESULT:") {
-			return strings.TrimPrefix(line, "API_KEY_RESULT:")
-		}
-	}
-	return ""
-}
-
-// extractProcResult extracts the value after "PROC_RESULT:" from output.
-func extractProcResult(output string) string {
-	for _, line := range strings.Split(output, "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "PROC_RESULT:") {
-			return strings.TrimPrefix(line, "PROC_RESULT:")
-		}
-	}
-	return ""
-}
-
 // procEnvLeakCommand returns a shell command that checks whether a given
 // env var name appears in /proc/1/environ. Outputs "PROC_RESULT:LEAKED"
-// or "PROC_RESULT:ISOLATED". Uses grep -q to avoid the issue where
-// grep -c outputs a count AND triggers || on no-match.
+// or "PROC_RESULT:ISOLATED".
 func procEnvLeakCommand(envVar string) string {
 	return "if grep -q " + envVar + " /proc/1/environ 2>/dev/null; then echo PROC_RESULT:LEAKED; else echo PROC_RESULT:ISOLATED; fi"
 }
@@ -72,7 +48,7 @@ func TestCodex_Addt_ApiKeyForwarded(t *testing.T) {
 			}
 
 			// Verify the key arrived inside the container
-			result := extractApiKeyResult(output)
+			result := extractMarker(output, "API_KEY_RESULT:")
 			if result != testKey {
 				t.Errorf("Expected API_KEY_RESULT:%s, got API_KEY_RESULT:%s\nFull output:\n%s",
 					testKey, result, output)
@@ -119,7 +95,7 @@ security:
 				t.Fatalf("shell command failed: %v\nOutput: %s", err, output)
 			}
 
-			result := extractProcResult(output)
+			result := extractMarker(output, "PROC_RESULT:")
 			if result != "ISOLATED" {
 				t.Errorf("Expected OPENAI_API_KEY to be isolated (PROC_RESULT:ISOLATED), got PROC_RESULT:%s\nFull output:\n%s",
 					result, output)
@@ -156,7 +132,7 @@ func TestCodex_Addt_ApiKeyAbsentWhenUnset(t *testing.T) {
 				t.Fatalf("shell command failed: %v\nOutput: %s", err, output)
 			}
 
-			result := extractApiKeyResult(output)
+			result := extractMarker(output, "API_KEY_RESULT:")
 			if result != "NONE" {
 				t.Errorf("Expected API_KEY_RESULT:NONE when OPENAI_API_KEY unset, got API_KEY_RESULT:%s\nFull output:\n%s",
 					result, output)

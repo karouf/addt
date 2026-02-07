@@ -7,28 +7,6 @@ import (
 	"testing"
 )
 
-// extractYoloResult extracts the value after "YOLO_RESULT:" from output.
-func extractYoloResult(output string) string {
-	for _, line := range strings.Split(output, "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "YOLO_RESULT:") {
-			return strings.TrimPrefix(line, "YOLO_RESULT:")
-		}
-	}
-	return ""
-}
-
-// extractArgsResult extracts the value after "ARGS_RESULT:" from output.
-func extractArgsResult(output string) string {
-	for _, line := range strings.Split(output, "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "ARGS_RESULT:") {
-			return strings.TrimPrefix(line, "ARGS_RESULT:")
-		}
-	}
-	return ""
-}
-
 // Scenario: A user enables yolo mode via project config so that
 // claude receives --dangerously-skip-permissions. The env var
 // ADDT_EXTENSION_CLAUDE_YOLO should be set inside the container.
@@ -53,7 +31,7 @@ extensions:
 				t.Fatalf("shell command failed: %v\nOutput: %s", err, output)
 			}
 
-			result := extractYoloResult(output)
+			result := extractMarker(output, "YOLO_RESULT:")
 			if result != "true" {
 				t.Errorf("Expected YOLO_RESULT:true, got YOLO_RESULT:%s\nFull output:\n%s",
 					result, output)
@@ -80,7 +58,7 @@ func TestClaudeYolo_Addt_NotSetByDefault(t *testing.T) {
 				t.Fatalf("shell command failed: %v\nOutput: %s", err, output)
 			}
 
-			result := extractYoloResult(output)
+			result := extractMarker(output, "YOLO_RESULT:")
 			if result != "UNSET" {
 				t.Errorf("Expected YOLO_RESULT:UNSET when yolo not configured, got YOLO_RESULT:%s\nFull output:\n%s",
 					result, output)
@@ -110,7 +88,7 @@ func TestClaudeYolo_Addt_ArgsTransformation(t *testing.T) {
 				t.Fatalf("shell command failed: %v\nOutput: %s", err, output)
 			}
 
-			result := extractArgsResult(output)
+			result := extractMarker(output, "ARGS_RESULT:")
 			if !strings.Contains(result, "--dangerously-skip-permissions") {
 				t.Errorf("Expected args.sh to transform --yolo to --dangerously-skip-permissions, got ARGS_RESULT:%s\nFull output:\n%s",
 					result, output)
@@ -149,7 +127,7 @@ extensions:
 				t.Fatalf("shell command failed: %v\nOutput: %s", err, output)
 			}
 
-			result := extractArgsResult(output)
+			result := extractMarker(output, "ARGS_RESULT:")
 			if !strings.Contains(result, "--dangerously-skip-permissions") {
 				t.Errorf("Expected args.sh to inject --dangerously-skip-permissions from env var, got ARGS_RESULT:%s\nFull output:\n%s",
 					result, output)

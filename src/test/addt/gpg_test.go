@@ -95,19 +95,19 @@ func TestGPG_Addt_ProxyMode(t *testing.T) {
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
-			dir, cleanup := setupAddtDir(t, prov, `
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
 gpg:
   forward: "proxy"
 `)
 			defer cleanup()
-			ensureAddtImage(t, dir, "claude")
+			ensureAddtImage(t, dir, "debug")
 
 			// Check GPG socket exists.
 			// On macOS+podman, socat chmod fails on virtiofs so socket may not be created.
-			output, err := runShellCommand(t, dir,
-				"claude", "-c", "ls -la /home/addt/.gnupg/S.gpg-agent 2>&1 || echo NO_SOCKET")
+			output, err := runRunSubcommand(t, dir, "debug",
+				"-c", "ls -la /home/addt/.gnupg/S.gpg-agent 2>&1 || echo NO_SOCKET")
 			if err != nil {
-				t.Fatalf("shell command failed: %v\nOutput: %s", err, output)
+				t.Fatalf("run command failed: %v\nOutput: %s", err, output)
 			}
 
 			if strings.Contains(output, "NO_SOCKET") {
@@ -119,18 +119,18 @@ gpg:
 			}
 
 			// Check safe files are present (public keyring, config)
-			output2, err := runShellCommand(t, dir,
-				"claude", "-c", "ls /home/addt/.gnupg/ 2>&1")
+			output2, err := runRunSubcommand(t, dir, "debug",
+				"-c", "ls /home/addt/.gnupg/ 2>&1")
 			if err != nil {
-				t.Fatalf("shell ls .gnupg failed: %v\nOutput: %s", err, output2)
+				t.Fatalf("run ls .gnupg failed: %v\nOutput: %s", err, output2)
 			}
 			t.Logf("GPG proxy mode directory:\n%s", output2)
 
 			// Verify private key directory is NOT mounted
-			output3, err := runShellCommand(t, dir,
-				"claude", "-c", "test -d /home/addt/.gnupg/private-keys-v1.d && echo HAS_PRIVATE || echo NO_PRIVATE")
+			output3, err := runRunSubcommand(t, dir, "debug",
+				"-c", "test -d /home/addt/.gnupg/private-keys-v1.d && echo HAS_PRIVATE || echo NO_PRIVATE")
 			if err != nil {
-				t.Fatalf("shell command failed: %v\nOutput: %s", err, output3)
+				t.Fatalf("run command failed: %v\nOutput: %s", err, output3)
 			}
 
 			if strings.Contains(output3, "HAS_PRIVATE") {
@@ -146,17 +146,17 @@ func TestGPG_Addt_KeysMode(t *testing.T) {
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
-			dir, cleanup := setupAddtDir(t, prov, `
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
 gpg:
   forward: "keys"
 `)
 			defer cleanup()
-			ensureAddtImage(t, dir, "claude")
+			ensureAddtImage(t, dir, "debug")
 
-			output, err := runShellCommand(t, dir,
-				"claude", "-c", "ls /home/addt/.gnupg/ 2>&1")
+			output, err := runRunSubcommand(t, dir, "debug",
+				"-c", "ls /home/addt/.gnupg/ 2>&1")
 			if err != nil {
-				t.Fatalf("shell ls .gnupg failed: %v\nOutput: %s", err, output)
+				t.Fatalf("run ls .gnupg failed: %v\nOutput: %s", err, output)
 			}
 
 			if strings.Contains(output, "No such file") || strings.Contains(output, "cannot access") {
@@ -179,15 +179,15 @@ func TestGPG_Addt_AgentMode(t *testing.T) {
 				t.Skip("podman on macOS cannot forward Unix sockets (use proxy mode)")
 			}
 
-			dir, cleanup := setupAddtDir(t, prov, `
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
 gpg:
   forward: "agent"
 `)
 			defer cleanup()
-			ensureAddtImage(t, dir, "claude")
+			ensureAddtImage(t, dir, "debug")
 
-			output, err := runShellCommand(t, dir,
-				"claude", "-c", "ls -la /home/addt/.gnupg/S.gpg-agent 2>&1 || echo NO_SOCKET")
+			output, err := runRunSubcommand(t, dir, "debug",
+				"-c", "ls -la /home/addt/.gnupg/S.gpg-agent 2>&1 || echo NO_SOCKET")
 			if err != nil {
 				t.Skipf("agent mode may not be supported on this platform: %v\nOutput: %s", err, output)
 			}
@@ -206,18 +206,17 @@ func TestGPG_Addt_Disabled(t *testing.T) {
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
-			dir, cleanup := setupAddtDir(t, prov, `
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
 gpg:
   forward: "off"
 `)
 			defer cleanup()
-			ensureAddtImage(t, dir, "claude")
+			ensureAddtImage(t, dir, "debug")
 
-			output, err := runShellCommand(t, dir,
-				"claude", "-c",
-				"test -d /home/addt/.gnupg && echo exists || echo missing")
+			output, err := runRunSubcommand(t, dir, "debug",
+				"-c", "test -d /home/addt/.gnupg && echo exists || echo missing")
 			if err != nil {
-				t.Fatalf("shell command failed: %v\nOutput: %s", err, output)
+				t.Fatalf("run command failed: %v\nOutput: %s", err, output)
 			}
 
 			if !strings.Contains(output, "missing") {

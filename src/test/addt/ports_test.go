@@ -108,40 +108,6 @@ func TestPorts_Addt_DefaultValues(t *testing.T) {
 
 // --- Container tests (subprocess, both providers) ---
 
-// extractPortMap finds the PORT_MAP value in subprocess output.
-// We use PORT_MAP: markers to isolate it from test framework noise.
-func extractPortMap(output string) string {
-	for _, line := range strings.Split(output, "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "PORT_MAP:") {
-			return strings.TrimPrefix(line, "PORT_MAP:")
-		}
-	}
-	return ""
-}
-
-// extractPrompt finds the PROMPT value in subprocess output.
-func extractPrompt(output string) string {
-	for _, line := range strings.Split(output, "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "PROMPT:") {
-			return strings.TrimPrefix(line, "PROMPT:")
-		}
-	}
-	return ""
-}
-
-// extractPortResult finds the PORT_RESULT value in subprocess output.
-func extractPortResult(output string) string {
-	for _, line := range strings.Split(output, "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "PORT_RESULT:") {
-			return strings.TrimPrefix(line, "PORT_RESULT:")
-		}
-	}
-	return ""
-}
-
 func TestPorts_Addt_PortMapEnvVar(t *testing.T) {
 	// Scenario: User configures ports.expose with two ports and a custom range_start.
 	// Inside the container, ADDT_PORT_MAP should be set with mappings for both ports.
@@ -149,7 +115,7 @@ func TestPorts_Addt_PortMapEnvVar(t *testing.T) {
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
-			dir, cleanup := setupAddtDir(t, prov, `
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
 ports:
   expose:
     - "3000"
@@ -157,13 +123,12 @@ ports:
   range_start: 30000
 `)
 			defer cleanup()
-			ensureAddtImage(t, dir, "claude")
+			ensureAddtImage(t, dir, "debug")
 
-			output, _ := runShellCommand(t, dir,
-				"claude", "-c",
-				"echo PORT_MAP:$ADDT_PORT_MAP")
+			output, _ := runRunSubcommand(t, dir, "debug",
+				"-c", "echo PORT_MAP:$ADDT_PORT_MAP")
 
-			portMap := extractPortMap(output)
+			portMap := extractMarker(output, "PORT_MAP:")
 			t.Logf("Port map: %q", portMap)
 
 			if portMap == "" {
@@ -181,13 +146,12 @@ ports:
 
 func TestPorts_Addt_SystemPromptInjected(t *testing.T) {
 	// Scenario: User configures ports with system prompt injection enabled (default).
-	// The entrypoint should generate ADDT_SYSTEM_PROMPT containing port mapping info
-	// that guides the AI to communicate correct host ports to users.
+	// The entrypoint should generate ADDT_SYSTEM_PROMPT containing port mapping info.
 	providers := requireProviders(t)
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
-			dir, cleanup := setupAddtDir(t, prov, `
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
 ports:
   expose:
     - "3000"
@@ -195,13 +159,12 @@ ports:
   range_start: 30000
 `)
 			defer cleanup()
-			ensureAddtImage(t, dir, "claude")
+			ensureAddtImage(t, dir, "debug")
 
-			output, _ := runShellCommand(t, dir,
-				"claude", "-c",
-				"echo PROMPT:$ADDT_SYSTEM_PROMPT")
+			output, _ := runRunSubcommand(t, dir, "debug",
+				"-c", "echo PROMPT:$ADDT_SYSTEM_PROMPT")
 
-			prompt := extractPrompt(output)
+			prompt := extractMarker(output, "PROMPT:")
 			t.Logf("System prompt: %q", prompt)
 
 			if prompt == "" {
@@ -223,25 +186,23 @@ ports:
 func TestPorts_Addt_ServiceAccessible(t *testing.T) {
 	// Scenario: User exposes port 8000. Inside the container, a Python HTTP server
 	// is started on that port, then curl verifies it's accessible from localhost.
-	// This confirms the port forwarding pipeline works end-to-end.
 	providers := requireProviders(t)
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
-			dir, cleanup := setupAddtDir(t, prov, `
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
 ports:
   expose:
     - "8000"
   range_start: 30000
 `)
 			defer cleanup()
-			ensureAddtImage(t, dir, "claude")
+			ensureAddtImage(t, dir, "debug")
 
-			output, _ := runShellCommand(t, dir,
-				"claude", "-c",
-				"python3 -m http.server 8000 & sleep 1; CODE=$(curl -s --connect-timeout 3 -o /dev/null -w '%{http_code}' http://localhost:8000); kill %1 2>/dev/null; echo PORT_RESULT:$CODE")
+			output, _ := runRunSubcommand(t, dir, "debug",
+				"-c", "python3 -m http.server 8000 & sleep 1; CODE=$(curl -s --connect-timeout 3 -o /dev/null -w '%{http_code}' http://localhost:8000); kill %1 2>/dev/null; echo PORT_RESULT:$CODE")
 
-			result := extractPortResult(output)
+			result := extractMarker(output, "PORT_RESULT:")
 			t.Logf("Service accessible result: %q", result)
 
 			if result == "" {
@@ -260,18 +221,17 @@ func TestPorts_Addt_NoPorts(t *testing.T) {
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
-			dir, cleanup := setupAddtDir(t, prov, `
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
 ports:
   expose: []
 `)
 			defer cleanup()
-			ensureAddtImage(t, dir, "claude")
+			ensureAddtImage(t, dir, "debug")
 
-			output, _ := runShellCommand(t, dir,
-				"claude", "-c",
-				"echo PORT_MAP:${ADDT_PORT_MAP:-NONE}")
+			output, _ := runRunSubcommand(t, dir, "debug",
+				"-c", "echo PORT_MAP:${ADDT_PORT_MAP:-NONE}")
 
-			portMap := extractPortMap(output)
+			portMap := extractMarker(output, "PORT_MAP:")
 			t.Logf("No-ports result: %q", portMap)
 
 			if portMap == "" {

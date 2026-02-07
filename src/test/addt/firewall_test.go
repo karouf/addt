@@ -309,53 +309,33 @@ func TestFirewall_Addt_DuplicateDomain(t *testing.T) {
 
 // --- Container tests (subprocess, both providers) ---
 
-// extractCurlResult finds the curl HTTP status code in subprocess output.
-// We use CURL_RESULT markers to isolate it from test framework noise.
-func extractCurlResult(output string) string {
-	for _, line := range strings.Split(output, "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "CURL_RESULT:") {
-			return strings.TrimPrefix(line, "CURL_RESULT:")
-		}
-	}
-	return ""
-}
-
 func TestFirewall_Addt_StrictModeBlocks(t *testing.T) {
 	// Scenario: User enables firewall in strict mode. Curl to an unlisted
 	// domain (example.com) should fail or time out because strict mode
 	// only allows explicitly listed domains.
-	//
-	// The container starts as root (--user root), applies iptables rules
-	// directly (no sudo needed), then drops to addt via gosu. This works
-	// even with no-new-privileges enabled.
 	providers := requireProviders(t)
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
-			dir, cleanup := setupAddtDir(t, prov, `
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
 firewall:
   enabled: true
   mode: "strict"
 `)
 			defer cleanup()
-			ensureAddtImage(t, dir, "claude")
+			ensureAddtImage(t, dir, "debug")
 
 			// Try to reach example.com — not in default allowed list
-			// Use markers to extract the curl result from subprocess noise
-			output, _ := runShellCommand(t, dir,
-				"claude", "-c",
-				"CODE=$(curl -s --connect-timeout 5 -o /dev/null -w '%{http_code}' https://example.com 2>/dev/null) || CODE=BLOCKED; echo CURL_RESULT:$CODE")
+			output, _ := runRunSubcommand(t, dir, "debug",
+				"-c", "CODE=$(curl -s --connect-timeout 5 -o /dev/null -w '%{http_code}' https://example.com 2>/dev/null) || CODE=BLOCKED; echo CURL_RESULT:$CODE")
 
-			result := extractCurlResult(output)
+			result := extractMarker(output, "CURL_RESULT:")
 			t.Logf("Strict mode blocked domain result: %q", result)
 
 			// In strict mode, unlisted domains should be blocked.
-			// With root entrypoint + gosu, firewall rules are properly applied.
 			if result == "200" || result == "301" || result == "302" {
 				t.Errorf("Expected strict mode to block example.com, but got HTTP %s", result)
 			}
-			// Expect either BLOCKED, 000 (connection failed), or empty (timeout)
 			if result != "" && result != "BLOCKED" && result != "000" {
 				t.Logf("Unexpected result %q — firewall may not have initialized properly", result)
 			}
@@ -367,31 +347,25 @@ func TestFirewall_Addt_AllowedDomainReachable(t *testing.T) {
 	// Scenario: User enables firewall in strict mode. Curl to a
 	// default-allowed domain (github.com) should succeed because
 	// it's in the default allowed list.
-	//
-	// The container starts as root, applies iptables rules, then drops
-	// to addt via gosu. Allowed domains should remain reachable.
 	providers := requireProviders(t)
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
-			dir, cleanup := setupAddtDir(t, prov, `
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
 firewall:
   enabled: true
   mode: "strict"
 `)
 			defer cleanup()
-			ensureAddtImage(t, dir, "claude")
+			ensureAddtImage(t, dir, "debug")
 
 			// Try to reach github.com — in default allowed list
-			// Use markers to extract the curl result from subprocess noise
-			output, _ := runShellCommand(t, dir,
-				"claude", "-c",
-				"CODE=$(curl -s --connect-timeout 10 -o /dev/null -w '%{http_code}' https://github.com 2>/dev/null); echo CURL_RESULT:$CODE")
+			output, _ := runRunSubcommand(t, dir, "debug",
+				"-c", "CODE=$(curl -s --connect-timeout 10 -o /dev/null -w '%{http_code}' https://github.com 2>/dev/null); echo CURL_RESULT:$CODE")
 
-			result := extractCurlResult(output)
+			result := extractMarker(output, "CURL_RESULT:")
 			t.Logf("Strict mode allowed domain result: %q", result)
 
-			// github.com is default-allowed, so it should be reachable
 			if result != "" {
 				if result == "000" {
 					t.Errorf("Expected github.com to be reachable (it's default-allowed), but curl failed with status 000")
@@ -410,23 +384,20 @@ func TestFirewall_Addt_DisabledAllowsAll(t *testing.T) {
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
-			dir, cleanup := setupAddtDir(t, prov, `
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
 firewall:
   enabled: false
 `)
 			defer cleanup()
-			ensureAddtImage(t, dir, "claude")
+			ensureAddtImage(t, dir, "debug")
 
 			// Try to reach example.com — should work with firewall disabled
-			// Use markers to extract the curl result from subprocess noise
-			output, _ := runShellCommand(t, dir,
-				"claude", "-c",
-				"CODE=$(curl -s --connect-timeout 10 -o /dev/null -w '%{http_code}' https://example.com 2>/dev/null); echo CURL_RESULT:$CODE")
+			output, _ := runRunSubcommand(t, dir, "debug",
+				"-c", "CODE=$(curl -s --connect-timeout 10 -o /dev/null -w '%{http_code}' https://example.com 2>/dev/null); echo CURL_RESULT:$CODE")
 
-			result := extractCurlResult(output)
+			result := extractMarker(output, "CURL_RESULT:")
 			t.Logf("Disabled firewall result: %q", result)
 
-			// With firewall disabled, curl should run and reach the domain
 			if result == "" {
 				t.Log("Shell command did not produce CURL_RESULT — entrypoint likely exited before running command")
 			} else if result == "000" {

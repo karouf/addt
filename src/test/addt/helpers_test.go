@@ -22,6 +22,21 @@ const (
 	testPortRangeStart = 30000
 )
 
+// --- Marker extraction ---
+
+// extractMarker finds a line starting with the given marker prefix and returns the suffix.
+// Used across all test files to extract structured results from subprocess output.
+// Example: extractMarker(output, "SHELL_TEST:") returns "hello" from a line "SHELL_TEST:hello".
+func extractMarker(output, marker string) string {
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, marker) {
+			return strings.TrimPrefix(line, marker)
+		}
+	}
+	return ""
+}
+
 // --- Subprocess helpers ---
 // cmd.Execute calls os.Exit on errors, so we run it in a subprocess
 // (the test binary itself) to avoid killing the test process.

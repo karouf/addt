@@ -5,21 +5,8 @@ package addt
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
-
-// --- Helper to extract run test markers from subprocess output ---
-
-func extractRunResult(output, marker string) string {
-	for _, line := range strings.Split(output, "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, marker) {
-			return strings.TrimPrefix(line, marker)
-		}
-	}
-	return ""
-}
 
 // --- Container tests (subprocess, both providers) ---
 
@@ -44,7 +31,7 @@ func TestRun_Addt_BasicExecution(t *testing.T) {
 				t.Fatalf("run subcommand failed: %v\nOutput:\n%s", err, output)
 			}
 
-			result := extractRunResult(output, "RUN_TEST:")
+			result := extractMarker(output, "RUN_TEST:")
 			if result != "hello" {
 				t.Errorf("Expected RUN_TEST:hello, got %q\nFull output:\n%s", result, output)
 			}
@@ -71,14 +58,14 @@ func TestRun_Addt_WorkdirMounted(t *testing.T) {
 			}
 
 			output, err := runRunSubcommand(t, dir, "debug",
-				"-c", "cat /workspace/run_test_marker.txt && echo WORKDIR_OK:yes || echo WORKDIR_OK:no")
+				"-c", "if [ -f /workspace/run_test_marker.txt ]; then echo WORKDIR_OK:yes; else echo WORKDIR_OK:no; fi")
 
 			t.Logf("Output:\n%s", output)
 			if err != nil {
 				t.Fatalf("run subcommand failed: %v\nOutput:\n%s", err, output)
 			}
 
-			result := extractRunResult(output, "WORKDIR_OK:")
+			result := extractMarker(output, "WORKDIR_OK:")
 			if result != "yes" {
 				t.Errorf("Expected WORKDIR_OK:yes, got %q\nFull output:\n%s", result, output)
 			}
@@ -106,7 +93,7 @@ func TestRun_Addt_EntrypointIsExtension(t *testing.T) {
 				t.Fatalf("run subcommand failed: %v\nOutput:\n%s", err, output)
 			}
 
-			result := extractRunResult(output, "RUN_CMD:")
+			result := extractMarker(output, "RUN_CMD:")
 			if result != "/bin/bash" {
 				t.Errorf("Expected ADDT_COMMAND=/bin/bash, got %q\nFull output:\n%s", result, output)
 			}
@@ -115,19 +102,37 @@ func TestRun_Addt_EntrypointIsExtension(t *testing.T) {
 }
 
 func TestRun_Addt_EnvVarsForwarded(t *testing.T) {
-	// Scenario: User configures a custom env var in project config, then runs
-	// `addt run debug`. The env var should be available inside the container,
+	// Scenario: User sets an env var on the host and configures ADDT_ENV_VARS
+	// to forward it. Inside the container the var should be available,
 	// confirming env forwarding works through the run subcommand path.
 	providers := requireProviders(t)
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
-			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
-env:
-  - "RUN_TEST_VAR=myvalue"
-`)
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, ``)
 			defer cleanup()
 			ensureAddtImage(t, dir, "debug")
+
+			// Set the env var on the host and configure forwarding
+			origVal := os.Getenv("RUN_TEST_VAR")
+			os.Setenv("RUN_TEST_VAR", "myvalue")
+			defer func() {
+				if origVal != "" {
+					os.Setenv("RUN_TEST_VAR", origVal)
+				} else {
+					os.Unsetenv("RUN_TEST_VAR")
+				}
+			}()
+
+			origEnvVars := os.Getenv("ADDT_ENV_VARS")
+			os.Setenv("ADDT_ENV_VARS", "RUN_TEST_VAR")
+			defer func() {
+				if origEnvVars != "" {
+					os.Setenv("ADDT_ENV_VARS", origEnvVars)
+				} else {
+					os.Unsetenv("ADDT_ENV_VARS")
+				}
+			}()
 
 			output, err := runRunSubcommand(t, dir, "debug",
 				"-c", "echo ENVVAR:${RUN_TEST_VAR:-NOTSET}")
@@ -137,7 +142,7 @@ env:
 				t.Fatalf("run subcommand failed: %v\nOutput:\n%s", err, output)
 			}
 
-			result := extractRunResult(output, "ENVVAR:")
+			result := extractMarker(output, "ENVVAR:")
 			if result != "myvalue" {
 				t.Errorf("Expected RUN_TEST_VAR=myvalue, got %q\nFull output:\n%s", result, output)
 			}
@@ -165,7 +170,7 @@ func TestRun_Addt_UserIsAddt(t *testing.T) {
 				t.Fatalf("run subcommand failed: %v\nOutput:\n%s", err, output)
 			}
 
-			result := extractRunResult(output, "WHOAMI:")
+			result := extractMarker(output, "WHOAMI:")
 			if result != "addt" {
 				t.Errorf("Expected whoami=addt, got %q\nFull output:\n%s", result, output)
 			}
