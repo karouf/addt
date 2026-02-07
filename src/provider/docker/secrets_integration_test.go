@@ -69,6 +69,9 @@ func TestIsolateSecrets_Integration_EnvVarsNotPassed(t *testing.T) {
 }
 
 func TestIsolateSecrets_Integration_TmpfsSecretsReadable(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping container test in short mode")
+	}
 	checkDockerForSecrets(t)
 
 	// Create secrets JSON (as host would prepare)
@@ -132,6 +135,9 @@ func TestIsolateSecrets_Integration_TmpfsSecretsReadable(t *testing.T) {
 }
 
 func TestIsolateSecrets_Integration_SecretsNotInEnvWhenDisabled(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping container test in short mode")
+	}
 	checkDockerForSecrets(t)
 
 	// When isolate_secrets is disabled, secrets should be passed as env vars
@@ -154,6 +160,9 @@ func TestIsolateSecrets_Integration_SecretsNotInEnvWhenDisabled(t *testing.T) {
 }
 
 func TestIsolateSecrets_Integration_TmpfsPermissions(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping container test in short mode")
+	}
 	checkDockerForSecrets(t)
 
 	containerName := fmt.Sprintf("addt-tmpfs-perms-test-%d", os.Getpid())
@@ -306,6 +315,9 @@ func ensureSecretsTestImage(t *testing.T) {
 // TestIsolateSecrets_Integration_DockerCpApproach tests the docker cp approach
 // where secrets are copied to a running container's tmpfs
 func TestIsolateSecrets_Integration_DockerCpApproach(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping container test in short mode")
+	}
 	checkDockerForSecrets(t)
 
 	secretValue := "sk-ant-docker-cp-test-12345"
@@ -377,6 +389,9 @@ echo "LOADED_SECRET=$ANTHROPIC_API_KEY"
 // TestIsolateSecrets_Integration_SecretsNotInProcEnviron verifies that
 // secrets are NOT visible in /proc/1/environ when using docker cp approach
 func TestIsolateSecrets_Integration_SecretsNotInProcEnviron(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping container test in short mode")
+	}
 	checkDockerForSecrets(t)
 
 	secretValue := "sk-ant-proc-environ-test"
