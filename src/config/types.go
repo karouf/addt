@@ -94,24 +94,24 @@ type WorkdirSettings struct {
 
 // GlobalConfig represents the persistent configuration stored in ~/.addt/config.yaml
 type GlobalConfig struct {
-	Container        *ContainerSettings `yaml:"container,omitempty"`
-	Docker           *DockerSettings    `yaml:"docker,omitempty"`
-	Vm               *VmSettings        `yaml:"vm,omitempty"`
-	Firewall         *FirewallSettings `yaml:"firewall,omitempty"`
-	GitHub           *GitHubSettings `yaml:"github,omitempty"`
-	EnvFileLoad      *bool           `yaml:"env_file_load,omitempty"`
-	EnvFile          string          `yaml:"env_file,omitempty"`
-	GoVersion        string          `yaml:"go_version,omitempty"`
-	GPG              *GPGSettings    `yaml:"gpg,omitempty"`
-	Log              *LogSettings    `yaml:"log,omitempty"`
-	NodeVersion      string          `yaml:"node_version,omitempty"`
-	Persistent       *bool           `yaml:"persistent,omitempty"`
-	Ports            *PortsSettings  `yaml:"ports,omitempty"`
-	SSH              *SSHSettings    `yaml:"ssh,omitempty"`
-	TmuxForward      *bool           `yaml:"tmux_forward,omitempty"`
-	HistoryPersist   *bool           `yaml:"history_persist,omitempty"` // Persist shell history between sessions
-	UvVersion        string          `yaml:"uv_version,omitempty"`
-	Workdir          *WorkdirSettings `yaml:"workdir,omitempty"`
+	Container      *ContainerSettings `yaml:"container,omitempty"`
+	Docker         *DockerSettings    `yaml:"docker,omitempty"`
+	Vm             *VmSettings        `yaml:"vm,omitempty"`
+	Firewall       *FirewallSettings  `yaml:"firewall,omitempty"`
+	GitHub         *GitHubSettings    `yaml:"github,omitempty"`
+	EnvFileLoad    *bool              `yaml:"env_file_load,omitempty"`
+	EnvFile        string             `yaml:"env_file,omitempty"`
+	GoVersion      string             `yaml:"go_version,omitempty"`
+	GPG            *GPGSettings       `yaml:"gpg,omitempty"`
+	Log            *LogSettings       `yaml:"log,omitempty"`
+	NodeVersion    string             `yaml:"node_version,omitempty"`
+	Persistent     *bool              `yaml:"persistent,omitempty"`
+	Ports          *PortsSettings     `yaml:"ports,omitempty"`
+	SSH            *SSHSettings       `yaml:"ssh,omitempty"`
+	TmuxForward    *bool              `yaml:"tmux_forward,omitempty"`
+	HistoryPersist *bool              `yaml:"history_persist,omitempty"` // Persist shell history between sessions
+	UvVersion      string             `yaml:"uv_version,omitempty"`
+	Workdir        *WorkdirSettings   `yaml:"workdir,omitempty"`
 
 	// Per-extension configuration
 	Extensions map[string]*ExtensionSettings `yaml:"extensions,omitempty"`

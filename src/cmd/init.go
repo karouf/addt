@@ -21,15 +21,15 @@ type ProjectType struct {
 
 // InitConfig holds the configuration being built during init
 type InitConfig struct {
-	Extensions      string                      `yaml:"extensions,omitempty"`
-	Persistent      *bool                       `yaml:"persistent,omitempty"`
-	Firewall        *cfgtypes.FirewallSettings  `yaml:"firewall,omitempty"`
-	SSH             *cfgtypes.SSHSettings       `yaml:"ssh,omitempty"`
-	GPG             *cfgtypes.GPGSettings        `yaml:"gpg,omitempty"`
-	Workdir         *cfgtypes.WorkdirSettings   `yaml:"workdir,omitempty"`
-	NodeVersion     string                      `yaml:"node_version,omitempty"`
-	GoVersion       string                      `yaml:"go_version,omitempty"`
-	GitHub          *cfgtypes.GitHubSettings    `yaml:"github,omitempty"`
+	Extensions  string                     `yaml:"extensions,omitempty"`
+	Persistent  *bool                      `yaml:"persistent,omitempty"`
+	Firewall    *cfgtypes.FirewallSettings `yaml:"firewall,omitempty"`
+	SSH         *cfgtypes.SSHSettings      `yaml:"ssh,omitempty"`
+	GPG         *cfgtypes.GPGSettings      `yaml:"gpg,omitempty"`
+	Workdir     *cfgtypes.WorkdirSettings  `yaml:"workdir,omitempty"`
+	NodeVersion string                     `yaml:"node_version,omitempty"`
+	GoVersion   string                     `yaml:"go_version,omitempty"`
+	GitHub      *cfgtypes.GitHubSettings   `yaml:"github,omitempty"`
 }
 
 // HandleInitCommand handles the init command

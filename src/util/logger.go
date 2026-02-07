@@ -39,7 +39,7 @@ type Logger struct {
 }
 
 var defaultLogger = &Logger{
-	enabled:  true,         // Enabled by default, logs go to stderr
+	enabled:  true, // Enabled by default, logs go to stderr
 	output:   "stderr",
 	logLevel: LogLevelInfo, // Default to INFO level
 	modules:  "*",

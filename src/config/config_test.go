@@ -374,8 +374,8 @@ func TestLoadConfig_FullPrecedenceChain(t *testing.T) {
 
 	projectPort := 36000
 	writeProjectConfig(t, projectDir, &GlobalConfig{
-		NodeVersion:  "22",         // Overrides global
-		Firewall:     &FirewallSettings{Mode: "permissive"}, // Only set here
+		NodeVersion: "22",                                  // Overrides global
+		Firewall:    &FirewallSettings{Mode: "permissive"}, // Only set here
 		Ports: &PortsSettings{
 			RangeStart: &projectPort, // Overrides global
 		},

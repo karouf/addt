@@ -188,8 +188,8 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 		Provider:                cfg.Provider,
 		Extensions:              cfg.Extensions,
 		Command:                 cfg.Command,
-		ContainerCPUs:              cfg.ContainerCPUs,
-		ContainerMemory:            cfg.ContainerMemory,
+		ContainerCPUs:           cfg.ContainerCPUs,
+		ContainerMemory:         cfg.ContainerMemory,
 		Security:                cfg.Security,
 		Otel:                    cfg.Otel,
 	}

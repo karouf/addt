@@ -129,8 +129,8 @@ func TestBuildRunOptions_DockerDindMode(t *testing.T) {
 func TestBuildRunOptions_Resources(t *testing.T) {
 	cfg := &provider.Config{
 		ImageName:        "test-image",
-		ContainerCPUs:       "2",
-		ContainerMemory:     "4g",
+		ContainerCPUs:    "2",
+		ContainerMemory:  "4g",
 		WorkdirAutomount: true,
 		PortRangeStart:   30000,
 	}
