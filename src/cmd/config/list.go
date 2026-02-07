@@ -66,7 +66,7 @@ func printConfigTable(projectCfg, globalCfg *cfgtypes.GlobalConfig) {
 			Key:          k.Key,
 			Value:        value,
 			Default:      def,
-			Source:        source,
+			Source:       source,
 			IsOverridden: source == "env" || source == "project" || source == "global",
 		})
 	}

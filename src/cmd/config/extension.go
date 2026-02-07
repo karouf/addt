@@ -119,7 +119,7 @@ func listExtension(extName string, useGlobal bool) {
 			Key:          k.Key,
 			Value:        displayValue,
 			Default:      def,
-			Source:        source,
+			Source:       source,
 			IsOverridden: source == "env" || source == scope,
 		})
 	}
