@@ -18,7 +18,7 @@
 - [ ] TMUX
 - [ ] OTEL
 - [ ] ENV file
-- [ ] NPM install with readonly root
+- [x] NPM install with readonly root (npm_readonly_test.go: 7 tests - default value, config loaded, config via set, npm install with readonly, npm install without readonly, readonly root write fails, tmp writable)
 
 ## Container Lifecycle
 - [x] SHELL (shell_test.go: 5 tests - basic execution, workdir mounted, bash is default, env vars forwarded, user is addt)

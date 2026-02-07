@@ -215,6 +215,8 @@ fi
 # Set npm global prefix to user-owned directory (so addt user can install/uninstall without sudo)
 export NPM_CONFIG_PREFIX="$HOME/.npm-global"
 mkdir -p "$NPM_CONFIG_PREFIX"
+# Set npm cache inside npm-global so it works with readonly rootfs (tmpfs on /home/addt)
+export NPM_CONFIG_CACHE="$NPM_CONFIG_PREFIX/.cache"
 
 # Ensure ~/.local/bin, npm-global/bin and ~/go/bin are in PATH
 export PATH="$HOME/.local/bin:$NPM_CONFIG_PREFIX/bin:$HOME/go/bin:$PATH"
