@@ -293,16 +293,28 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 	cfg.ProjectFirewallDenied = projectCfg.FirewallDenied
 	// Extension firewall rules are loaded below after determining the extension
 
-	// GitHub detect: default (false) -> global -> project -> env
-	cfg.GitHubDetect = false
-	if globalCfg.GitHubDetect != nil {
-		cfg.GitHubDetect = *globalCfg.GitHubDetect
+	// GitHub forward token: default (true) -> global -> project -> env
+	cfg.GitHubForwardToken = true
+	if globalCfg.GitHub != nil && globalCfg.GitHub.ForwardToken != nil {
+		cfg.GitHubForwardToken = *globalCfg.GitHub.ForwardToken
 	}
-	if projectCfg.GitHubDetect != nil {
-		cfg.GitHubDetect = *projectCfg.GitHubDetect
+	if projectCfg.GitHub != nil && projectCfg.GitHub.ForwardToken != nil {
+		cfg.GitHubForwardToken = *projectCfg.GitHub.ForwardToken
 	}
-	if v := os.Getenv("ADDT_GITHUB_DETECT"); v != "" {
-		cfg.GitHubDetect = v == "true"
+	if v := os.Getenv("ADDT_GITHUB_FORWARD_TOKEN"); v != "" {
+		cfg.GitHubForwardToken = v == "true"
+	}
+
+	// GitHub token source: default ("env") -> global -> project -> env
+	cfg.GitHubTokenSource = "env"
+	if globalCfg.GitHub != nil && globalCfg.GitHub.TokenSource != "" {
+		cfg.GitHubTokenSource = globalCfg.GitHub.TokenSource
+	}
+	if projectCfg.GitHub != nil && projectCfg.GitHub.TokenSource != "" {
+		cfg.GitHubTokenSource = projectCfg.GitHub.TokenSource
+	}
+	if v := os.Getenv("ADDT_GITHUB_TOKEN_SOURCE"); v != "" {
+		cfg.GitHubTokenSource = v
 	}
 
 	// CPUs: default (2) -> global -> project -> env

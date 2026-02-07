@@ -31,7 +31,7 @@ type InitConfig struct {
 	WorkdirReadonly *bool                 `yaml:"workdir_readonly,omitempty"`
 	NodeVersion     string                `yaml:"node_version,omitempty"`
 	GoVersion       string                `yaml:"go_version,omitempty"`
-	GitHubDetect    *bool                 `yaml:"github_detect,omitempty"`
+	GitHub          *cfgtypes.GitHubSettings `yaml:"github,omitempty"`
 }
 
 // HandleInitCommand handles the init command
@@ -182,9 +182,12 @@ func configureDefaults(config *InitConfig, project ProjectType) {
 		}
 	}
 
-	// GitHub detection if GitHub project
+	// GitHub token forwarding if GitHub project
 	if project.HasGitHub {
-		config.GitHubDetect = &t
+		config.GitHub = &cfgtypes.GitHubSettings{
+			ForwardToken: &t,
+			TokenSource:  "gh_auth",
+		}
 	}
 
 	// Set tool versions based on project
@@ -305,9 +308,12 @@ func configureInteractive(config *InitConfig, project ProjectType) {
 	}
 	fmt.Println()
 
-	// Auto-detect GitHub
+	// GitHub token forwarding if GitHub project
 	if project.HasGitHub {
-		config.GitHubDetect = &t
+		config.GitHub = &cfgtypes.GitHubSettings{
+			ForwardToken: &t,
+			TokenSource:  "gh_auth",
+		}
 	}
 
 	// Set tool versions

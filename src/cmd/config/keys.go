@@ -23,7 +23,6 @@ func GetKeys() []KeyInfo {
 	keys := []KeyInfo{
 		{Key: "firewall", Description: "Enable network firewall", Type: "bool", EnvVar: "ADDT_FIREWALL"},
 		{Key: "firewall_mode", Description: "Firewall mode: strict, permissive, off", Type: "string", EnvVar: "ADDT_FIREWALL_MODE"},
-		{Key: "github_detect", Description: "Auto-detect GitHub token from gh CLI", Type: "bool", EnvVar: "ADDT_GITHUB_DETECT"},
 		{Key: "go_version", Description: "Go version", Type: "string", EnvVar: "ADDT_GO_VERSION"},
 		{Key: "gpg_forward", Description: "Enable GPG forwarding", Type: "bool", EnvVar: "ADDT_GPG_FORWARD"},
 		{Key: "log", Description: "Enable command logging", Type: "bool", EnvVar: "ADDT_LOG"},
@@ -35,6 +34,8 @@ func GetKeys() []KeyInfo {
 		{Key: "workdir", Description: "Override working directory (default: current directory)", Type: "string", EnvVar: "ADDT_WORKDIR"},
 		{Key: "workdir_automount", Description: "Auto-mount working directory to /workspace", Type: "bool", EnvVar: "ADDT_WORKDIR_AUTOMOUNT"},
 	}
+	// Add github keys
+	keys = append(keys, GetGitHubKeys()...)
 	// Add ports keys
 	keys = append(keys, GetPortsKeys()...)
 	// Add SSH keys
@@ -55,6 +56,51 @@ func GetPortsKeys() []KeyInfo {
 		{Key: "ports.expose", Description: "Container ports to expose (comma-separated)", Type: "string", EnvVar: "ADDT_PORTS"},
 		{Key: "ports.inject_system_prompt", Description: "Inject port mappings into AI system prompt (default: true)", Type: "bool", EnvVar: "ADDT_PORTS_INJECT_SYSTEM_PROMPT"},
 		{Key: "ports.range_start", Description: "Starting port for auto allocation", Type: "int", EnvVar: "ADDT_PORT_RANGE_START"},
+	}
+}
+
+// GetGitHubKeys returns all valid GitHub config keys
+func GetGitHubKeys() []KeyInfo {
+	return []KeyInfo{
+		{Key: "github.forward_token", Description: "Forward GH_TOKEN to container (default: true)", Type: "bool", EnvVar: "ADDT_GITHUB_FORWARD_TOKEN"},
+		{Key: "github.token_source", Description: "Token source: env or gh_auth (default: env)", Type: "string", EnvVar: "ADDT_GITHUB_TOKEN_SOURCE"},
+	}
+}
+
+// GetGitHubValue retrieves a GitHub config value
+func GetGitHubValue(g *cfgtypes.GitHubSettings, key string) string {
+	if g == nil {
+		return ""
+	}
+	switch key {
+	case "github.forward_token":
+		if g.ForwardToken != nil {
+			return fmt.Sprintf("%v", *g.ForwardToken)
+		}
+	case "github.token_source":
+		return g.TokenSource
+	}
+	return ""
+}
+
+// SetGitHubValue sets a GitHub config value
+func SetGitHubValue(g *cfgtypes.GitHubSettings, key, value string) {
+	switch key {
+	case "github.forward_token":
+		b := value == "true"
+		g.ForwardToken = &b
+	case "github.token_source":
+		g.TokenSource = value
+	}
+}
+
+// UnsetGitHubValue clears a GitHub config value
+func UnsetGitHubValue(g *cfgtypes.GitHubSettings, key string) {
+	switch key {
+	case "github.forward_token":
+		g.ForwardToken = nil
+	case "github.token_source":
+		g.TokenSource = ""
 	}
 }
 
@@ -123,8 +169,10 @@ func GetDefaultValue(key string) string {
 		return "false"
 	case "firewall_mode":
 		return "strict"
-	case "github_detect":
-		return "false"
+	case "github.forward_token":
+		return "true"
+	case "github.token_source":
+		return "env"
 	case "go_version":
 		return "latest"
 	case "gpg_forward":
@@ -306,10 +354,6 @@ func GetValue(cfg *cfgtypes.GlobalConfig, key string) string {
 		}
 	case "firewall_mode":
 		return cfg.FirewallMode
-	case "github_detect":
-		if cfg.GitHubDetect != nil {
-			return fmt.Sprintf("%v", *cfg.GitHubDetect)
-		}
 	case "go_version":
 		return cfg.GoVersion
 	case "gpg_forward":
@@ -340,6 +384,10 @@ func GetValue(cfg *cfgtypes.GlobalConfig, key string) string {
 		if cfg.WorkdirAutomount != nil {
 			return fmt.Sprintf("%v", *cfg.WorkdirAutomount)
 		}
+	}
+	// Check github keys
+	if strings.HasPrefix(key, "github.") {
+		return GetGitHubValue(cfg.GitHub, key)
 	}
 	// Check ports keys
 	if strings.HasPrefix(key, "ports.") {
@@ -483,9 +531,6 @@ func SetValue(cfg *cfgtypes.GlobalConfig, key, value string) {
 		cfg.Firewall = &b
 	case "firewall_mode":
 		cfg.FirewallMode = value
-	case "github_detect":
-		b := value == "true"
-		cfg.GitHubDetect = &b
 	case "go_version":
 		cfg.GoVersion = value
 	case "gpg_forward":
@@ -517,6 +562,13 @@ func SetValue(cfg *cfgtypes.GlobalConfig, key, value string) {
 		b := value == "true"
 		cfg.WorkdirAutomount = &b
 	default:
+		// Check github keys
+		if strings.HasPrefix(key, "github.") {
+			if cfg.GitHub == nil {
+				cfg.GitHub = &cfgtypes.GitHubSettings{}
+			}
+			SetGitHubValue(cfg.GitHub, key, value)
+		}
 		// Check ports keys
 		if strings.HasPrefix(key, "ports.") {
 			if cfg.Ports == nil {
@@ -657,8 +709,6 @@ func UnsetValue(cfg *cfgtypes.GlobalConfig, key string) {
 		cfg.Firewall = nil
 	case "firewall_mode":
 		cfg.FirewallMode = ""
-	case "github_detect":
-		cfg.GitHubDetect = nil
 	case "go_version":
 		cfg.GoVersion = ""
 	case "gpg_forward":
@@ -682,6 +732,10 @@ func UnsetValue(cfg *cfgtypes.GlobalConfig, key string) {
 	case "workdir_automount":
 		cfg.WorkdirAutomount = nil
 	default:
+		// Check github keys
+		if strings.HasPrefix(key, "github.") && cfg.GitHub != nil {
+			UnsetGitHubValue(cfg.GitHub, key)
+		}
 		// Check ports keys
 		if strings.HasPrefix(key, "ports.") && cfg.Ports != nil {
 			UnsetPortsValue(cfg.Ports, key)

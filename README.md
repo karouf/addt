@@ -125,7 +125,9 @@ firewall_allowed:
 ssh:
   forward_keys: true
   forward_mode: proxy
-github_detect: true
+github:
+  forward_token: true
+  token_source: gh_auth
 node_version: "22"
 ```
 
@@ -234,7 +236,7 @@ addt run claude "Clone the private repo and create a PR"
 
 Or auto-detect from `gh auth login`:
 ```bash
-export ADDT_GITHUB_DETECT=true
+export ADDT_GITHUB_TOKEN_SOURCE=gh_auth
 addt run claude "Clone git@github.com:org/private-repo.git"
 ```
 
@@ -736,7 +738,8 @@ addt cli update                   # Update addt
 | `ADDT_TMUX_FORWARD` | false | Forward tmux socket into container |
 | `ADDT_DOCKER_DIND_ENABLE` | false | Enable Docker-in-Docker |
 | `ADDT_DOCKER_DIND_MODE` | isolated | DinD mode: `isolated` or `host` |
-| `ADDT_GITHUB_DETECT` | false | Auto-detect GH token from `gh` CLI |
+| `ADDT_GITHUB_FORWARD_TOKEN` | true | Forward `GH_TOKEN` to container |
+| `ADDT_GITHUB_TOKEN_SOURCE` | env | Token source: `env` or `gh_auth` |
 
 ### Security
 | Variable | Default | Description |

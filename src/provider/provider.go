@@ -44,7 +44,8 @@ type Config struct {
 	GoVersion               string
 	UvVersion               string
 	EnvVars                 []string
-	GitHubDetect            bool
+	GitHubForwardToken      bool
+	GitHubTokenSource       string
 	Ports                   []string
 	PortRangeStart          int
 	PortsInjectSystemPrompt bool

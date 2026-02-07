@@ -42,6 +42,12 @@ type SSHSettings struct {
 	AllowedKeys []string `yaml:"allowed_keys,omitempty"`
 }
 
+// GitHubSettings holds GitHub token forwarding configuration
+type GitHubSettings struct {
+	ForwardToken *bool  `yaml:"forward_token,omitempty"`
+	TokenSource  string `yaml:"token_source,omitempty"`
+}
+
 // GlobalConfig represents the persistent configuration stored in ~/.addt/config.yaml
 type GlobalConfig struct {
 	Docker           *DockerSettings `yaml:"docker,omitempty"`
@@ -51,7 +57,7 @@ type GlobalConfig struct {
 	FirewallMode     string          `yaml:"firewall_mode,omitempty"`
 	FirewallAllowed  []string        `yaml:"firewall_allowed,omitempty"`
 	FirewallDenied   []string        `yaml:"firewall_denied,omitempty"`
-	GitHubDetect     *bool           `yaml:"github_detect,omitempty"`
+	GitHub           *GitHubSettings `yaml:"github,omitempty"`
 	GoVersion        string          `yaml:"go_version,omitempty"`
 	GPGForward       string          `yaml:"gpg_forward,omitempty"`         // "proxy", "agent", "keys", or "off"
 	GPGAllowedKeyIDs []string        `yaml:"gpg_allowed_key_ids,omitempty"` // GPG key IDs allowed
@@ -85,7 +91,8 @@ type Config struct {
 	GoVersion                string
 	UvVersion                string
 	EnvVars                  []string
-	GitHubDetect             bool
+	GitHubForwardToken       bool
+	GitHubTokenSource        string
 	Ports                    []string
 	PortRangeStart           int
 	PortsInjectSystemPrompt  bool

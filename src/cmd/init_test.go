@@ -143,6 +143,13 @@ func TestConfigureDefaults(t *testing.T) {
 		t.Errorf("expected proxy SSH forward mode, got %s", config.SSH.ForwardMode)
 	}
 
+	if config.GitHub == nil || config.GitHub.ForwardToken == nil || !*config.GitHub.ForwardToken {
+		t.Error("expected GitHub.ForwardToken to be true")
+	}
+	if config.GitHub.TokenSource != "gh_auth" {
+		t.Errorf("expected GitHub.TokenSource to be gh_auth, got %s", config.GitHub.TokenSource)
+	}
+
 	if config.NodeVersion != "22" {
 		t.Errorf("expected Node version 22, got %s", config.NodeVersion)
 	}
