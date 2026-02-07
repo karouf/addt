@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.10] - 2026-02-07
+
+### Added
+- **Podman support**: Podman as default container provider with auto-download and machine setup on macOS
+- **OpenTelemetry** (experimental): Tracing support with configurable endpoint, protocol, and per-extension OTEL vars
+- **Orchestrator** (experimental): Web interface for session management (`addt-orchestrator`)
+- **`addt update <extension> [version]`**: Force-rebuild extension to latest or specific version
+- **`addt init`**: Interactive project configuration setup
+- **GPG forwarding**: Proxy-based GPG agent forwarding with key ID filtering
+- **SSH proxy mode**: Default SSH forwarding via proxy agent with key filtering
+- **Tmux forwarding**: Socket forwarding for tmux sessions (disabled by default)
+- **Shell history persistence**: Per-project shell history between container sessions
+- **Credential scripts**: Extension-level credential management via `cred.sh`
+- **Secret isolation**: Secrets delivered via tmpfs/docker-cp instead of environment variables
+- **Security hardening**: cap_drop/cap_add, seccomp profiles, user namespaces, read-only rootfs, tmpfs sizing, PID/nofile limits, network_mode, disable_devices, disable_ipc, time_limit
+- **Progress indicators**: Visual feedback during build and container operations
+- **Native Claude support**: Run Claude Code natively on macOS without container
+- **Extension flags**: Config-driven flags (e.g., `yolo`) that map to environment variables
+- **Default column**: Config list views now show Key, Value, Default, and Source columns
+
+### Changed
+- **Config namespacing**: Flat config keys reorganized into nested namespaces:
+  - `firewall`/`firewall_mode` → `firewall.enabled`/`firewall.mode`
+  - `ssh_forward_keys`/`ssh_forward_mode`/`ssh_allowed_keys` → `ssh.*`
+  - `docker_cpus`/`docker_memory` → `container.cpus`/`container.memory`
+  - `gpg_forward`/`gpg_allowed_key_ids` → `gpg.*`
+  - `workdir`/`workdir_automount`/`workdir_readonly` → `workdir.*`
+  - `log_enabled`/`log_file` → `log.*` with output, dir, level, modules, rotation
+  - New `vm.cpus`/`vm.memory` for Podman machine / Docker Desktop VM resources
+- **Config list**: Shared table formatting across global, project, and extension views
+- **Improved help text**: Extension config commands documented with examples
+- **Rebuild logic**: Avoid unnecessary rebuilds when only embedded assets change
+- **Firewall rules**: Stored in config files with layered evaluation
+- **GitHub token**: Default to `gh_auth` token source
+- **Logging**: Full-featured logger with module filtering, log rotation, and configurable output
+
+### Fixed
+- Completion for all shell types (bash, zsh, fish)
+- System prompt null byte handling
+- Time limit enforcement
+- Persistent container mode reliability
+- Extension rebuilding on every run
+- Concurrent addt safety with PID-based cleanup
+- CI: Skip slow integration tests in short mode
+
 ## [0.0.9] - 2026-02-04
 
 ### Fixed
