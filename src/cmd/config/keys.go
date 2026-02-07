@@ -53,6 +53,7 @@ func GetPortsKeys() []KeyInfo {
 	return []KeyInfo{
 		{Key: "ports.forward", Description: "Enable port forwarding (default: true)", Type: "bool", EnvVar: "ADDT_PORTS_FORWARD"},
 		{Key: "ports.expose", Description: "Container ports to expose (comma-separated)", Type: "string", EnvVar: "ADDT_PORTS"},
+		{Key: "ports.inject_system_prompt", Description: "Inject port mappings into AI system prompt (default: true)", Type: "bool", EnvVar: "ADDT_PORTS_INJECT_SYSTEM_PROMPT"},
 		{Key: "ports.range_start", Description: "Starting port for auto allocation", Type: "int", EnvVar: "ADDT_PORT_RANGE_START"},
 	}
 }
@@ -142,6 +143,8 @@ func GetDefaultValue(key string) string {
 		return "true"
 	case "ports.expose":
 		return ""
+	case "ports.inject_system_prompt":
+		return "true"
 	case "ports.range_start":
 		return "30000"
 	case "ssh.forward_keys":
@@ -788,6 +791,10 @@ func GetPortsValue(p *cfgtypes.PortsSettings, key string) string {
 		}
 	case "ports.expose":
 		return strings.Join(p.Expose, ",")
+	case "ports.inject_system_prompt":
+		if p.InjectSystemPrompt != nil {
+			return fmt.Sprintf("%v", *p.InjectSystemPrompt)
+		}
 	case "ports.range_start":
 		if p.RangeStart != nil {
 			return fmt.Sprintf("%d", *p.RangeStart)
@@ -812,6 +819,9 @@ func SetPortsValue(p *cfgtypes.PortsSettings, key, value string) {
 			}
 			p.Expose = parts
 		}
+	case "ports.inject_system_prompt":
+		b := value == "true"
+		p.InjectSystemPrompt = &b
 	case "ports.range_start":
 		var i int
 		fmt.Sscanf(value, "%d", &i)
@@ -826,6 +836,8 @@ func UnsetPortsValue(p *cfgtypes.PortsSettings, key string) {
 		p.Forward = nil
 	case "ports.expose":
 		p.Expose = nil
+	case "ports.inject_system_prompt":
+		p.InjectSystemPrompt = nil
 	case "ports.range_start":
 		p.RangeStart = nil
 	}

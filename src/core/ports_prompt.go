@@ -4,9 +4,14 @@ import (
 	"github.com/jedi4ever/addt/provider"
 )
 
-// AddAIContext adds environment variables that provide context to the AI
+// PortsInjectPrompt adds environment variables that provide context to the AI
 // This includes port mappings that get converted to system prompts by the entrypoint
-func AddAIContext(env map[string]string, cfg *provider.Config) {
+func PortsInjectPrompt(env map[string]string, cfg *provider.Config) {
+	// Skip system prompt injection if disabled via ports.inject_system_prompt
+	if !cfg.PortsInjectSystemPrompt {
+		return
+	}
+
 	// Add port map for system prompt generation
 	// The entrypoint script reads ADDT_PORT_MAP and generates ADDT_SYSTEM_PROMPT
 	// which tells the AI how to communicate port information to users

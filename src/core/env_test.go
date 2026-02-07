@@ -98,8 +98,9 @@ func TestBuildEnvironment_CommandNotSet(t *testing.T) {
 
 func TestBuildEnvironment_PortMap(t *testing.T) {
 	cfg := &provider.Config{
-		Ports:          []string{"3000", "8080"},
-		PortRangeStart: 30000,
+		Ports:                   []string{"3000", "8080"},
+		PortRangeStart:          30000,
+		PortsInjectSystemPrompt: true,
 	}
 
 	env := BuildEnvironment(&mockEnvProvider{}, cfg)
@@ -111,8 +112,9 @@ func TestBuildEnvironment_PortMap(t *testing.T) {
 
 func TestBuildEnvironment_NoPortMap(t *testing.T) {
 	cfg := &provider.Config{
-		Ports:          []string{},
-		PortRangeStart: 30000,
+		Ports:                   []string{},
+		PortRangeStart:          30000,
+		PortsInjectSystemPrompt: true,
 	}
 
 	env := BuildEnvironment(&mockEnvProvider{}, cfg)

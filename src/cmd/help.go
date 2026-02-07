@@ -99,6 +99,7 @@ Environment Variables:
     ADDT_GITHUB_DETECT     Auto-detect GitHub token from gh CLI (default: false)
     ADDT_PORTS_FORWARD     Enable port forwarding (default: true)
     ADDT_PORTS             Comma-separated container ports to expose
+    ADDT_PORTS_INJECT_SYSTEM_PROMPT  Inject port mappings into AI system prompt (default: true)
     ADDT_PORT_RANGE_START  Starting port for allocation (default: 30000)
     ADDT_ENV_VARS          Env vars to pass (default: ANTHROPIC_API_KEY,GH_TOKEN)
     ADDT_ENV_FILE          Path to .env file (default: .env)

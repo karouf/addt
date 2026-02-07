@@ -28,8 +28,8 @@ func BuildEnvironment(p provider.Provider, cfg *provider.Config) map[string]stri
 	// Add terminal environment variables
 	addTerminalEnvVars(env)
 
-	// Add AI context (port mappings for system prompt)
-	AddAIContext(env, cfg)
+	// Inject port mapping info into system prompt
+	PortsInjectPrompt(env, cfg)
 
 	// Add firewall configuration
 	addFirewallEnvVars(env, cfg)

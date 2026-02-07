@@ -7,31 +7,48 @@ import (
 	"github.com/jedi4ever/addt/provider"
 )
 
-func TestAddAIContext_WithPorts(t *testing.T) {
+func TestPortsInjectPrompt_WithPorts(t *testing.T) {
 	cfg := &provider.Config{
-		Ports:          []string{"3000", "8080"},
-		PortRangeStart: 30000,
+		Ports:                   []string{"3000", "8080"},
+		PortRangeStart:          30000,
+		PortsInjectSystemPrompt: true,
 	}
 
 	env := make(map[string]string)
-	AddAIContext(env, cfg)
+	PortsInjectPrompt(env, cfg)
 
 	if env["ADDT_PORT_MAP"] == "" {
 		t.Error("ADDT_PORT_MAP not set")
 	}
 }
 
-func TestAddAIContext_NoPorts(t *testing.T) {
+func TestPortsInjectPrompt_NoPorts(t *testing.T) {
 	cfg := &provider.Config{
-		Ports:          []string{},
-		PortRangeStart: 30000,
+		Ports:                   []string{},
+		PortRangeStart:          30000,
+		PortsInjectSystemPrompt: true,
 	}
 
 	env := make(map[string]string)
-	AddAIContext(env, cfg)
+	PortsInjectPrompt(env, cfg)
 
 	if _, ok := env["ADDT_PORT_MAP"]; ok {
 		t.Error("ADDT_PORT_MAP should not be set when no ports")
+	}
+}
+
+func TestPortsInjectPrompt_InjectSystemPromptDisabled(t *testing.T) {
+	cfg := &provider.Config{
+		Ports:                   []string{"3000", "8080"},
+		PortRangeStart:          30000,
+		PortsInjectSystemPrompt: false,
+	}
+
+	env := make(map[string]string)
+	PortsInjectPrompt(env, cfg)
+
+	if _, ok := env["ADDT_PORT_MAP"]; ok {
+		t.Error("ADDT_PORT_MAP should not be set when inject_system_prompt is false")
 	}
 }
 

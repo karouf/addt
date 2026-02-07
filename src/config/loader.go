@@ -86,6 +86,18 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 		}
 	}
 
+	// Ports inject system prompt: default (true) -> global -> project -> env
+	cfg.PortsInjectSystemPrompt = true
+	if globalCfg.Ports != nil && globalCfg.Ports.InjectSystemPrompt != nil {
+		cfg.PortsInjectSystemPrompt = *globalCfg.Ports.InjectSystemPrompt
+	}
+	if projectCfg.Ports != nil && projectCfg.Ports.InjectSystemPrompt != nil {
+		cfg.PortsInjectSystemPrompt = *projectCfg.Ports.InjectSystemPrompt
+	}
+	if v := os.Getenv("ADDT_PORTS_INJECT_SYSTEM_PROMPT"); v != "" {
+		cfg.PortsInjectSystemPrompt = v == "true"
+	}
+
 	// SSH forward keys: default (true) -> global -> project -> env
 	cfg.SSHForwardKeys = true
 	cfg.SSHForwardMode = "proxy"

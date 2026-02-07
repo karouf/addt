@@ -13,7 +13,7 @@ func TestKeyValidation(t *testing.T) {
 	validKeys := []string{
 		"docker.cpus", "docker.memory", "docker.dind.enable", "docker.dind.mode",
 		"firewall", "firewall_mode", "node_version", "go_version",
-		"persistent", "ports.forward", "ports.expose", "ports.range_start",
+		"persistent", "ports.forward", "ports.expose", "ports.inject_system_prompt", "ports.range_start",
 		"workdir", "workdir_automount",
 	}
 
@@ -111,6 +111,7 @@ func TestGetValue(t *testing.T) {
 	persistent := true
 	portStart := 35000
 	portsForward := true
+	portsInjectSystemPrompt := true
 	cfg := &cfgtypes.GlobalConfig{
 		NodeVersion: "20",
 		Docker: &cfgtypes.DockerSettings{
@@ -118,9 +119,10 @@ func TestGetValue(t *testing.T) {
 		},
 		Persistent: &persistent,
 		Ports: &cfgtypes.PortsSettings{
-			Forward:    &portsForward,
-			Expose:     []string{"3000", "8080"},
-			RangeStart: &portStart,
+			Forward:            &portsForward,
+			Expose:             []string{"3000", "8080"},
+			RangeStart:         &portStart,
+			InjectSystemPrompt: &portsInjectSystemPrompt,
 		},
 	}
 
@@ -133,6 +135,7 @@ func TestGetValue(t *testing.T) {
 		{"persistent", "true"},
 		{"ports.forward", "true"},
 		{"ports.expose", "3000,8080"},
+		{"ports.inject_system_prompt", "true"},
 		{"ports.range_start", "35000"},
 		{"go_version", ""}, // not set
 	}
@@ -172,17 +175,24 @@ func TestSetValue(t *testing.T) {
 	if cfg.Ports == nil || cfg.Ports.Forward == nil || *cfg.Ports.Forward != true {
 		t.Errorf("Ports.Forward not set correctly")
 	}
+
+	SetValue(cfg, "ports.inject_system_prompt", "false")
+	if cfg.Ports == nil || cfg.Ports.InjectSystemPrompt == nil || *cfg.Ports.InjectSystemPrompt != false {
+		t.Errorf("Ports.InjectSystemPrompt not set correctly")
+	}
 }
 
 func TestUnsetValue(t *testing.T) {
 	persistent := true
 	portsForward := true
+	portsInjectSystemPrompt := true
 	cfg := &cfgtypes.GlobalConfig{
 		NodeVersion: "20",
 		Persistent:  &persistent,
 		Ports: &cfgtypes.PortsSettings{
-			Forward: &portsForward,
-			Expose:  []string{"3000", "8080"},
+			Forward:            &portsForward,
+			Expose:             []string{"3000", "8080"},
+			InjectSystemPrompt: &portsInjectSystemPrompt,
 		},
 	}
 
@@ -205,6 +215,11 @@ func TestUnsetValue(t *testing.T) {
 	if cfg.Ports.Forward != nil {
 		t.Errorf("Ports.Forward = %v, want nil", cfg.Ports.Forward)
 	}
+
+	UnsetValue(cfg, "ports.inject_system_prompt")
+	if cfg.Ports.InjectSystemPrompt != nil {
+		t.Errorf("Ports.InjectSystemPrompt = %v, want nil", cfg.Ports.InjectSystemPrompt)
+	}
 }
 
 func TestGetDefaultValue(t *testing.T) {
@@ -218,6 +233,7 @@ func TestGetDefaultValue(t *testing.T) {
 		{"persistent", "false"},
 		{"ports.forward", "true"},
 		{"ports.expose", ""},
+		{"ports.inject_system_prompt", "true"},
 		{"ports.range_start", "30000"},
 		{"workdir_automount", "true"},
 		{"ssh.forward_keys", "true"},

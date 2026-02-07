@@ -29,9 +29,10 @@ type DockerSettings struct {
 
 // PortsSettings holds port forwarding configuration
 type PortsSettings struct {
-	Forward    *bool    `yaml:"forward,omitempty"`
-	Expose     []string `yaml:"expose,omitempty"`
-	RangeStart *int     `yaml:"range_start,omitempty"`
+	Forward            *bool    `yaml:"forward,omitempty"`
+	Expose             []string `yaml:"expose,omitempty"`
+	RangeStart         *int     `yaml:"range_start,omitempty"`
+	InjectSystemPrompt *bool    `yaml:"inject_system_prompt,omitempty"`
 }
 
 // SSHSettings holds SSH forwarding configuration
@@ -87,6 +88,7 @@ type Config struct {
 	GitHubDetect             bool
 	Ports                    []string
 	PortRangeStart           int
+	PortsInjectSystemPrompt  bool
 	SSHForwardKeys           bool
 	SSHForwardMode           string
 	SSHAllowedKeys           []string
