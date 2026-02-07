@@ -69,6 +69,7 @@ func HandleShellCommand(args []string, version, defaultNodeVersion, defaultGoVer
 		TmuxForward:             cfg.TmuxForward,
 		HistoryPersist:          cfg.HistoryPersist,
 		DockerDindMode:          cfg.DockerDindMode,
+		EnvFileLoad:             cfg.EnvFileLoad,
 		EnvFile:                 cfg.EnvFile,
 		LogEnabled:              cfg.LogEnabled,
 		LogFile:                 cfg.LogFile,

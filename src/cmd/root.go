@@ -167,6 +167,7 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 		TmuxForward:             cfg.TmuxForward,
 		HistoryPersist:          cfg.HistoryPersist,
 		DockerDindMode:          cfg.DockerDindMode,
+		EnvFileLoad:             cfg.EnvFileLoad,
 		EnvFile:                 cfg.EnvFile,
 		LogEnabled:              cfg.LogEnabled,
 		LogFile:                 cfg.LogFile,
@@ -228,10 +229,12 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 		providerCfg.EnvVars = filtered
 	}
 
-	// Load env file if exists
-	if err := config.LoadEnvFile(cfg.EnvFile); err != nil {
-		fmt.Printf("Error loading env file: %v\n", err)
-		os.Exit(1)
+	// Load env file if enabled
+	if cfg.EnvFileLoad {
+		if err := config.LoadEnvFile(cfg.EnvFile); err != nil {
+			fmt.Printf("Error loading env file: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
 	// Run via runner

@@ -103,6 +103,7 @@ Environment Variables:
     ADDT_PORTS_INJECT_SYSTEM_PROMPT  Inject port mappings into AI system prompt (default: true)
     ADDT_PORT_RANGE_START  Starting port for allocation (default: 30000)
     ADDT_ENV_VARS          Env vars to pass (default: ANTHROPIC_API_KEY,GH_TOKEN)
+    ADDT_ENV_FILE_LOAD     Load .env file (default: true)
     ADDT_ENV_FILE          Path to .env file (default: .env)
     ADDT_LOG               Enable command logging (default: false)
     ADDT_LOG_FILE          Log file path (default: addt.log)

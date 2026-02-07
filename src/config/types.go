@@ -58,6 +58,8 @@ type GlobalConfig struct {
 	FirewallAllowed  []string        `yaml:"firewall_allowed,omitempty"`
 	FirewallDenied   []string        `yaml:"firewall_denied,omitempty"`
 	GitHub           *GitHubSettings `yaml:"github,omitempty"`
+	EnvFileLoad      *bool           `yaml:"env_file_load,omitempty"`
+	EnvFile          string          `yaml:"env_file,omitempty"`
 	GoVersion        string          `yaml:"go_version,omitempty"`
 	GPGForward       string          `yaml:"gpg_forward,omitempty"`         // "proxy", "agent", "keys", or "off"
 	GPGAllowedKeyIDs []string        `yaml:"gpg_allowed_key_ids,omitempty"` // GPG key IDs allowed
@@ -104,6 +106,7 @@ type Config struct {
 	GPGForward               string   // "proxy", "agent", "keys", or "off"
 	GPGAllowedKeyIDs         []string // GPG key IDs allowed for signing
 	DockerDindMode           string
+	EnvFileLoad              bool
 	EnvFile                  string
 	LogEnabled               bool
 	LogFile                  string

@@ -21,6 +21,8 @@ type KeyInfo struct {
 // GetKeys returns all valid config keys with their metadata (sorted alphabetically)
 func GetKeys() []KeyInfo {
 	keys := []KeyInfo{
+		{Key: "env_file_load", Description: "Load .env file (default: true)", Type: "bool", EnvVar: "ADDT_ENV_FILE_LOAD"},
+		{Key: "env_file", Description: "Path to .env file (default: .env)", Type: "string", EnvVar: "ADDT_ENV_FILE"},
 		{Key: "firewall", Description: "Enable network firewall", Type: "bool", EnvVar: "ADDT_FIREWALL"},
 		{Key: "firewall_mode", Description: "Firewall mode: strict, permissive, off", Type: "string", EnvVar: "ADDT_FIREWALL_MODE"},
 		{Key: "go_version", Description: "Go version", Type: "string", EnvVar: "ADDT_GO_VERSION"},
@@ -165,6 +167,10 @@ func GetDefaultValue(key string) string {
 		return "false"
 	case "docker.dind.mode":
 		return "isolated"
+	case "env_file_load":
+		return "true"
+	case "env_file":
+		return ".env"
 	case "firewall":
 		return "false"
 	case "firewall_mode":
@@ -348,6 +354,12 @@ func IsFlagKey(key string, extName string) bool {
 // GetValue retrieves a config value from the config struct
 func GetValue(cfg *cfgtypes.GlobalConfig, key string) string {
 	switch key {
+	case "env_file_load":
+		if cfg.EnvFileLoad != nil {
+			return fmt.Sprintf("%v", *cfg.EnvFileLoad)
+		}
+	case "env_file":
+		return cfg.EnvFile
 	case "firewall":
 		if cfg.Firewall != nil {
 			return fmt.Sprintf("%v", *cfg.Firewall)
@@ -526,6 +538,11 @@ func GetDockerValue(d *cfgtypes.DockerSettings, key string) string {
 // SetValue sets a config value in the config struct
 func SetValue(cfg *cfgtypes.GlobalConfig, key, value string) {
 	switch key {
+	case "env_file_load":
+		b := value == "true"
+		cfg.EnvFileLoad = &b
+	case "env_file":
+		cfg.EnvFile = value
 	case "firewall":
 		b := value == "true"
 		cfg.Firewall = &b
@@ -705,6 +722,10 @@ func SetDockerValue(d *cfgtypes.DockerSettings, key, value string) {
 // UnsetValue clears a config value in the config struct
 func UnsetValue(cfg *cfgtypes.GlobalConfig, key string) {
 	switch key {
+	case "env_file_load":
+		cfg.EnvFileLoad = nil
+	case "env_file":
+		cfg.EnvFile = ""
 	case "firewall":
 		cfg.Firewall = nil
 	case "firewall_mode":

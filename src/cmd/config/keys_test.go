@@ -12,6 +12,7 @@ import (
 func TestKeyValidation(t *testing.T) {
 	validKeys := []string{
 		"docker.cpus", "docker.memory", "docker.dind.enable", "docker.dind.mode",
+		"env_file_load", "env_file",
 		"firewall", "firewall_mode",
 		"github.forward_token", "github.token_source",
 		"node_version", "go_version",
@@ -229,6 +230,8 @@ func TestGetDefaultValue(t *testing.T) {
 		key      string
 		expected string
 	}{
+		{"env_file_load", "true"},
+		{"env_file", ".env"},
 		{"node_version", "22"},
 		{"firewall", "false"},
 		{"firewall_mode", "strict"},
@@ -704,5 +707,58 @@ func TestGitHubGetDefaultValue(t *testing.T) {
 		if got != tt.expected {
 			t.Errorf("GetDefaultValue(%q) = %q, want %q", tt.key, got, tt.expected)
 		}
+	}
+}
+
+func TestEnvFileGetValue(t *testing.T) {
+	envFileLoad := false
+	cfg := &cfgtypes.GlobalConfig{
+		EnvFileLoad: &envFileLoad,
+		EnvFile:     "/path/to/.env",
+	}
+
+	if got := GetValue(cfg, "env_file_load"); got != "false" {
+		t.Errorf("GetValue(env_file_load) = %q, want %q", got, "false")
+	}
+	if got := GetValue(cfg, "env_file"); got != "/path/to/.env" {
+		t.Errorf("GetValue(env_file) = %q, want %q", got, "/path/to/.env")
+	}
+
+	// nil EnvFileLoad returns empty
+	nilCfg := &cfgtypes.GlobalConfig{}
+	if got := GetValue(nilCfg, "env_file_load"); got != "" {
+		t.Errorf("GetValue(env_file_load) with nil = %q, want empty", got)
+	}
+}
+
+func TestEnvFileSetValue(t *testing.T) {
+	cfg := &cfgtypes.GlobalConfig{}
+
+	SetValue(cfg, "env_file_load", "false")
+	if cfg.EnvFileLoad == nil || *cfg.EnvFileLoad != false {
+		t.Errorf("EnvFileLoad not set correctly")
+	}
+
+	SetValue(cfg, "env_file", "custom.env")
+	if cfg.EnvFile != "custom.env" {
+		t.Errorf("EnvFile = %q, want %q", cfg.EnvFile, "custom.env")
+	}
+}
+
+func TestEnvFileUnsetValue(t *testing.T) {
+	envFileLoad := true
+	cfg := &cfgtypes.GlobalConfig{
+		EnvFileLoad: &envFileLoad,
+		EnvFile:     "custom.env",
+	}
+
+	UnsetValue(cfg, "env_file_load")
+	if cfg.EnvFileLoad != nil {
+		t.Errorf("EnvFileLoad should be nil after unset")
+	}
+
+	UnsetValue(cfg, "env_file")
+	if cfg.EnvFile != "" {
+		t.Errorf("EnvFile should be empty after unset")
 	}
 }

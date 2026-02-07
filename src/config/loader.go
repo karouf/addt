@@ -350,9 +350,29 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 		cfg.Workdir = v
 	}
 
+	// Env file load: default (true) -> global -> project -> env
+	cfg.EnvFileLoad = true
+	if globalCfg.EnvFileLoad != nil {
+		cfg.EnvFileLoad = *globalCfg.EnvFileLoad
+	}
+	if projectCfg.EnvFileLoad != nil {
+		cfg.EnvFileLoad = *projectCfg.EnvFileLoad
+	}
+	if v := os.Getenv("ADDT_ENV_FILE_LOAD"); v != "" {
+		cfg.EnvFileLoad = v == "true"
+	}
+
+	// Env file path: default ("") -> global -> project -> env
+	cfg.EnvFile = globalCfg.EnvFile
+	if projectCfg.EnvFile != "" {
+		cfg.EnvFile = projectCfg.EnvFile
+	}
+	if v := os.Getenv("ADDT_ENV_FILE"); v != "" {
+		cfg.EnvFile = v
+	}
+
 	// These don't have global config equivalents
 	cfg.EnvVars = strings.Split(getEnvOrDefault("ADDT_ENV_VARS", "ANTHROPIC_API_KEY,GH_TOKEN"), ",")
-	cfg.EnvFile = os.Getenv("ADDT_ENV_FILE")
 	cfg.Mode = getEnvOrDefault("ADDT_MODE", "container")
 	// Auto-detect container runtime (Docker > Podman) if not explicitly set
 	cfg.Provider = DetectContainerRuntime()

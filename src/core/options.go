@@ -76,10 +76,12 @@ func BuildRunOptions(p provider.Provider, cfg *provider.Config, name string, arg
 		optionsLogger.Debug("Command logging disabled")
 	}
 
-	// Add env file path if exists
-	addEnvFilePath(spec, cfg, cwd)
-	if spec.Env["ADDT_ENV_FILE"] != "" {
-		optionsLogger.Debugf("Env file found: %s", spec.Env["ADDT_ENV_FILE"])
+	// Add env file path if exists and loading is enabled
+	if cfg.EnvFileLoad {
+		addEnvFilePath(spec, cfg, cwd)
+		if spec.Env["ADDT_ENV_FILE"] != "" {
+			optionsLogger.Debugf("Env file found: %s", spec.Env["ADDT_ENV_FILE"])
+		}
 	}
 
 	optionsLogger.Debugf("BuildRunOptions completed: spec.Args=%v, spec.Env count=%d", spec.Args, len(spec.Env))
