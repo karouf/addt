@@ -211,23 +211,11 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 	// Create runner
 	runner := core.NewRunner(prov, providerCfg)
 
-	// Auto-detect GitHub token from gh CLI if token_source is gh_auth
-	if cfg.GitHubTokenSource == "gh_auth" && os.Getenv("GH_TOKEN") == "" {
-		if token := config.DetectGitHubToken(); token != "" {
-			os.Setenv("GH_TOKEN", token)
-		}
-	}
+	// Auto-detect GitHub token from gh CLI if configured
+	config.HandleGitHubGhAuth(cfg.GitHubTokenSource)
 
-	// If forward_token is false, remove GH_TOKEN from env vars list
-	if !cfg.GitHubForwardToken {
-		filtered := make([]string, 0, len(providerCfg.EnvVars))
-		for _, v := range providerCfg.EnvVars {
-			if v != "GH_TOKEN" {
-				filtered = append(filtered, v)
-			}
-		}
-		providerCfg.EnvVars = filtered
-	}
+	// Filter GH_TOKEN from env vars if forwarding is disabled
+	providerCfg.EnvVars = config.HandleGitHubToken(cfg.GitHubForwardToken, providerCfg.EnvVars)
 
 	// Load env file if enabled
 	if cfg.EnvFileLoad {
