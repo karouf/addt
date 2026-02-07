@@ -72,20 +72,29 @@ func printDomainList(label string, domains []string, defaults []string, denied [
 	}
 }
 
+// ensureFirewall initializes the Firewall settings struct if nil
+func ensureFirewall(cfg *config.GlobalConfig) *config.FirewallSettings {
+	if cfg.Firewall == nil {
+		cfg.Firewall = &config.FirewallSettings{}
+	}
+	return cfg.Firewall
+}
+
 // removeDomainFromConfig removes a domain from both allowed and denied lists
 func removeDomainFromConfig(cfg *config.GlobalConfig, domain string) bool {
+	fw := ensureFirewall(cfg)
 	removed := false
 
-	newAllowed := removeString(cfg.FirewallAllowed, domain)
-	if len(newAllowed) < len(cfg.FirewallAllowed) {
-		cfg.FirewallAllowed = newAllowed
+	newAllowed := removeString(fw.Allowed, domain)
+	if len(newAllowed) < len(fw.Allowed) {
+		fw.Allowed = newAllowed
 		removed = true
 		fmt.Printf("Removed '%s' from allowed domains\n", domain)
 	}
 
-	newDenied := removeString(cfg.FirewallDenied, domain)
-	if len(newDenied) < len(cfg.FirewallDenied) {
-		cfg.FirewallDenied = newDenied
+	newDenied := removeString(fw.Denied, domain)
+	if len(newDenied) < len(fw.Denied) {
+		fw.Denied = newDenied
 		removed = true
 		fmt.Printf("Removed '%s' from denied domains\n", domain)
 	}

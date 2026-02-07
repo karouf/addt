@@ -21,17 +21,15 @@ type ProjectType struct {
 
 // InitConfig holds the configuration being built during init
 type InitConfig struct {
-	Extensions      string                   `yaml:"extensions,omitempty"`
-	Persistent      *bool                    `yaml:"persistent,omitempty"`
-	Firewall        *bool                    `yaml:"firewall,omitempty"`
-	FirewallMode    string                   `yaml:"firewall_mode,omitempty"`
-	FirewallAllowed []string                 `yaml:"firewall_allowed,omitempty"`
-	SSH             *cfgtypes.SSHSettings    `yaml:"ssh,omitempty"`
-	GPGForward      string                   `yaml:"gpg_forward,omitempty"`
-	WorkdirReadonly *bool                    `yaml:"workdir_readonly,omitempty"`
-	NodeVersion     string                   `yaml:"node_version,omitempty"`
-	GoVersion       string                   `yaml:"go_version,omitempty"`
-	GitHub          *cfgtypes.GitHubSettings `yaml:"github,omitempty"`
+	Extensions      string                      `yaml:"extensions,omitempty"`
+	Persistent      *bool                       `yaml:"persistent,omitempty"`
+	Firewall        *cfgtypes.FirewallSettings  `yaml:"firewall,omitempty"`
+	SSH             *cfgtypes.SSHSettings       `yaml:"ssh,omitempty"`
+	GPGForward      string                      `yaml:"gpg_forward,omitempty"`
+	WorkdirReadonly *bool                       `yaml:"workdir_readonly,omitempty"`
+	NodeVersion     string                      `yaml:"node_version,omitempty"`
+	GoVersion       string                      `yaml:"go_version,omitempty"`
+	GitHub          *cfgtypes.GitHubSettings    `yaml:"github,omitempty"`
 }
 
 // HandleInitCommand handles the init command
@@ -167,11 +165,11 @@ func configureDefaults(config *InitConfig, project ProjectType) {
 
 	// Enable firewall with restricted mode
 	t := true
-	config.Firewall = &t
-	config.FirewallMode = "strict"
-
-	// Set up firewall allowed list based on project
-	config.FirewallAllowed = getDefaultAllowedDomains(project)
+	config.Firewall = &cfgtypes.FirewallSettings{
+		Enabled: &t,
+		Mode:    "strict",
+		Allowed: getDefaultAllowedDomains(project),
+	}
 
 	// SSH proxy mode (most secure)
 	if project.HasGit {
@@ -260,27 +258,36 @@ func configureInteractive(config *InitConfig, project ProjectType) {
 	f := false
 	switch choice {
 	case "", "1":
-		config.Firewall = &t
-		config.FirewallMode = "strict"
-		config.FirewallAllowed = getDefaultAllowedDomains(project)
+		config.Firewall = &cfgtypes.FirewallSettings{
+			Enabled: &t,
+			Mode:    "strict",
+			Allowed: getDefaultAllowedDomains(project),
+		}
 	case "2":
-		config.Firewall = &f
+		config.Firewall = &cfgtypes.FirewallSettings{
+			Enabled: &f,
+		}
 	case "3":
-		config.Firewall = &t
-		config.FirewallMode = "strict"
+		fw := &cfgtypes.FirewallSettings{
+			Enabled: &t,
+			Mode:    "strict",
+		}
 		// Ask for allowed domains
 		fmt.Print("Allowed domains (comma-separated): ")
 		domains := readLine(reader)
 		if domains != "" {
-			config.FirewallAllowed = strings.Split(domains, ",")
-			for i, d := range config.FirewallAllowed {
-				config.FirewallAllowed[i] = strings.TrimSpace(d)
+			parts := strings.Split(domains, ",")
+			for i, d := range parts {
+				parts[i] = strings.TrimSpace(d)
 			}
+			fw.Allowed = parts
 		}
+		config.Firewall = fw
 	case "4":
-		config.Firewall = &t
-		config.FirewallMode = "strict"
-		// No allowed domains
+		config.Firewall = &cfgtypes.FirewallSettings{
+			Enabled: &t,
+			Mode:    "strict",
+		}
 	}
 	fmt.Println()
 

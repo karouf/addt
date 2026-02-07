@@ -263,11 +263,11 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 
 	// Firewall: default (false) -> global -> project -> env
 	cfg.FirewallEnabled = false
-	if globalCfg.Firewall != nil {
-		cfg.FirewallEnabled = *globalCfg.Firewall
+	if globalCfg.Firewall != nil && globalCfg.Firewall.Enabled != nil {
+		cfg.FirewallEnabled = *globalCfg.Firewall.Enabled
 	}
-	if projectCfg.Firewall != nil {
-		cfg.FirewallEnabled = *projectCfg.Firewall
+	if projectCfg.Firewall != nil && projectCfg.Firewall.Enabled != nil {
+		cfg.FirewallEnabled = *projectCfg.Firewall.Enabled
 	}
 	if v := os.Getenv("ADDT_FIREWALL"); v != "" {
 		cfg.FirewallEnabled = v == "true"
@@ -275,11 +275,11 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 
 	// Firewall mode: default (strict) -> global -> project -> env
 	cfg.FirewallMode = "strict"
-	if globalCfg.FirewallMode != "" {
-		cfg.FirewallMode = globalCfg.FirewallMode
+	if globalCfg.Firewall != nil && globalCfg.Firewall.Mode != "" {
+		cfg.FirewallMode = globalCfg.Firewall.Mode
 	}
-	if projectCfg.FirewallMode != "" {
-		cfg.FirewallMode = projectCfg.FirewallMode
+	if projectCfg.Firewall != nil && projectCfg.Firewall.Mode != "" {
+		cfg.FirewallMode = projectCfg.Firewall.Mode
 	}
 	if v := os.Getenv("ADDT_FIREWALL_MODE"); v != "" {
 		cfg.FirewallMode = v
@@ -287,10 +287,14 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 
 	// Firewall rules: keep each layer separate for layered override evaluation
 	// Order: Defaults → Extension → Global → Project (project wins)
-	cfg.GlobalFirewallAllowed = globalCfg.FirewallAllowed
-	cfg.GlobalFirewallDenied = globalCfg.FirewallDenied
-	cfg.ProjectFirewallAllowed = projectCfg.FirewallAllowed
-	cfg.ProjectFirewallDenied = projectCfg.FirewallDenied
+	if globalCfg.Firewall != nil {
+		cfg.GlobalFirewallAllowed = globalCfg.Firewall.Allowed
+		cfg.GlobalFirewallDenied = globalCfg.Firewall.Denied
+	}
+	if projectCfg.Firewall != nil {
+		cfg.ProjectFirewallAllowed = projectCfg.Firewall.Allowed
+		cfg.ProjectFirewallDenied = projectCfg.Firewall.Denied
+	}
 	// Extension firewall rules are loaded below after determining the extension
 
 	// GitHub forward token: default (true) -> global -> project -> env

@@ -65,8 +65,8 @@ func TestGlobal_Integration_AllowDomain(t *testing.T) {
 	}
 
 	cfg := config.LoadGlobalConfig()
-	if !containsString(cfg.FirewallAllowed, "test.example.com") {
-		t.Errorf("Expected 'test.example.com' in allowed list, got: %v", cfg.FirewallAllowed)
+	if !containsString(ensureFirewall(cfg).Allowed, "test.example.com") {
+		t.Errorf("Expected 'test.example.com' in allowed list, got: %v", ensureFirewall(cfg).Allowed)
 	}
 }
 
@@ -78,8 +78,8 @@ func TestGlobal_Integration_DenyDomain(t *testing.T) {
 	HandleCommand([]string{"global", "deny", "malware.example.com"})
 
 	cfg := config.LoadGlobalConfig()
-	if !containsString(cfg.FirewallDenied, "malware.example.com") {
-		t.Errorf("Expected 'malware.example.com' in denied list, got: %v", cfg.FirewallDenied)
+	if !containsString(ensureFirewall(cfg).Denied, "malware.example.com") {
+		t.Errorf("Expected 'malware.example.com' in denied list, got: %v", ensureFirewall(cfg).Denied)
 	}
 }
 
@@ -92,7 +92,7 @@ func TestGlobal_Integration_RemoveDomain(t *testing.T) {
 	HandleCommand([]string{"global", "remove", "to-remove.example.com"})
 
 	cfg := config.LoadGlobalConfig()
-	if containsString(cfg.FirewallAllowed, "to-remove.example.com") {
+	if containsString(ensureFirewall(cfg).Allowed, "to-remove.example.com") {
 		t.Error("Expected domain to be removed from allowed list")
 	}
 }
@@ -111,15 +111,15 @@ func TestGlobal_Integration_Reset(t *testing.T) {
 	cfg := config.LoadGlobalConfig()
 
 	// Custom domains should be gone
-	if containsString(cfg.FirewallAllowed, "custom.example.com") {
+	if containsString(ensureFirewall(cfg).Allowed, "custom.example.com") {
 		t.Error("Expected custom domain to be removed after reset")
 	}
-	if containsString(cfg.FirewallDenied, "blocked.example.com") {
+	if containsString(ensureFirewall(cfg).Denied, "blocked.example.com") {
 		t.Error("Expected denied domain to be cleared after reset")
 	}
 
 	// Defaults should be present
-	if !containsString(cfg.FirewallAllowed, "api.anthropic.com") {
+	if !containsString(ensureFirewall(cfg).Allowed, "api.anthropic.com") {
 		t.Error("Expected default domains after reset")
 	}
 }
@@ -132,8 +132,8 @@ func TestProject_Integration_AllowDomain(t *testing.T) {
 	HandleCommand([]string{"project", "allow", "project-api.example.com"})
 
 	cfg := config.LoadProjectConfig()
-	if !containsString(cfg.FirewallAllowed, "project-api.example.com") {
-		t.Errorf("Expected 'project-api.example.com' in project allowed list, got: %v", cfg.FirewallAllowed)
+	if !containsString(ensureFirewall(cfg).Allowed, "project-api.example.com") {
+		t.Errorf("Expected 'project-api.example.com' in project allowed list, got: %v", ensureFirewall(cfg).Allowed)
 	}
 }
 
@@ -146,8 +146,8 @@ func TestProject_Integration_Reset(t *testing.T) {
 	HandleCommand([]string{"project", "reset"})
 
 	cfg := config.LoadProjectConfig()
-	if len(cfg.FirewallAllowed) > 0 {
-		t.Errorf("Expected empty allowed list after reset, got: %v", cfg.FirewallAllowed)
+	if len(ensureFirewall(cfg).Allowed) > 0 {
+		t.Errorf("Expected empty allowed list after reset, got: %v", ensureFirewall(cfg).Allowed)
 	}
 }
 
@@ -219,7 +219,7 @@ func TestCommand_Integration_DuplicateDomain(t *testing.T) {
 
 	cfg := config.LoadGlobalConfig()
 	count := 0
-	for _, d := range cfg.FirewallAllowed {
+	for _, d := range ensureFirewall(cfg).Allowed {
 		if d == "duplicate.example.com" {
 			count++
 		}
@@ -246,11 +246,11 @@ func TestConfig_Integration_YAMLFormat(t *testing.T) {
 
 	// Verify YAML structure
 	contentStr := string(content)
-	if !strings.Contains(contentStr, "firewall_allowed:") {
-		t.Error("Expected firewall_allowed in YAML")
+	if !strings.Contains(contentStr, "allowed:") {
+		t.Error("Expected allowed in YAML")
 	}
-	if !strings.Contains(contentStr, "firewall_denied:") {
-		t.Error("Expected firewall_denied in YAML")
+	if !strings.Contains(contentStr, "denied:") {
+		t.Error("Expected denied in YAML")
 	}
 	if !strings.Contains(contentStr, "allowed.example.com") {
 		t.Error("Expected allowed domain in YAML")

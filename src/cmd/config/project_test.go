@@ -26,8 +26,8 @@ func TestSaveAndLoadProjectConfig(t *testing.T) {
 	// Create and save project config
 	persistent := true
 	cfg := &cfgtypes.GlobalConfig{
-		Persistent:   &persistent,
-		FirewallMode: "permissive",
+		Persistent: &persistent,
+		Firewall:   &cfgtypes.FirewallSettings{Mode: "permissive"},
 	}
 
 	err := cfgtypes.SaveProjectConfigFile(cfg)
@@ -44,7 +44,7 @@ func TestSaveAndLoadProjectConfig(t *testing.T) {
 	if loaded.Persistent == nil || *loaded.Persistent != true {
 		t.Errorf("Persistent = %v, want true", loaded.Persistent)
 	}
-	if loaded.FirewallMode != "permissive" {
-		t.Errorf("FirewallMode = %q, want %q", loaded.FirewallMode, "permissive")
+	if loaded.Firewall == nil || loaded.Firewall.Mode != "permissive" {
+		t.Errorf("Firewall.Mode = %v, want %q", loaded.Firewall, "permissive")
 	}
 }

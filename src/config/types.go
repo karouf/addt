@@ -48,15 +48,20 @@ type GitHubSettings struct {
 	TokenSource  string `yaml:"token_source,omitempty"`
 }
 
+// FirewallSettings holds network firewall configuration
+type FirewallSettings struct {
+	Enabled *bool    `yaml:"enabled,omitempty"`
+	Mode    string   `yaml:"mode,omitempty"`
+	Allowed []string `yaml:"allowed,omitempty"`
+	Denied  []string `yaml:"denied,omitempty"`
+}
+
 // GlobalConfig represents the persistent configuration stored in ~/.addt/config.yaml
 type GlobalConfig struct {
-	Docker           *DockerSettings `yaml:"docker,omitempty"`
-	VmMemory         string          `yaml:"vm_memory,omitempty"` // Podman VM memory in MB (default: 8192)
-	VmCpus           string          `yaml:"vm_cpus,omitempty"`   // Podman VM CPUs (default: 4)
-	Firewall         *bool           `yaml:"firewall,omitempty"`
-	FirewallMode     string          `yaml:"firewall_mode,omitempty"`
-	FirewallAllowed  []string        `yaml:"firewall_allowed,omitempty"`
-	FirewallDenied   []string        `yaml:"firewall_denied,omitempty"`
+	Docker           *DockerSettings   `yaml:"docker,omitempty"`
+	VmMemory         string            `yaml:"vm_memory,omitempty"` // Podman VM memory in MB (default: 8192)
+	VmCpus           string            `yaml:"vm_cpus,omitempty"`   // Podman VM CPUs (default: 4)
+	Firewall         *FirewallSettings `yaml:"firewall,omitempty"`
 	GitHub           *GitHubSettings `yaml:"github,omitempty"`
 	EnvFileLoad      *bool           `yaml:"env_file_load,omitempty"`
 	EnvFile          string          `yaml:"env_file,omitempty"`

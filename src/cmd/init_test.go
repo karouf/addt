@@ -128,12 +128,12 @@ func TestConfigureDefaults(t *testing.T) {
 		t.Error("expected persistent to be false")
 	}
 
-	if config.Firewall == nil || !*config.Firewall {
-		t.Error("expected firewall to be true")
+	if config.Firewall == nil || config.Firewall.Enabled == nil || !*config.Firewall.Enabled {
+		t.Error("expected firewall to be enabled")
 	}
 
-	if config.FirewallMode != "strict" {
-		t.Errorf("expected strict firewall mode, got %s", config.FirewallMode)
+	if config.Firewall.Mode != "strict" {
+		t.Errorf("expected strict firewall mode, got %s", config.Firewall.Mode)
 	}
 
 	if config.SSH == nil || config.SSH.ForwardKeys == nil || !*config.SSH.ForwardKeys {
@@ -156,7 +156,7 @@ func TestConfigureDefaults(t *testing.T) {
 
 	// Check firewall allowed domains
 	foundNpm := false
-	for _, d := range config.FirewallAllowed {
+	for _, d := range config.Firewall.Allowed {
 		if d == "registry.npmjs.org" {
 			foundNpm = true
 		}
@@ -180,7 +180,7 @@ func TestConfigureDefaults_Go(t *testing.T) {
 
 	// Check firewall allowed domains
 	foundProxy := false
-	for _, d := range config.FirewallAllowed {
+	for _, d := range config.Firewall.Allowed {
 		if d == "proxy.golang.org" {
 			foundProxy = true
 		}
@@ -252,12 +252,14 @@ func TestWriteConfig(tt *testing.T) {
 	t := true
 	f := false
 	config := &InitConfig{
-		Extensions:      "claude",
-		Persistent:      &f,
-		Firewall:        &t,
-		FirewallMode:    "strict",
-		FirewallAllowed: []string{"api.anthropic.com"},
-		SSH:             &cfgtypes.SSHSettings{ForwardKeys: &t, ForwardMode: "proxy"},
+		Extensions: "claude",
+		Persistent: &f,
+		Firewall: &cfgtypes.FirewallSettings{
+			Enabled: &t,
+			Mode:    "strict",
+			Allowed: []string{"api.anthropic.com"},
+		},
+		SSH: &cfgtypes.SSHSettings{ForwardKeys: &t, ForwardMode: "proxy"},
 	}
 
 	err := writeConfig(config)
@@ -285,8 +287,8 @@ func TestWriteConfig(tt *testing.T) {
 	if !contains(content, "extensions: claude") {
 		tt.Error("expected extensions field")
 	}
-	if !contains(content, "firewall: true") {
-		tt.Error("expected firewall field")
+	if !contains(content, "enabled: true") {
+		tt.Error("expected firewall enabled field")
 	}
 	if !contains(content, "forward_keys: true") {
 		tt.Error("expected forward_keys field")

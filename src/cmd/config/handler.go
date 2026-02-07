@@ -188,7 +188,7 @@ func printHelp() {
 	fmt.Println("Examples:")
 	fmt.Println("  addt config list                      # project config")
 	fmt.Println("  addt config list -g                   # global config")
-	fmt.Println("  addt config set firewall true")
+	fmt.Println("  addt config set firewall.enabled true")
 	fmt.Println("  addt config set docker_cpus 2 -g")
 	fmt.Println("  addt config extension claude set version 1.0.5")
 	fmt.Println("  addt config extension claude set version 1.0.5 -g")

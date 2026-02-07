@@ -23,8 +23,6 @@ func GetKeys() []KeyInfo {
 	keys := []KeyInfo{
 		{Key: "env_file_load", Description: "Load .env file (default: true)", Type: "bool", EnvVar: "ADDT_ENV_FILE_LOAD"},
 		{Key: "env_file", Description: "Path to .env file (default: .env)", Type: "string", EnvVar: "ADDT_ENV_FILE"},
-		{Key: "firewall", Description: "Enable network firewall", Type: "bool", EnvVar: "ADDT_FIREWALL"},
-		{Key: "firewall_mode", Description: "Firewall mode: strict, permissive, off", Type: "string", EnvVar: "ADDT_FIREWALL_MODE"},
 		{Key: "go_version", Description: "Go version", Type: "string", EnvVar: "ADDT_GO_VERSION"},
 		{Key: "gpg_forward", Description: "Enable GPG forwarding", Type: "bool", EnvVar: "ADDT_GPG_FORWARD"},
 		{Key: "log", Description: "Enable command logging", Type: "bool", EnvVar: "ADDT_LOG"},
@@ -36,6 +34,8 @@ func GetKeys() []KeyInfo {
 		{Key: "workdir", Description: "Override working directory (default: current directory)", Type: "string", EnvVar: "ADDT_WORKDIR"},
 		{Key: "workdir_automount", Description: "Auto-mount working directory to /workspace", Type: "bool", EnvVar: "ADDT_WORKDIR_AUTOMOUNT"},
 	}
+	// Add firewall keys
+	keys = append(keys, GetFirewallKeys()...)
 	// Add github keys
 	keys = append(keys, GetGitHubKeys()...)
 	// Add ports keys
@@ -72,9 +72,9 @@ func GetDefaultValue(key string) string {
 		return "true"
 	case "env_file":
 		return ".env"
-	case "firewall":
+	case "firewall.enabled":
 		return "false"
-	case "firewall_mode":
+	case "firewall.mode":
 		return "strict"
 	case "github.forward_token":
 		return "true"
@@ -261,12 +261,6 @@ func GetValue(cfg *cfgtypes.GlobalConfig, key string) string {
 		}
 	case "env_file":
 		return cfg.EnvFile
-	case "firewall":
-		if cfg.Firewall != nil {
-			return fmt.Sprintf("%v", *cfg.Firewall)
-		}
-	case "firewall_mode":
-		return cfg.FirewallMode
 	case "go_version":
 		return cfg.GoVersion
 	case "gpg_forward":
@@ -297,6 +291,10 @@ func GetValue(cfg *cfgtypes.GlobalConfig, key string) string {
 		if cfg.WorkdirAutomount != nil {
 			return fmt.Sprintf("%v", *cfg.WorkdirAutomount)
 		}
+	}
+	// Check firewall keys
+	if strings.HasPrefix(key, "firewall.") {
+		return GetFirewallValue(cfg.Firewall, key)
 	}
 	// Check github keys
 	if strings.HasPrefix(key, "github.") {
@@ -333,11 +331,6 @@ func SetValue(cfg *cfgtypes.GlobalConfig, key, value string) {
 		cfg.EnvFileLoad = &b
 	case "env_file":
 		cfg.EnvFile = value
-	case "firewall":
-		b := value == "true"
-		cfg.Firewall = &b
-	case "firewall_mode":
-		cfg.FirewallMode = value
 	case "go_version":
 		cfg.GoVersion = value
 	case "gpg_forward":
@@ -369,6 +362,13 @@ func SetValue(cfg *cfgtypes.GlobalConfig, key, value string) {
 		b := value == "true"
 		cfg.WorkdirAutomount = &b
 	default:
+		// Check firewall keys
+		if strings.HasPrefix(key, "firewall.") {
+			if cfg.Firewall == nil {
+				cfg.Firewall = &cfgtypes.FirewallSettings{}
+			}
+			SetFirewallValue(cfg.Firewall, key, value)
+		}
 		// Check github keys
 		if strings.HasPrefix(key, "github.") {
 			if cfg.GitHub == nil {
@@ -421,10 +421,6 @@ func UnsetValue(cfg *cfgtypes.GlobalConfig, key string) {
 		cfg.EnvFileLoad = nil
 	case "env_file":
 		cfg.EnvFile = ""
-	case "firewall":
-		cfg.Firewall = nil
-	case "firewall_mode":
-		cfg.FirewallMode = ""
 	case "go_version":
 		cfg.GoVersion = ""
 	case "gpg_forward":
@@ -448,6 +444,10 @@ func UnsetValue(cfg *cfgtypes.GlobalConfig, key string) {
 	case "workdir_automount":
 		cfg.WorkdirAutomount = nil
 	default:
+		// Check firewall keys
+		if strings.HasPrefix(key, "firewall.") && cfg.Firewall != nil {
+			UnsetFirewallValue(cfg.Firewall, key)
+		}
 		// Check github keys
 		if strings.HasPrefix(key, "github.") && cfg.GitHub != nil {
 			UnsetGitHubValue(cfg.GitHub, key)

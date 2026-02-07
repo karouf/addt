@@ -233,7 +233,7 @@ func TestLoadConfig_FirewallModePrecedence(t *testing.T) {
 
 	// Global sets permissive
 	writeGlobalConfig(t, globalDir, &GlobalConfig{
-		FirewallMode: "permissive",
+		Firewall: &FirewallSettings{Mode: "permissive"},
 	})
 	cfg = LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 	if cfg.FirewallMode != "permissive" {
@@ -242,7 +242,7 @@ func TestLoadConfig_FirewallModePrecedence(t *testing.T) {
 
 	// Project sets off
 	writeProjectConfig(t, projectDir, &GlobalConfig{
-		FirewallMode: "off",
+		Firewall: &FirewallSettings{Mode: "off"},
 	})
 	cfg = LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
 	if cfg.FirewallMode != "off" {
@@ -375,7 +375,7 @@ func TestLoadConfig_FullPrecedenceChain(t *testing.T) {
 	projectPort := 36000
 	writeProjectConfig(t, projectDir, &GlobalConfig{
 		NodeVersion:  "22",         // Overrides global
-		FirewallMode: "permissive", // Only set here
+		Firewall:     &FirewallSettings{Mode: "permissive"}, // Only set here
 		Ports: &PortsSettings{
 			RangeStart: &projectPort, // Overrides global
 		},

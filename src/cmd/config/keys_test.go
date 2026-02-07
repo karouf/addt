@@ -11,7 +11,7 @@ func TestKeyValidation(t *testing.T) {
 	validKeys := []string{
 		"docker.cpus", "docker.memory", "docker.dind.enable", "docker.dind.mode",
 		"env_file_load", "env_file",
-		"firewall", "firewall_mode",
+		"firewall.enabled", "firewall.mode",
 		"github.forward_token", "github.token_source",
 		"node_version", "go_version",
 		"persistent", "ports.forward", "ports.expose", "ports.inject_system_prompt", "ports.range_start",
@@ -189,8 +189,8 @@ func TestGetDefaultValue(t *testing.T) {
 		{"env_file_load", "true"},
 		{"env_file", ".env"},
 		{"node_version", "22"},
-		{"firewall", "false"},
-		{"firewall_mode", "strict"},
+		{"firewall.enabled", "false"},
+		{"firewall.mode", "strict"},
 		{"persistent", "false"},
 		{"workdir_automount", "true"},
 	}
