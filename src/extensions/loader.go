@@ -19,6 +19,11 @@ func GetLocalExtensionsDir() string {
 	return filepath.Join(addtHome, "extensions")
 }
 
+// GetExtraExtensionsDir returns the path from ADDT_EXTENSIONS_DIR env var (empty if unset)
+func GetExtraExtensionsDir() string {
+	return os.Getenv("ADDT_EXTENSIONS_DIR")
+}
+
 // GetExtensions reads all extension configs from embedded filesystem and local ~/.addt/extensions/
 func GetExtensions() ([]ExtensionConfig, error) {
 	configMap := make(map[string]ExtensionConfig)
@@ -71,6 +76,32 @@ func GetExtensions() ([]ExtensionConfig, error) {
 
 				cfg.IsLocal = true
 				configMap[cfg.Name] = cfg // Override embedded extension if exists
+			}
+		}
+	}
+
+	// Then, read extra extensions from ADDT_EXTENSIONS_DIR (override both embedded and local)
+	extraExtsDir := GetExtraExtensionsDir()
+	if extraExtsDir != "" {
+		if entries, err := os.ReadDir(extraExtsDir); err == nil {
+			for _, entry := range entries {
+				if !entry.IsDir() {
+					continue
+				}
+
+				configPath := filepath.Join(extraExtsDir, entry.Name(), "config.yaml")
+				data, err := os.ReadFile(configPath)
+				if err != nil {
+					continue // Skip directories without config.yaml
+				}
+
+				var cfg ExtensionConfig
+				if err := yaml.Unmarshal(data, &cfg); err != nil {
+					continue // Skip invalid configs
+				}
+
+				cfg.IsLocal = true
+				configMap[cfg.Name] = cfg // Override embedded and local extensions
 			}
 		}
 	}

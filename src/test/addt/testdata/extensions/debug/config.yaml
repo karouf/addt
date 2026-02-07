@@ -1,0 +1,4 @@
+name: debug
+description: Debug extension for testing (entrypoint is /bin/bash)
+entrypoint: /bin/bash
+default_version: latest

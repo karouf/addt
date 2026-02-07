@@ -178,6 +178,16 @@ func (p *PodmanProvider) BuildImage(embeddedDockerfile, embeddedEntrypoint []byt
 		}
 	}
 
+	// Copy extra extensions from ADDT_EXTENSIONS_DIR (override both embedded and local)
+	extraExtsDir := extensions.GetExtraExtensionsDir()
+	if extraExtsDir != "" {
+		if _, err := os.Stat(extraExtsDir); err == nil {
+			if err := p.copyLocalExtensions(extraExtsDir, extensionsDir); err != nil {
+				fmt.Printf("Warning: failed to copy extra extensions: %v\n", err)
+			}
+		}
+	}
+
 	scriptDir := buildDir
 
 	// Build EXTENSION_VERSIONS string from map (e.g., "claude:stable,codex:latest")

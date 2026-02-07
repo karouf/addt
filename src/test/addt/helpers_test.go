@@ -67,6 +67,26 @@ func TestBuildHelper(t *testing.T) {
 	cmd.Execute(testVersion, testNodeVersion, testGoVersion, testUvVersion, testPortRangeStart)
 }
 
+// TestRunSubcommandHelper is invoked as a subprocess by runRunSubcommand.
+// It routes through the "addt run <ext> [args...]" subcommand path, which calls
+// provider.Run() with the extension's entrypoint as ADDT_COMMAND.
+func TestRunSubcommandHelper(t *testing.T) {
+	ext := os.Getenv("ADDT_TEST_RUNSUB_EXT")
+	if ext == "" {
+		t.Skip("not invoked as subprocess")
+	}
+
+	// Build os.Args: "addt run <ext> [args...]"
+	osArgs := []string{"addt", "run", ext}
+	argsStr := os.Getenv("ADDT_TEST_RUNSUB_ARGS")
+	if argsStr != "" {
+		osArgs = append(osArgs, strings.Split(argsStr, "\n")...)
+	}
+	os.Args = osArgs
+
+	cmd.Execute(testVersion, testNodeVersion, testGoVersion, testUvVersion, testPortRangeStart)
+}
+
 // TestShellSubcommandHelper is invoked as a subprocess by runShellSubcommand.
 // It routes through the "addt shell <ext>" subcommand path, which calls
 // provider.Shell() (sets entrypoint to /bin/bash) rather than provider.Run().
@@ -100,6 +120,24 @@ func runShellSubcommand(t *testing.T, dir string, ext string, args ...string) (s
 	c.Env = append(os.Environ(),
 		"ADDT_TEST_SHELLSUB_EXT="+ext,
 		"ADDT_TEST_SHELLSUB_ARGS="+strings.Join(args, "\n"),
+	)
+	output, err := c.CombinedOutput()
+	return string(output), err
+}
+
+// runRunSubcommand runs a command via the "addt run" subcommand path.
+// This goes through HandleRunCommand → runner.Run → provider.Run,
+// which sets ADDT_COMMAND to the extension's entrypoint.
+// The first arg is the extension name; the rest are passed as run args
+// (typically: "-c", "command string" when entrypoint is /bin/bash).
+func runRunSubcommand(t *testing.T, dir string, ext string, args ...string) (string, error) {
+	t.Helper()
+
+	c := exec.Command(os.Args[0], "-test.run=^TestRunSubcommandHelper$", "-test.v")
+	c.Dir = dir
+	c.Env = append(os.Environ(),
+		"ADDT_TEST_RUNSUB_EXT="+ext,
+		"ADDT_TEST_RUNSUB_ARGS="+strings.Join(args, "\n"),
 	)
 	output, err := c.CombinedOutput()
 	return string(output), err
@@ -189,6 +227,32 @@ func setupAddtDir(t *testing.T, provider, yamlContent string) (string, func()) {
 			os.Unsetenv("ADDT_PROVIDER")
 		}
 		os.Chdir(origCwd)
+	}
+
+	return projectDir, cleanup
+}
+
+// setupAddtDirWithExtensions is like setupAddtDir but also sets ADDT_EXTENSIONS_DIR
+// to point at the testdata/extensions directory containing the debug extension.
+func setupAddtDirWithExtensions(t *testing.T, provider, yamlContent string) (string, func()) {
+	t.Helper()
+
+	projectDir, baseCleanup := setupAddtDir(t, provider, yamlContent)
+
+	// Resolve testdata extensions dir (relative to this test file's package)
+	_, thisFile, _, _ := runtime.Caller(0)
+	testdataExtsDir := filepath.Join(filepath.Dir(thisFile), "testdata", "extensions")
+
+	origExtsDir := os.Getenv("ADDT_EXTENSIONS_DIR")
+	os.Setenv("ADDT_EXTENSIONS_DIR", testdataExtsDir)
+
+	cleanup := func() {
+		if origExtsDir != "" {
+			os.Setenv("ADDT_EXTENSIONS_DIR", origExtsDir)
+		} else {
+			os.Unsetenv("ADDT_EXTENSIONS_DIR")
+		}
+		baseCleanup()
 	}
 
 	return projectDir, cleanup
