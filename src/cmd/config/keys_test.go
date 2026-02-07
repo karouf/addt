@@ -236,7 +236,7 @@ func TestGetDefaultValue(t *testing.T) {
 		{"firewall", "false"},
 		{"firewall_mode", "strict"},
 		{"github.forward_token", "true"},
-		{"github.token_source", "env"},
+		{"github.token_source", "gh_auth"},
 		{"persistent", "false"},
 		{"ports.forward", "true"},
 		{"ports.expose", ""},
@@ -699,7 +699,7 @@ func TestGitHubGetDefaultValue(t *testing.T) {
 		expected string
 	}{
 		{"github.forward_token", "true"},
-		{"github.token_source", "env"},
+		{"github.token_source", "gh_auth"},
 	}
 
 	for _, tt := range tests {

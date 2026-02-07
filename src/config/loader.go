@@ -305,8 +305,8 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 		cfg.GitHubForwardToken = v == "true"
 	}
 
-	// GitHub token source: default ("env") -> global -> project -> env
-	cfg.GitHubTokenSource = "env"
+	// GitHub token source: default ("gh_auth") -> global -> project -> env
+	cfg.GitHubTokenSource = "gh_auth"
 	if globalCfg.GitHub != nil && globalCfg.GitHub.TokenSource != "" {
 		cfg.GitHubTokenSource = globalCfg.GitHub.TokenSource
 	}

@@ -65,7 +65,7 @@ func GetPortsKeys() []KeyInfo {
 func GetGitHubKeys() []KeyInfo {
 	return []KeyInfo{
 		{Key: "github.forward_token", Description: "Forward GH_TOKEN to container (default: true)", Type: "bool", EnvVar: "ADDT_GITHUB_FORWARD_TOKEN"},
-		{Key: "github.token_source", Description: "Token source: env or gh_auth (default: env)", Type: "string", EnvVar: "ADDT_GITHUB_TOKEN_SOURCE"},
+		{Key: "github.token_source", Description: "Token source: env or gh_auth (default: gh_auth)", Type: "string", EnvVar: "ADDT_GITHUB_TOKEN_SOURCE"},
 	}
 }
 
@@ -178,7 +178,7 @@ func GetDefaultValue(key string) string {
 	case "github.forward_token":
 		return "true"
 	case "github.token_source":
-		return "env"
+		return "gh_auth"
 	case "go_version":
 		return "latest"
 	case "gpg_forward":

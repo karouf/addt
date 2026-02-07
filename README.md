@@ -168,7 +168,7 @@ This mounts `~/.claude` and `~/.claude.json` into the container.
 
 **Your code:** Your current directory is automatically mounted at `/workspace` in the container. The agent can read and edit your files directly.
 
-**For GitHub operations:** If the agent needs to create PRs, push commits, or access private repos, pass your GitHub token:
+**For GitHub operations:** If the agent needs to create PRs, push commits, or access private repos, addt automatically picks up your token from `gh auth token` (requires [GitHub CLI](https://cli.github.com/) installed and `gh auth login` done). You can also set a token explicitly:
 ```bash
 export GH_TOKEN="ghp_..."
 ```
@@ -229,15 +229,26 @@ addt config global set ports.forward false   # disable port forwarding
 
 ### GitHub Access (private repos, PRs)
 
+By default, addt auto-detects your GitHub token via `gh auth token` (requires [GitHub CLI](https://cli.github.com/) and `gh auth login`):
+
+```bash
+# Just works if gh CLI is installed and authenticated
+addt run claude "Clone git@github.com:org/private-repo.git"
+```
+
+Or set a token explicitly:
 ```bash
 export GH_TOKEN="ghp_..."
 addt run claude "Clone the private repo and create a PR"
 ```
 
-Or auto-detect from `gh auth login`:
+Token source options (`github.token_source`):
+- **`gh_auth`** (default) — runs `gh auth token` on the host. Requires `gh` CLI installed and authenticated via `gh auth login`
+- **`env`** — uses the `GH_TOKEN` environment variable as-is
+
+To disable token forwarding entirely:
 ```bash
-export ADDT_GITHUB_TOKEN_SOURCE=gh_auth
-addt run claude "Clone git@github.com:org/private-repo.git"
+addt config set github.forward_token false
 ```
 
 ### SSH Keys (git over SSH)
@@ -739,7 +750,7 @@ addt cli update                   # Update addt
 | `ADDT_DOCKER_DIND_ENABLE` | false | Enable Docker-in-Docker |
 | `ADDT_DOCKER_DIND_MODE` | isolated | DinD mode: `isolated` or `host` |
 | `ADDT_GITHUB_FORWARD_TOKEN` | true | Forward `GH_TOKEN` to container |
-| `ADDT_GITHUB_TOKEN_SOURCE` | env | Token source: `env` or `gh_auth` |
+| `ADDT_GITHUB_TOKEN_SOURCE` | gh_auth | Token source: `gh_auth` (requires `gh` CLI) or `env` |
 
 ### Security
 | Variable | Default | Description |

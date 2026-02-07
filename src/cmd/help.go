@@ -97,7 +97,7 @@ Environment Variables:
     ADDT_PROVIDER          Provider: docker, podman, or daytona (auto-detected)
     ADDT_CONFIG_DIR        Global config directory (default: ~/.addt)
     ADDT_GITHUB_FORWARD_TOKEN  Forward GH_TOKEN to container (default: true)
-    ADDT_GITHUB_TOKEN_SOURCE   Token source: env or gh_auth (default: env)
+    ADDT_GITHUB_TOKEN_SOURCE   Token source: env or gh_auth (default: gh_auth)
     ADDT_PORTS_FORWARD     Enable port forwarding (default: true)
     ADDT_PORTS             Comma-separated container ports to expose
     ADDT_PORTS_INJECT_SYSTEM_PROMPT  Inject port mappings into AI system prompt (default: true)
