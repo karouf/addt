@@ -156,6 +156,15 @@ if [ -f "$EXTENSIONS_JSON" ] && [ ! -f "$SETUP_MARKER" ]; then
     debug_log "Extension setup complete"
 fi
 
+# Clear credential env vars after setup so they don't leak into shell sessions
+if [ -n "$ADDT_CREDENTIAL_VARS" ]; then
+    IFS=',' read -ra CRED_VARS <<< "$ADDT_CREDENTIAL_VARS"
+    for var in "${CRED_VARS[@]}"; do
+        unset "$var" 2>/dev/null || true
+    done
+    unset ADDT_CREDENTIAL_VARS
+fi
+
 # Build system prompt for port mappings (exported for args.sh to use)
 export ADDT_SYSTEM_PROMPT=""
 

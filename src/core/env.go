@@ -62,6 +62,7 @@ func addExtensionEnvVars(env map[string]string, p provider.Provider, cfg *provid
 	}
 
 	// Run credential scripts for active extensions
+	// Track credential var names so the entrypoint can unset them after setup
 	addCredentialScriptEnvVars(env, cfg)
 }
 
@@ -75,7 +76,9 @@ func parseEnvVarSpec(spec string) (name, defaultValue string) {
 	return spec, ""
 }
 
-// addCredentialScriptEnvVars runs credential scripts for active extensions
+// addCredentialScriptEnvVars runs credential scripts for active extensions.
+// It also sets ADDT_CREDENTIAL_VARS with the list of credential env var names
+// so the entrypoint can unset them after setup (preventing leaks into shell sessions).
 func addCredentialScriptEnvVars(env map[string]string, cfg *provider.Config) {
 	// Get the list of extensions being used
 	extNames := getActiveExtensionNames(cfg)
@@ -85,6 +88,8 @@ func addCredentialScriptEnvVars(env map[string]string, cfg *provider.Config) {
 	if err != nil {
 		return
 	}
+
+	var credVarNames []string
 
 	for _, ext := range allExts {
 		if !contains(extNames, ext.Name) {
@@ -107,7 +112,13 @@ func addCredentialScriptEnvVars(env map[string]string, cfg *provider.Config) {
 			if _, exists := env[k]; !exists {
 				env[k] = v
 			}
+			credVarNames = append(credVarNames, k)
 		}
+	}
+
+	// Tell the entrypoint which env vars to unset after setup
+	if len(credVarNames) > 0 {
+		env["ADDT_CREDENTIAL_VARS"] = strings.Join(credVarNames, ",")
 	}
 }
 
