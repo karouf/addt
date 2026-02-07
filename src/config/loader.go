@@ -159,11 +159,11 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 
 	// GPG forward: default (off) -> global -> project -> env
 	cfg.GPGForward = ""
-	if globalCfg.GPGForward != "" {
-		cfg.GPGForward = globalCfg.GPGForward
+	if globalCfg.GPG != nil && globalCfg.GPG.Forward != "" {
+		cfg.GPGForward = globalCfg.GPG.Forward
 	}
-	if projectCfg.GPGForward != "" {
-		cfg.GPGForward = projectCfg.GPGForward
+	if projectCfg.GPG != nil && projectCfg.GPG.Forward != "" {
+		cfg.GPGForward = projectCfg.GPG.Forward
 	}
 	if v := os.Getenv("ADDT_GPG_FORWARD"); v != "" {
 		// Support legacy boolean values
@@ -177,9 +177,11 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 	}
 
 	// GPG allowed key IDs: global -> project -> env
-	cfg.GPGAllowedKeyIDs = globalCfg.GPGAllowedKeyIDs
-	if len(projectCfg.GPGAllowedKeyIDs) > 0 {
-		cfg.GPGAllowedKeyIDs = projectCfg.GPGAllowedKeyIDs
+	if globalCfg.GPG != nil {
+		cfg.GPGAllowedKeyIDs = globalCfg.GPG.AllowedKeyIDs
+	}
+	if projectCfg.GPG != nil && len(projectCfg.GPG.AllowedKeyIDs) > 0 {
+		cfg.GPGAllowedKeyIDs = projectCfg.GPG.AllowedKeyIDs
 	}
 	if v := os.Getenv("ADDT_GPG_ALLOWED_KEY_IDS"); v != "" {
 		cfg.GPGAllowedKeyIDs = strings.Split(v, ",")

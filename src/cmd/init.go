@@ -25,7 +25,7 @@ type InitConfig struct {
 	Persistent      *bool                       `yaml:"persistent,omitempty"`
 	Firewall        *cfgtypes.FirewallSettings  `yaml:"firewall,omitempty"`
 	SSH             *cfgtypes.SSHSettings       `yaml:"ssh,omitempty"`
-	GPGForward      string                      `yaml:"gpg_forward,omitempty"`
+	GPG             *cfgtypes.GPGSettings        `yaml:"gpg,omitempty"`
 	WorkdirReadonly *bool                       `yaml:"workdir_readonly,omitempty"`
 	NodeVersion     string                      `yaml:"node_version,omitempty"`
 	GoVersion       string                      `yaml:"go_version,omitempty"`

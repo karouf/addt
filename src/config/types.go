@@ -56,6 +56,12 @@ type FirewallSettings struct {
 	Denied  []string `yaml:"denied,omitempty"`
 }
 
+// GPGSettings holds GPG forwarding configuration
+type GPGSettings struct {
+	Forward       string   `yaml:"forward,omitempty"`         // "proxy", "agent", "keys", or "off"
+	AllowedKeyIDs []string `yaml:"allowed_key_ids,omitempty"` // GPG key IDs allowed
+}
+
 // GlobalConfig represents the persistent configuration stored in ~/.addt/config.yaml
 type GlobalConfig struct {
 	Docker           *DockerSettings   `yaml:"docker,omitempty"`
@@ -66,8 +72,7 @@ type GlobalConfig struct {
 	EnvFileLoad      *bool           `yaml:"env_file_load,omitempty"`
 	EnvFile          string          `yaml:"env_file,omitempty"`
 	GoVersion        string          `yaml:"go_version,omitempty"`
-	GPGForward       string          `yaml:"gpg_forward,omitempty"`         // "proxy", "agent", "keys", or "off"
-	GPGAllowedKeyIDs []string        `yaml:"gpg_allowed_key_ids,omitempty"` // GPG key IDs allowed
+	GPG              *GPGSettings    `yaml:"gpg,omitempty"`
 	Log              *bool           `yaml:"log,omitempty"`
 	LogFile          string          `yaml:"log_file,omitempty"`
 	NodeVersion      string          `yaml:"node_version,omitempty"`

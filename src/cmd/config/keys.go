@@ -24,7 +24,6 @@ func GetKeys() []KeyInfo {
 		{Key: "env_file_load", Description: "Load .env file (default: true)", Type: "bool", EnvVar: "ADDT_ENV_FILE_LOAD"},
 		{Key: "env_file", Description: "Path to .env file (default: .env)", Type: "string", EnvVar: "ADDT_ENV_FILE"},
 		{Key: "go_version", Description: "Go version", Type: "string", EnvVar: "ADDT_GO_VERSION"},
-		{Key: "gpg_forward", Description: "Enable GPG forwarding", Type: "bool", EnvVar: "ADDT_GPG_FORWARD"},
 		{Key: "log", Description: "Enable command logging", Type: "bool", EnvVar: "ADDT_LOG"},
 		{Key: "log_file", Description: "Log file path", Type: "string", EnvVar: "ADDT_LOG_FILE"},
 		{Key: "node_version", Description: "Node.js version", Type: "string", EnvVar: "ADDT_NODE_VERSION"},
@@ -38,6 +37,8 @@ func GetKeys() []KeyInfo {
 	keys = append(keys, GetFirewallKeys()...)
 	// Add github keys
 	keys = append(keys, GetGitHubKeys()...)
+	// Add GPG keys
+	keys = append(keys, GetGPGKeys()...)
 	// Add ports keys
 	keys = append(keys, GetPortsKeys()...)
 	// Add SSH keys
@@ -82,8 +83,10 @@ func GetDefaultValue(key string) string {
 		return "gh_auth"
 	case "go_version":
 		return "latest"
-	case "gpg_forward":
-		return "false"
+	case "gpg.forward":
+		return ""
+	case "gpg.allowed_key_ids":
+		return ""
 	case "log":
 		return "false"
 	case "log_file":
@@ -263,10 +266,6 @@ func GetValue(cfg *cfgtypes.GlobalConfig, key string) string {
 		return cfg.EnvFile
 	case "go_version":
 		return cfg.GoVersion
-	case "gpg_forward":
-		return cfg.GPGForward
-	case "gpg_allowed_key_ids":
-		return strings.Join(cfg.GPGAllowedKeyIDs, ",")
 	case "log":
 		if cfg.Log != nil {
 			return fmt.Sprintf("%v", *cfg.Log)
@@ -299,6 +298,10 @@ func GetValue(cfg *cfgtypes.GlobalConfig, key string) string {
 	// Check github keys
 	if strings.HasPrefix(key, "github.") {
 		return GetGitHubValue(cfg.GitHub, key)
+	}
+	// Check GPG keys
+	if strings.HasPrefix(key, "gpg.") {
+		return GetGPGValue(cfg.GPG, key)
 	}
 	// Check ports keys
 	if strings.HasPrefix(key, "ports.") {
@@ -333,14 +336,6 @@ func SetValue(cfg *cfgtypes.GlobalConfig, key, value string) {
 		cfg.EnvFile = value
 	case "go_version":
 		cfg.GoVersion = value
-	case "gpg_forward":
-		cfg.GPGForward = value
-	case "gpg_allowed_key_ids":
-		if value == "" {
-			cfg.GPGAllowedKeyIDs = nil
-		} else {
-			cfg.GPGAllowedKeyIDs = strings.Split(value, ",")
-		}
 	case "log":
 		b := value == "true"
 		cfg.Log = &b
@@ -375,6 +370,13 @@ func SetValue(cfg *cfgtypes.GlobalConfig, key, value string) {
 				cfg.GitHub = &cfgtypes.GitHubSettings{}
 			}
 			SetGitHubValue(cfg.GitHub, key, value)
+		}
+		// Check GPG keys
+		if strings.HasPrefix(key, "gpg.") {
+			if cfg.GPG == nil {
+				cfg.GPG = &cfgtypes.GPGSettings{}
+			}
+			SetGPGValue(cfg.GPG, key, value)
 		}
 		// Check ports keys
 		if strings.HasPrefix(key, "ports.") {
@@ -423,10 +425,6 @@ func UnsetValue(cfg *cfgtypes.GlobalConfig, key string) {
 		cfg.EnvFile = ""
 	case "go_version":
 		cfg.GoVersion = ""
-	case "gpg_forward":
-		cfg.GPGForward = ""
-	case "gpg_allowed_key_ids":
-		cfg.GPGAllowedKeyIDs = nil
 	case "log":
 		cfg.Log = nil
 	case "log_file":
@@ -451,6 +449,10 @@ func UnsetValue(cfg *cfgtypes.GlobalConfig, key string) {
 		// Check github keys
 		if strings.HasPrefix(key, "github.") && cfg.GitHub != nil {
 			UnsetGitHubValue(cfg.GitHub, key)
+		}
+		// Check GPG keys
+		if strings.HasPrefix(key, "gpg.") && cfg.GPG != nil {
+			UnsetGPGValue(cfg.GPG, key)
 		}
 		// Check ports keys
 		if strings.HasPrefix(key, "ports.") && cfg.Ports != nil {
