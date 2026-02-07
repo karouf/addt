@@ -62,6 +62,13 @@ type GPGSettings struct {
 	AllowedKeyIDs []string `yaml:"allowed_key_ids,omitempty"` // GPG key IDs allowed
 }
 
+// WorkdirSettings holds working directory configuration
+type WorkdirSettings struct {
+	Path      string `yaml:"path,omitempty"`      // Override working directory (default: current directory)
+	Automount *bool  `yaml:"automount,omitempty"` // Auto-mount working directory to /workspace
+	Readonly  *bool  `yaml:"readonly,omitempty"`  // Mount working directory as read-only
+}
+
 // GlobalConfig represents the persistent configuration stored in ~/.addt/config.yaml
 type GlobalConfig struct {
 	Docker           *DockerSettings   `yaml:"docker,omitempty"`
@@ -82,9 +89,7 @@ type GlobalConfig struct {
 	TmuxForward      *bool           `yaml:"tmux_forward,omitempty"`
 	HistoryPersist   *bool           `yaml:"history_persist,omitempty"` // Persist shell history between sessions
 	UvVersion        string          `yaml:"uv_version,omitempty"`
-	Workdir          string          `yaml:"workdir,omitempty"`
-	WorkdirAutomount *bool           `yaml:"workdir_automount,omitempty"`
-	WorkdirReadonly  *bool           `yaml:"workdir_readonly,omitempty"`
+	Workdir          *WorkdirSettings `yaml:"workdir,omitempty"`
 
 	// Per-extension configuration
 	Extensions map[string]*ExtensionSettings `yaml:"extensions,omitempty"`

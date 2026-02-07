@@ -16,7 +16,7 @@ func TestKeyValidation(t *testing.T) {
 		"gpg.forward", "gpg.allowed_key_ids",
 		"node_version", "go_version",
 		"persistent", "ports.forward", "ports.expose", "ports.inject_system_prompt", "ports.range_start",
-		"workdir", "workdir_automount",
+		"workdir.path", "workdir.automount", "workdir.readonly",
 	}
 
 	for _, key := range validKeys {
@@ -193,7 +193,7 @@ func TestGetDefaultValue(t *testing.T) {
 		{"firewall.enabled", "false"},
 		{"firewall.mode", "strict"},
 		{"persistent", "false"},
-		{"workdir_automount", "true"},
+		{"workdir.automount", "true"},
 	}
 
 	for _, tt := range tests {

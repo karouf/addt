@@ -30,8 +30,6 @@ func GetKeys() []KeyInfo {
 		{Key: "persistent", Description: "Enable persistent container mode", Type: "bool", EnvVar: "ADDT_PERSISTENT"},
 		{Key: "history_persist", Description: "Persist shell history between sessions (default: false)", Type: "bool", EnvVar: "ADDT_HISTORY_PERSIST"},
 		{Key: "uv_version", Description: "UV Python package manager version", Type: "string", EnvVar: "ADDT_UV_VERSION"},
-		{Key: "workdir", Description: "Override working directory (default: current directory)", Type: "string", EnvVar: "ADDT_WORKDIR"},
-		{Key: "workdir_automount", Description: "Auto-mount working directory to /workspace", Type: "bool", EnvVar: "ADDT_WORKDIR_AUTOMOUNT"},
 	}
 	// Add firewall keys
 	keys = append(keys, GetFirewallKeys()...)
@@ -43,6 +41,8 @@ func GetKeys() []KeyInfo {
 	keys = append(keys, GetPortsKeys()...)
 	// Add SSH keys
 	keys = append(keys, GetSSHKeys()...)
+	// Add workdir keys
+	keys = append(keys, GetWorkdirKeys()...)
 	// Add docker keys
 	keys = append(keys, GetDockerKeys()...)
 	// Add security keys
@@ -115,10 +115,12 @@ func GetDefaultValue(key string) string {
 		return "false"
 	case "uv_version":
 		return "latest"
-	case "workdir":
+	case "workdir.path":
 		return "."
-	case "workdir_automount":
+	case "workdir.automount":
 		return "true"
+	case "workdir.readonly":
+		return "false"
 	// Security defaults
 	case "security.cap_add":
 		return "CHOWN,SETUID,SETGID"
@@ -284,12 +286,10 @@ func GetValue(cfg *cfgtypes.GlobalConfig, key string) string {
 		}
 	case "uv_version":
 		return cfg.UvVersion
-	case "workdir":
-		return cfg.Workdir
-	case "workdir_automount":
-		if cfg.WorkdirAutomount != nil {
-			return fmt.Sprintf("%v", *cfg.WorkdirAutomount)
-		}
+	}
+	// Check workdir keys
+	if strings.HasPrefix(key, "workdir.") {
+		return GetWorkdirValue(cfg.Workdir, key)
 	}
 	// Check firewall keys
 	if strings.HasPrefix(key, "firewall.") {
@@ -351,12 +351,14 @@ func SetValue(cfg *cfgtypes.GlobalConfig, key, value string) {
 		cfg.HistoryPersist = &b
 	case "uv_version":
 		cfg.UvVersion = value
-	case "workdir":
-		cfg.Workdir = value
-	case "workdir_automount":
-		b := value == "true"
-		cfg.WorkdirAutomount = &b
 	default:
+		// Check workdir keys
+		if strings.HasPrefix(key, "workdir.") {
+			if cfg.Workdir == nil {
+				cfg.Workdir = &cfgtypes.WorkdirSettings{}
+			}
+			SetWorkdirValue(cfg.Workdir, key, value)
+		}
 		// Check firewall keys
 		if strings.HasPrefix(key, "firewall.") {
 			if cfg.Firewall == nil {
@@ -437,11 +439,11 @@ func UnsetValue(cfg *cfgtypes.GlobalConfig, key string) {
 		cfg.HistoryPersist = nil
 	case "uv_version":
 		cfg.UvVersion = ""
-	case "workdir":
-		cfg.Workdir = ""
-	case "workdir_automount":
-		cfg.WorkdirAutomount = nil
 	default:
+		// Check workdir keys
+		if strings.HasPrefix(key, "workdir.") && cfg.Workdir != nil {
+			UnsetWorkdirValue(cfg.Workdir, key)
+		}
 		// Check firewall keys
 		if strings.HasPrefix(key, "firewall.") && cfg.Firewall != nil {
 			UnsetFirewallValue(cfg.Firewall, key)

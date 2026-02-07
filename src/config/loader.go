@@ -241,11 +241,11 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 
 	// Workdir automount: default (true) -> global -> project -> env
 	cfg.WorkdirAutomount = true
-	if globalCfg.WorkdirAutomount != nil {
-		cfg.WorkdirAutomount = *globalCfg.WorkdirAutomount
+	if globalCfg.Workdir != nil && globalCfg.Workdir.Automount != nil {
+		cfg.WorkdirAutomount = *globalCfg.Workdir.Automount
 	}
-	if projectCfg.WorkdirAutomount != nil {
-		cfg.WorkdirAutomount = *projectCfg.WorkdirAutomount
+	if projectCfg.Workdir != nil && projectCfg.Workdir.Automount != nil {
+		cfg.WorkdirAutomount = *projectCfg.Workdir.Automount
 	}
 	if v := os.Getenv("ADDT_WORKDIR_AUTOMOUNT"); v != "" {
 		cfg.WorkdirAutomount = v != "false"
@@ -253,11 +253,11 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 
 	// Workdir readonly: default (false) -> global -> project -> env
 	cfg.WorkdirReadonly = false
-	if globalCfg.WorkdirReadonly != nil {
-		cfg.WorkdirReadonly = *globalCfg.WorkdirReadonly
+	if globalCfg.Workdir != nil && globalCfg.Workdir.Readonly != nil {
+		cfg.WorkdirReadonly = *globalCfg.Workdir.Readonly
 	}
-	if projectCfg.WorkdirReadonly != nil {
-		cfg.WorkdirReadonly = *projectCfg.WorkdirReadonly
+	if projectCfg.Workdir != nil && projectCfg.Workdir.Readonly != nil {
+		cfg.WorkdirReadonly = *projectCfg.Workdir.Readonly
 	}
 	if v := os.Getenv("ADDT_WORKDIR_READONLY"); v != "" {
 		cfg.WorkdirReadonly = v == "true"
@@ -347,10 +347,12 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 		cfg.DockerMemory = v
 	}
 
-	// Workdir: default (empty = current dir) -> global -> project -> env
-	cfg.Workdir = globalCfg.Workdir
-	if projectCfg.Workdir != "" {
-		cfg.Workdir = projectCfg.Workdir
+	// Workdir path: default (empty = current dir) -> global -> project -> env
+	if globalCfg.Workdir != nil {
+		cfg.Workdir = globalCfg.Workdir.Path
+	}
+	if projectCfg.Workdir != nil && projectCfg.Workdir.Path != "" {
+		cfg.Workdir = projectCfg.Workdir.Path
 	}
 	if v := os.Getenv("ADDT_WORKDIR"); v != "" {
 		cfg.Workdir = v

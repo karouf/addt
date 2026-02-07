@@ -26,7 +26,7 @@ type InitConfig struct {
 	Firewall        *cfgtypes.FirewallSettings  `yaml:"firewall,omitempty"`
 	SSH             *cfgtypes.SSHSettings       `yaml:"ssh,omitempty"`
 	GPG             *cfgtypes.GPGSettings        `yaml:"gpg,omitempty"`
-	WorkdirReadonly *bool                       `yaml:"workdir_readonly,omitempty"`
+	Workdir         *cfgtypes.WorkdirSettings   `yaml:"workdir,omitempty"`
 	NodeVersion     string                      `yaml:"node_version,omitempty"`
 	GoVersion       string                      `yaml:"go_version,omitempty"`
 	GitHub          *cfgtypes.GitHubSettings    `yaml:"github,omitempty"`
@@ -298,7 +298,7 @@ func configureInteractive(config *InitConfig, project ProjectType) {
 	fmt.Print("Choice [1]: ")
 	choice = readLine(reader)
 	if choice == "2" {
-		config.WorkdirReadonly = &t
+		config.Workdir = &cfgtypes.WorkdirSettings{Readonly: &t}
 	}
 	fmt.Println()
 
