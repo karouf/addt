@@ -162,30 +162,3 @@ func writeSecretsFile(secretsJSON string) (string, error) {
 
 	return tmpFile.Name(), nil
 }
-
-// copyDebugLogFromContainer copies the debug log file from the container
-func (p *DockerProvider) copyDebugLogFromContainer(containerName string) ([]byte, error) {
-	// Create a temp file to receive the debug log
-	tmpFile, err := os.CreateTemp("", "addt-debug-log-*.log")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create temp file: %w", err)
-	}
-	tmpPath := tmpFile.Name()
-	tmpFile.Close()
-	defer os.Remove(tmpPath)
-
-	// Copy debug log from container
-	cmd := exec.Command("docker", "cp", containerName+":/tmp/addt-entrypoint-debug.log", tmpPath)
-	if _, err := cmd.CombinedOutput(); err != nil {
-		// If file doesn't exist yet, that's okay - entrypoint may not have started
-		return nil, nil
-	}
-
-	// Read the copied file
-	content, err := os.ReadFile(tmpPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read debug log: %w", err)
-	}
-
-	return content, nil
-}

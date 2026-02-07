@@ -391,157 +391,77 @@ func (p *DockerProvider) runPersistent(baseArgs []string, spec *provider.RunSpec
 	return p.executeDockerCommand(execArgs)
 }
 
-// runWithSecrets starts a container, copies secrets, then runs entrypoint
+// runWithSecrets starts a container, copies secrets, then execs the entrypoint.
+// Uses a simple approach: start with sleep, copy secrets, exec entrypoint.
+// Entrypoint output goes directly to terminal via exec (no attach needed).
 func (p *DockerProvider) runWithSecrets(baseArgs []string, spec *provider.RunSpec, secretsJSON string) error {
-	// For detached start, we need to preserve -t (TTY) but remove -i (stdin)
-	// This ensures attach will have a terminal, but detached start won't wait for stdin
+	// Strip interactive flags from run args — they'll be added to exec instead.
+	// The detached sleep process doesn't need stdin or TTY.
+	// Track -i vs -it separately: Docker requires a real TTY for -it.
 	var runArgs []string
-	interactive := false
 	needsTTY := false
-	for i := 0; i < len(baseArgs); i++ {
-		arg := baseArgs[i]
-		if arg == "-it" {
-			interactive = true
+	needsStdin := false
+	for _, arg := range baseArgs {
+		switch arg {
+		case "-it":
 			needsTTY = true
-			// Add -t but not -i for detached run - TTY needed for attach, but no stdin during detached start
-			runArgs = append(runArgs, "-t")
-		} else if arg == "-i" {
-			interactive = true
-			// Don't add -i for detached run - we'll handle stdin on attach
-		} else if arg == "-t" {
-			interactive = true
-			needsTTY = true
-			// Keep -t for detached run - needed for terminal on attach
-			runArgs = append(runArgs, "-t")
-		} else {
+			needsStdin = true
+		case "-i":
+			needsStdin = true
+		case "-t", "--init":
+			// not needed for detached sleep process
+		default:
 			runArgs = append(runArgs, arg)
 		}
 	}
-	dockerLogger.Debugf("Starting detached container (interactive=%v, needsTTY=%v), removed -i flag but kept -t", interactive, needsTTY)
 
-	// Start container detached, waiting for secrets
-	runArgs = append(runArgs, "-d")
-	runArgs = append(runArgs, "--entrypoint", "/bin/sh")
-	runArgs = append(runArgs, spec.ImageName)
-	// Wait loop: check for .secrets file or .ready signal
-	// Add echo to stderr so we can see the wait loop is running (helps debug)
-	waitScript := `echo '[WAIT] Waiting for secrets...' >&2
-debug_log() {
-    if [ "${ADDT_LOG_LEVEL:-INFO}" = "DEBUG" ]; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] [WAIT-DEBUG] $*" >&2
-    fi
-}
-debug_log "Starting wait loop for /run/secrets/.secrets"
-iter=0
-while [ ! -f /run/secrets/.secrets ] && [ ! -f /run/secrets/.ready ]; do
-    iter=$((iter + 1))
-    # Check file existence and log the result
-    if [ -f /run/secrets/.secrets ]; then
-        debug_log "Check result: /run/secrets/.secrets EXISTS (iteration $iter)"
-    else
-        debug_log "Check result: /run/secrets/.secrets NOT FOUND (iteration $iter)"
-    fi
-    if [ -f /run/secrets/.ready ]; then
-        debug_log "Check result: /run/secrets/.ready EXISTS (iteration $iter)"
-    else
-        debug_log "Check result: /run/secrets/.ready NOT FOUND (iteration $iter)"
-    fi
-    if [ $((iter % 20)) -eq 0 ]; then
-        debug_log "Still waiting... (iteration $iter)"
-        debug_log "Directory exists: $([ -d /run/secrets ] && echo yes || echo no)"
-        debug_log "Directory readable: $([ -r /run/secrets ] && echo yes || echo no)"
-        debug_log "Directory listing: $(ls -la /run/secrets 2>&1 | head -5)"
-        debug_log "Test command result: test -f /run/secrets/.secrets returns $([ -f /run/secrets/.secrets ] && echo 0 || echo 1)"
-    fi
-    sleep 0.05
-done
-if [ -f /run/secrets/.secrets ]; then
-    debug_log "Found /run/secrets/.secrets, file size: $(stat -c%s /run/secrets/.secrets 2>/dev/null || echo unknown)"
-elif [ -f /run/secrets/.ready ]; then
-    debug_log "Found /run/secrets/.ready signal"
-fi
-echo '[WAIT] Secrets found, starting entrypoint...' >&2
-exec /usr/local/bin/docker-entrypoint.sh "$@"`
-	runArgs = append(runArgs, "-c", waitScript, "--")
-	runArgs = append(runArgs, spec.Args...)
+	// Start container detached with sleep as keep-alive
+	runArgs = append(runArgs, "-d", "--entrypoint", "sleep", spec.ImageName, "infinity")
+	dockerLogger.Debugf("Starting detached container: docker %v", runArgs)
 
-	// Start the container
 	cmd := exec.Command("docker", runArgs...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to start container: %w\n%s", err, string(output))
 	}
 
-	// Copy secrets to container
+	// Copy secrets to container tmpfs
+	dockerLogger.Debug("Copying secrets to container")
 	if err := p.copySecretsToContainer(spec.Name, secretsJSON); err != nil {
-		// Cleanup: stop and remove container (it's waiting for secrets that will never arrive)
-		// The container is stuck in a wait loop, so we need to clean it up
 		dockerLogger.Debugf("Failed to copy secrets, cleaning up container %s", spec.Name)
-		if rmErr := exec.Command("docker", "rm", "-f", spec.Name).Run(); rmErr != nil {
-			dockerLogger.Debugf("Warning: failed to remove container %s during cleanup: %v", spec.Name, rmErr)
-		}
+		exec.Command("docker", "rm", "-f", spec.Name).Run()
 		return fmt.Errorf("failed to copy secrets: %w", err)
 	}
 
-	// Wait for container to process secrets and start entrypoint
-	// The wait loop in the container checks for .secrets file every 0.05s
-	// Try to fetch debug log file from container (entrypoint writes to /tmp/addt-entrypoint-debug.log)
-	dockerLogger.Debug("Waiting for container to process secrets and start entrypoint")
-	var debugLogOutput []byte
-	cpCmdStr := fmt.Sprintf("docker cp %s:/tmp/addt-entrypoint-debug.log", spec.Name)
-	dockerLogger.Debugf("Fetching debug log with command: %s", cpCmdStr)
+	// Exec entrypoint — output goes directly to terminal
+	// Use -it only when original run had TTY; otherwise just -i
+	execArgs := []string{"exec"}
+	if needsTTY {
+		execArgs = append(execArgs, "-it")
+	} else if needsStdin {
+		execArgs = append(execArgs, "-i")
+	}
+	execArgs = append(execArgs, spec.Name, "/usr/local/bin/docker-entrypoint.sh")
+	execArgs = append(execArgs, spec.Args...)
 
-	// Retry copying debug log file for up to 4 seconds
-	for i := 0; i < 40; i++ {
-		time.Sleep(100 * time.Millisecond)
-		dockerLogger.Debugf("Attempt %d/%d: Fetching debug log", i+1, 40)
-		content, err := p.copyDebugLogFromContainer(spec.Name)
-		if err != nil {
-			dockerLogger.Debugf("Debug log copy error (attempt %d): %v", i+1, err)
-		} else if len(content) > 0 {
-			dockerLogger.Debugf("Found debug log on attempt %d (%d bytes)", i+1, len(content))
-			debugLogOutput = content
-			break
-		} else {
-			dockerLogger.Debugf("No debug log yet (attempt %d) - entrypoint may not have started", i+1)
+	dockerLogger.Debugf("Executing entrypoint: docker %v", execArgs)
+	execErr := p.executeDockerCommand(execArgs)
+
+	// On failure, dump container logs for debugging
+	if execErr != nil {
+		dockerLogger.Debugf("Entrypoint failed, fetching container logs for %s", spec.Name)
+		if logsOutput, err := exec.Command("docker", "logs", spec.Name).CombinedOutput(); err == nil && len(logsOutput) > 0 {
+			dockerLogger.Debugf("Container logs:\n%s", string(logsOutput))
 		}
 	}
 
-	// Output debug log to stderr so user can see entrypoint output even when detached
-	if len(debugLogOutput) > 0 {
-		fmt.Fprintf(os.Stderr, "\n--- Entrypoint debug log (before attach) ---\n%s--- End of entrypoint debug log ---\n\n", string(debugLogOutput))
-		dockerLogger.Debugf("Entrypoint debug log (before attach):\n%s", string(debugLogOutput))
-	} else {
-		dockerLogger.Debug("No debug log available yet - container may still be starting or ADDT_LOG_LEVEL is not DEBUG")
-		// Also try to verify container exists and is running
-		if p.Exists(spec.Name) {
-			if p.IsRunning(spec.Name) {
-				dockerLogger.Debug("Container exists and is running, but no debug log yet - entrypoint may not have started or ADDT_LOG_LEVEL is not DEBUG")
-			} else {
-				dockerLogger.Debug("Container exists but is not running")
-			}
-		} else {
-			dockerLogger.Debug("Container does not exist")
-		}
+	// Clean up non-persistent containers (stop sleep, triggers --rm if set)
+	if !spec.Persistent {
+		dockerLogger.Debugf("Removing non-persistent container %s", spec.Name)
+		exec.Command("docker", "rm", "-f", spec.Name).Run()
 	}
 
-	// Verify container is running before attaching
-	if !p.IsRunning(spec.Name) {
-		dockerLogger.Debugf("Container %s is not running, checking status", spec.Name)
-		// Check if container exists and what state it's in
-		if p.Exists(spec.Name) {
-			return fmt.Errorf("container %s exists but is not running", spec.Name)
-		}
-		return fmt.Errorf("container %s does not exist", spec.Name)
-	}
-	dockerLogger.Debugf("Container %s is running, proceeding with attach", spec.Name)
-
-	// Attach to container
-	// Note: attach doesn't take -i flag; stdin is already configured from container start
-	attachArgs := []string{"attach", spec.Name}
-	dockerLogger.Debugf("Attaching to container with args: %v (interactive=%v)", attachArgs, interactive || spec.Interactive)
-
-	return p.executeDockerCommand(attachArgs)
+	return execErr
 }
 
 // Shell opens a shell in a container

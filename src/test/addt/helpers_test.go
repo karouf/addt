@@ -363,6 +363,22 @@ func runCmd(t *testing.T, name string, args ...string) string {
 	return strings.TrimSpace(string(out))
 }
 
+// setDummyAnthropicKey sets a dummy ANTHROPIC_API_KEY so that the claude
+// extension's credentials.sh exits early without hitting the macOS keychain.
+// Returns a cleanup function that restores the original value.
+func setDummyAnthropicKey(t *testing.T) func() {
+	t.Helper()
+	orig := os.Getenv("ANTHROPIC_API_KEY")
+	os.Setenv("ANTHROPIC_API_KEY", "sk-ant-test-dummy-key-for-addt-tests")
+	return func() {
+		if orig != "" {
+			os.Setenv("ANTHROPIC_API_KEY", orig)
+		} else {
+			os.Unsetenv("ANTHROPIC_API_KEY")
+		}
+	}
+}
+
 // ensureAddtImage builds the extension image via TestBuildHelper subprocess.
 func ensureAddtImage(t *testing.T, dir, extension string) {
 	t.Helper()

@@ -15,6 +15,9 @@ func TestClaudeYolo_Addt_ConfigSetsEnvVar(t *testing.T) {
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
+			// Set dummy API key so credentials.sh skips macOS keychain prompt
+			defer setDummyAnthropicKey(t)()
+
 			dir, cleanup := setupAddtDir(t, prov, `
 extensions:
   claude:
@@ -47,6 +50,9 @@ func TestClaudeYolo_Addt_NotSetByDefault(t *testing.T) {
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
+			// Set dummy API key so credentials.sh skips macOS keychain prompt
+			defer setDummyAnthropicKey(t)()
+
 			dir, cleanup := setupAddtDir(t, prov, ``)
 			defer cleanup()
 			ensureAddtImage(t, dir, "claude")
@@ -75,6 +81,9 @@ func TestClaudeYolo_Addt_ArgsTransformation(t *testing.T) {
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
+			// Set dummy API key so credentials.sh skips macOS keychain prompt
+			defer setDummyAnthropicKey(t)()
+
 			dir, cleanup := setupAddtDir(t, prov, ``)
 			defer cleanup()
 			ensureAddtImage(t, dir, "claude")
@@ -109,6 +118,9 @@ func TestClaudeYolo_Addt_ArgsTransformationViaEnv(t *testing.T) {
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
+			// Set dummy API key so credentials.sh skips macOS keychain prompt
+			defer setDummyAnthropicKey(t)()
+
 			dir, cleanup := setupAddtDir(t, prov, `
 extensions:
   claude:
