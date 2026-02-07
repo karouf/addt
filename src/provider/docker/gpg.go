@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/jedi4ever/addt/config/security"
@@ -58,36 +59,78 @@ func (p *DockerProvider) handleGPGProxyForwarding(gpgDir, username string, allow
 		return args
 	}
 
-	// Create the proxy
+	// On macOS, Docker Desktop runs containers in a VM and can't mount Unix sockets.
+	// Use TCP mode: proxy listens on TCP, container connects via socat.
+	if runtime.GOOS == "darwin" {
+		return p.handleGPGProxyForwardingTCP(agentSocket, gpgDir, username, allowedKeyIDs)
+	}
+
+	// Linux: use Unix socket (can be mounted directly)
 	proxy, err := security.NewGPGProxyAgent(agentSocket, allowedKeyIDs)
 	if err != nil {
 		fmt.Printf("Warning: failed to create GPG proxy: %v\n", err)
 		return args
 	}
 
-	// Start the proxy
 	if err := proxy.Start(); err != nil {
 		fmt.Printf("Warning: failed to start GPG proxy: %v\n", err)
 		return args
 	}
 
-	// Store proxy for cleanup
 	p.gpgProxy = proxy
 
-	// Mount the proxy socket directory
 	proxyDir := proxy.SocketDir()
 	args = append(args, "-v", fmt.Sprintf("%s:/home/%s/.gnupg/S.gpg-agent", proxy.SocketPath(), username))
-
-	// Mount safe GPG files only (public keys, config)
 	args = append(args, p.mountSafeGPGFiles(gpgDir, username)...)
-
-	// Set GPG_TTY for interactive operations
 	args = append(args, "-e", "GPG_TTY=/dev/console")
 
 	if len(allowedKeyIDs) > 0 {
 		fmt.Printf("GPG proxy active: only keys matching %v are accessible\n", allowedKeyIDs)
 	} else {
 		fmt.Printf("GPG proxy active: all keys accessible (socket: %s)\n", proxyDir)
+	}
+
+	return args
+}
+
+// handleGPGProxyForwardingTCP creates a TCP-based GPG agent proxy for macOS.
+// The proxy listens on a TCP port on the host; the container connects via socat.
+func (p *DockerProvider) handleGPGProxyForwardingTCP(agentSocket, gpgDir, username string, allowedKeyIDs []string) []string {
+	var args []string
+
+	proxy, err := security.NewGPGProxyAgentTCP(agentSocket, allowedKeyIDs)
+	if err != nil {
+		fmt.Printf("Warning: failed to create GPG TCP proxy: %v\n", err)
+		return args
+	}
+
+	if err := proxy.Start(); err != nil {
+		fmt.Printf("Warning: failed to start GPG TCP proxy: %v\n", err)
+		return args
+	}
+
+	p.gpgProxy = proxy
+
+	hostIP, err := getHostGatewayIP()
+	if err != nil {
+		fmt.Printf("Warning: could not detect host IP for GPG proxy: %v\n", err)
+		proxy.Stop()
+		return args
+	}
+
+	// Pass TCP connection info — entrypoint uses socat to bridge TCP→Unix socket
+	args = append(args, "-e", fmt.Sprintf("ADDT_GPG_PROXY_HOST=%s", hostIP))
+	args = append(args, "-e", fmt.Sprintf("ADDT_GPG_PROXY_PORT=%d", proxy.TCPPort()))
+
+	// Mount safe GPG files writable (socat needs to create S.gpg-agent socket inside)
+	args = append(args, p.mountSafeGPGFilesWritable(gpgDir, username)...)
+
+	args = append(args, "-e", "GPG_TTY=/dev/console")
+
+	if len(allowedKeyIDs) > 0 {
+		fmt.Printf("GPG proxy active (TCP): only keys matching %v are accessible\n", allowedKeyIDs)
+	} else {
+		fmt.Println("GPG proxy active (TCP): all keys accessible")
 	}
 
 	return args
@@ -100,6 +143,12 @@ func (p *DockerProvider) handleGPGAgentForwarding(gpgDir, username string) []str
 	agentSocket := getGPGAgentSocket(gpgDir)
 	if agentSocket == "" {
 		fmt.Println("Warning: GPG agent socket not found")
+		return args
+	}
+
+	// macOS: can't mount Unix sockets into Docker containers
+	if runtime.GOOS == "darwin" {
+		fmt.Println("Warning: GPG agent forwarding not supported on macOS (use ADDT_GPG_FORWARD=proxy)")
 		return args
 	}
 
@@ -192,6 +241,57 @@ func (p *DockerProvider) mountSafeGPGFiles(gpgDir, username string) []string {
 
 	// Mount the safe directory
 	args = append(args, "-v", fmt.Sprintf("%s:/home/%s/.gnupg:ro", tmpDir, username))
+
+	return args
+}
+
+// mountSafeGPGFilesWritable creates a temp directory with only safe GPG files
+// and returns writable mount arguments (needed for TCP mode where socat creates S.gpg-agent)
+func (p *DockerProvider) mountSafeGPGFilesWritable(gpgDir, username string) []string {
+	var args []string
+
+	if _, err := os.Stat(gpgDir); err != nil {
+		return args
+	}
+
+	tmpDir, err := os.MkdirTemp("", "gpg-safe-*")
+	if err != nil {
+		return args
+	}
+
+	if err := os.Chmod(tmpDir, 0700); err != nil {
+		os.RemoveAll(tmpDir)
+		return args
+	}
+	if err := security.WritePIDFile(tmpDir); err != nil {
+		os.RemoveAll(tmpDir)
+		return args
+	}
+
+	p.tempDirs = append(p.tempDirs, tmpDir)
+
+	safeFiles := []string{
+		"pubring.kbx", "pubring.gpg", "trustdb.gpg",
+		"gpg.conf", "gpg-agent.conf", "dirmngr.conf",
+		"sshcontrol", "tofu.db", "crls.d",
+	}
+
+	for _, file := range safeFiles {
+		src := filepath.Join(gpgDir, file)
+		dst := filepath.Join(tmpDir, file)
+		info, err := os.Stat(src)
+		if err != nil {
+			continue
+		}
+		if info.IsDir() {
+			util.SafeCopyDir(src, dst)
+		} else {
+			util.SafeCopyFile(src, dst)
+		}
+	}
+
+	// Mount writable (no :ro) so socat can create S.gpg-agent socket
+	args = append(args, "-v", fmt.Sprintf("%s:/home/%s/.gnupg", tmpDir, username))
 
 	return args
 }
