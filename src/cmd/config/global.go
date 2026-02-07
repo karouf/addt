@@ -24,72 +24,7 @@ func listGlobal() {
 	fmt.Printf("Global config:  %s\n", cfgtypes.GetGlobalConfigPath())
 	fmt.Printf("Project config: %s\n\n", cfgtypes.GetProjectConfigPath())
 
-	keys := GetKeys()
-
-	// Calculate column widths based on content
-	maxKeyLen := 3 // "Key"
-	maxValLen := 5 // "Value"
-	for _, k := range keys {
-		if len(k.Key) > maxKeyLen {
-			maxKeyLen = len(k.Key)
-		}
-		envValue := os.Getenv(k.EnvVar)
-		projectValue := GetValue(projectCfg, k.Key)
-		globalValue := GetValue(globalCfg, k.Key)
-		defaultValue := GetDefaultValue(k.Key)
-		val := envValue
-		if val == "" {
-			val = projectValue
-		}
-		if val == "" {
-			val = globalValue
-		}
-		if val == "" {
-			val = defaultValue
-		}
-		if val == "" {
-			val = "-"
-		}
-		if len(val) > maxValLen {
-			maxValLen = len(val)
-		}
-	}
-
-	// Print header
-	fmt.Printf("  %-*s   %-*s   %s\n", maxKeyLen, "Key", maxValLen, "Value", "Source")
-	fmt.Printf("  %s   %s   %s\n", strings.Repeat("-", maxKeyLen), strings.Repeat("-", maxValLen), "--------")
-
-	for _, k := range keys {
-		envValue := os.Getenv(k.EnvVar)
-		projectValue := GetValue(projectCfg, k.Key)
-		globalValue := GetValue(globalCfg, k.Key)
-		defaultValue := GetDefaultValue(k.Key)
-
-		var displayValue, source string
-		if envValue != "" {
-			displayValue = envValue
-			source = "env"
-		} else if projectValue != "" {
-			displayValue = projectValue
-			source = "project"
-		} else if globalValue != "" {
-			displayValue = globalValue
-			source = "global"
-		} else if defaultValue != "" {
-			displayValue = defaultValue
-			source = "default"
-		} else {
-			displayValue = "-"
-			source = ""
-		}
-
-		// Highlight non-default values
-		if source == "env" || source == "project" || source == "global" {
-			fmt.Printf("* %-*s   %-*s   %s\n", maxKeyLen, k.Key, maxValLen, displayValue, source)
-		} else {
-			fmt.Printf("  %-*s   %-*s   %s\n", maxKeyLen, k.Key, maxValLen, displayValue, source)
-		}
-	}
+	printConfigTable(projectCfg, globalCfg)
 }
 
 func getGlobal(key string) {

@@ -9,49 +9,22 @@ import (
 )
 
 func listProject() {
-	cfg, err := cfgtypes.LoadProjectConfigFile()
+	projectCfg, err := cfgtypes.LoadProjectConfigFile()
 	if err != nil {
 		fmt.Printf("Error loading project config: %v\n", err)
 		os.Exit(1)
 	}
 
-	configPath := cfgtypes.GetProjectConfigPath()
-	fmt.Printf("Project config: %s\n\n", configPath)
-
-	keys := GetKeys()
-
-	// Calculate column widths
-	maxKeyLen := 3
-	maxValLen := 5
-	for _, k := range keys {
-		if len(k.Key) > maxKeyLen {
-			maxKeyLen = len(k.Key)
-		}
-		val := GetValue(cfg, k.Key)
-		if val == "" {
-			val = "-"
-		}
-		if len(val) > maxValLen {
-			maxValLen = len(val)
-		}
+	globalCfg, err := cfgtypes.LoadGlobalConfigFile()
+	if err != nil {
+		fmt.Printf("Error loading global config: %v\n", err)
+		os.Exit(1)
 	}
 
-	// Print header
-	fmt.Printf("  %-*s   %-*s\n", maxKeyLen, "Key", maxValLen, "Value")
-	fmt.Printf("  %s   %s\n", strings.Repeat("-", maxKeyLen), strings.Repeat("-", maxValLen))
+	fmt.Printf("Project config: %s\n", cfgtypes.GetProjectConfigPath())
+	fmt.Printf("Global config:  %s\n\n", cfgtypes.GetGlobalConfigPath())
 
-	hasValues := false
-	for _, k := range keys {
-		val := GetValue(cfg, k.Key)
-		if val != "" {
-			hasValues = true
-			fmt.Printf("* %-*s   %-*s\n", maxKeyLen, k.Key, maxValLen, val)
-		}
-	}
-
-	if !hasValues {
-		fmt.Println("  (no project config set)")
-	}
+	printConfigTable(projectCfg, globalCfg)
 }
 
 func getProject(key string) {

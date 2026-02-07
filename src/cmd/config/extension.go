@@ -48,10 +48,7 @@ func listExtension(extName string, useGlobal bool) {
 		extCfg = cfg.Extensions[extName]
 	}
 
-	// Print header
-	fmt.Printf("  %-10s   %-15s   %s\n", "Key", "Value", "Source")
-	fmt.Printf("  %s   %s   %s\n", strings.Repeat("-", 10), strings.Repeat("-", 15), "--------")
-
+	rows := make([]configRow, 0, len(keys))
 	for _, k := range keys {
 		var envVar string
 		if strings.Contains(k.EnvVar, "%s") {
@@ -113,12 +110,21 @@ func listExtension(extName string, useGlobal bool) {
 			source = ""
 		}
 
-		if source == "env" || source == scope {
-			fmt.Printf("* %-10s   %-15s   %s\n", k.Key, displayValue, source)
-		} else {
-			fmt.Printf("  %-10s   %-15s   %s\n", k.Key, displayValue, source)
+		def := defaultValue
+		if def == "" {
+			def = "-"
 		}
+
+		rows = append(rows, configRow{
+			Key:          k.Key,
+			Value:        displayValue,
+			Default:      def,
+			Source:        source,
+			IsOverridden: source == "env" || source == scope,
+		})
 	}
+
+	printRows(rows)
 }
 
 func getExtension(extName, key string, useGlobal bool) {
