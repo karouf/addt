@@ -36,7 +36,7 @@ func TestSSHForwarding_Integration_NoForwarding(t *testing.T) {
 	checkDockerForSSH(t)
 
 	prov := createTestProvider(t)
-	args := prov.HandleSSHForwarding(false, "", "/home/test", "testuser", nil)
+	args := prov.HandleSSHForwarding(false, "", "/home/test/.ssh", "testuser", nil)
 
 	if len(args) != 0 {
 		t.Errorf("Expected empty args for no forwarding, got: %v", args)
@@ -47,7 +47,7 @@ func TestSSHForwarding_Integration_InvalidMode(t *testing.T) {
 	checkDockerForSSH(t)
 
 	prov := createTestProvider(t)
-	args := prov.HandleSSHForwarding(true, "invalid", "/home/test", "testuser", nil)
+	args := prov.HandleSSHForwarding(true, "invalid", "/home/test/.ssh", "testuser", nil)
 
 	if len(args) != 0 {
 		t.Errorf("Expected empty args for invalid mode, got: %v", args)
@@ -58,7 +58,7 @@ func TestSSHForwarding_Integration_NonExistentSSHDir(t *testing.T) {
 	checkDockerForSSH(t)
 
 	prov := createTestProvider(t)
-	args := prov.HandleSSHForwarding(true, "keys", "/nonexistent/path", "testuser", nil)
+	args := prov.HandleSSHForwarding(true, "keys", "/nonexistent/path/.ssh", "testuser", nil)
 
 	if len(args) != 0 {
 		t.Errorf("Expected empty args for non-existent .ssh dir, got: %v", args)
@@ -105,7 +105,7 @@ func TestSSHForwarding_Integration_MountSafeFiles(t *testing.T) {
 		}
 	}()
 
-	args := prov.mountSafeSSHFiles(tmpHome, "testuser")
+	args := prov.mountSafeSSHFiles(sshDir, "testuser")
 
 	// Should have created a temp dir and mounted it
 	if len(prov.tempDirs) == 0 {
@@ -176,7 +176,7 @@ func TestSSHForwarding_Integration_SafeFilesInContainer(t *testing.T) {
 		}
 	}()
 
-	args := prov.mountSafeSSHFiles(tmpHome, "testuser")
+	args := prov.mountSafeSSHFiles(sshDir, "testuser")
 
 	if len(prov.tempDirs) == 0 {
 		t.Fatal("Expected temp dir to be created")
@@ -252,7 +252,7 @@ func TestSSHForwarding_Integration_FullProviderWithSSH(t *testing.T) {
 		tempDirs: []string{},
 	}
 
-	args := prov.HandleSSHForwarding(cfg.SSHForwardKeys, cfg.SSHForwardMode, tmpHome, "addt", nil)
+	args := prov.HandleSSHForwarding(cfg.SSHForwardKeys, cfg.SSHForwardMode, sshDir, "addt", nil)
 
 	if len(args) == 0 {
 		t.Error("Expected SSH mount args")

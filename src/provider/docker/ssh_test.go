@@ -9,12 +9,12 @@ import (
 func TestHandleSSHForwarding_Disabled(t *testing.T) {
 	p := &DockerProvider{}
 
-	args := p.HandleSSHForwarding(false, "", "/home/test", "testuser", nil)
+	args := p.HandleSSHForwarding(false, "", "/home/test/.ssh", "testuser", nil)
 	if len(args) != 0 {
 		t.Errorf("HandleSSHForwarding(false) returned %v, want empty", args)
 	}
 
-	args = p.HandleSSHForwarding(false, "agent", "/home/test", "testuser", nil)
+	args = p.HandleSSHForwarding(false, "agent", "/home/test/.ssh", "testuser", nil)
 	if len(args) != 0 {
 		t.Errorf("HandleSSHForwarding(false, agent) returned %v, want empty", args)
 	}
@@ -26,7 +26,7 @@ func TestHandleSSHForwarding_DisabledReturnsEmpty(t *testing.T) {
 	// When forwardKeys is false, any mode should return empty
 	modes := []string{"agent", "keys", "proxy", ""}
 	for _, mode := range modes {
-		args := p.HandleSSHForwarding(false, mode, "/home/test", "testuser", nil)
+		args := p.HandleSSHForwarding(false, mode, "/home/test/.ssh", "testuser", nil)
 		if len(args) != 0 {
 			t.Errorf("HandleSSHForwarding(false, %q) = %v, want empty", mode, args)
 		}
@@ -36,7 +36,7 @@ func TestHandleSSHForwarding_DisabledReturnsEmpty(t *testing.T) {
 func TestHandleSSHForwarding_InvalidMode(t *testing.T) {
 	p := &DockerProvider{}
 
-	args := p.HandleSSHForwarding(true, "invalid", "/home/test", "testuser", nil)
+	args := p.HandleSSHForwarding(true, "invalid", "/home/test/.ssh", "testuser", nil)
 	if len(args) != 0 {
 		t.Errorf("HandleSSHForwarding(true, \"invalid\") = %v, want empty", args)
 	}
@@ -57,7 +57,7 @@ func TestMountSafeSSHFiles(t *testing.T) {
 	os.WriteFile(filepath.Join(sshDir, "id_rsa"), []byte("PRIVATE KEY"), 0600)
 	os.WriteFile(filepath.Join(sshDir, "id_ed25519"), []byte("PRIVATE KEY"), 0600)
 
-	args := p.mountSafeSSHFiles(homeDir, "testuser")
+	args := p.mountSafeSSHFiles(sshDir, "testuser")
 	defer func() {
 		for _, dir := range p.tempDirs {
 			os.RemoveAll(dir)
@@ -103,9 +103,10 @@ func TestMountSafeSSHFiles_NoSSHDir(t *testing.T) {
 	p := &DockerProvider{tempDirs: []string{}}
 
 	homeDir := t.TempDir()
-	// No .ssh dir
+	sshDir := filepath.Join(homeDir, ".ssh")
+	// No .ssh dir created
 
-	args := p.mountSafeSSHFiles(homeDir, "testuser")
+	args := p.mountSafeSSHFiles(sshDir, "testuser")
 
 	if len(args) != 0 {
 		t.Errorf("mountSafeSSHFiles without .ssh returned %v, want empty", args)

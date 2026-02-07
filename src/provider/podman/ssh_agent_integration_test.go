@@ -19,7 +19,7 @@ func TestSSHForwarding_Integration_AgentModeNoSocket(t *testing.T) {
 	}()
 
 	prov := createTestProvider(t)
-	args := prov.HandleSSHForwarding(true, "agent", "/home/test", "testuser", nil)
+	args := prov.HandleSSHForwarding(true, "agent", "/home/test/.ssh", "testuser", nil)
 
 	if len(args) > 0 {
 		t.Errorf("Expected empty args when SSH_AUTH_SOCK not set, got: %v", args)

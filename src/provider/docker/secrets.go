@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/jedi4ever/addt/util"
 )
 
 // prepareSecretsJSON collects secret environment variables and returns them as JSON
@@ -130,12 +132,12 @@ func (p *DockerProvider) filterSecretEnvVars(env map[string]string, secretVarNam
 // writeSecretsFile writes secrets JSON to a file for later docker cp
 func writeSecretsFile(secretsJSON string) (string, error) {
 	// Create secrets directory
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("failed to get home dir: %w", err)
+	addtHome := util.GetAddtHome()
+	if addtHome == "" {
+		return "", fmt.Errorf("failed to determine addt home directory")
 	}
 
-	secretsDir := filepath.Join(homeDir, ".addt", "secrets")
+	secretsDir := filepath.Join(addtHome, "secrets")
 	if err := os.MkdirAll(secretsDir, 0700); err != nil {
 		return "", fmt.Errorf("failed to create secrets dir: %w", err)
 	}

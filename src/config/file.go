@@ -3,22 +3,21 @@ package config
 import (
 	"fmt"
 	"os"
-	"os/user"
 	"path/filepath"
 
+	"github.com/jedi4ever/addt/util"
 	"gopkg.in/yaml.v3"
 )
 
 // GetGlobalConfigPath returns the path to the global config file
-// Can be overridden with ADDT_CONFIG_DIR environment variable
+// Can be overridden with ADDT_CONFIG_DIR (for config only) or ADDT_HOME (for all addt data)
 func GetGlobalConfigPath() string {
 	configDir := os.Getenv("ADDT_CONFIG_DIR")
 	if configDir == "" {
-		currentUser, err := user.Current()
-		if err != nil {
-			return ""
-		}
-		configDir = filepath.Join(currentUser.HomeDir, ".addt")
+		configDir = util.GetAddtHome()
+	}
+	if configDir == "" {
+		return ""
 	}
 	return filepath.Join(configDir, "config.yaml")
 }

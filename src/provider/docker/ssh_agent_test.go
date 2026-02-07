@@ -19,7 +19,7 @@ func TestHandleSSHForwarding_Agent_NoSocket(t *testing.T) {
 		}
 	}()
 
-	args := p.HandleSSHForwarding(true, "agent", "/home/test", "testuser", nil)
+	args := p.HandleSSHForwarding(true, "agent", "/home/test/.ssh", "testuser", nil)
 
 	// Should return empty when no SSH agent
 	if len(args) != 0 {
@@ -42,7 +42,7 @@ func TestHandleSSHForwarding_Agent_MacOSSocket(t *testing.T) {
 	// Set a macOS-style socket path (these don't work in Docker)
 	os.Setenv("SSH_AUTH_SOCK", "/var/folders/xx/fake/com.apple.launchd.xxx/Listeners")
 
-	args := p.HandleSSHForwarding(true, "agent", "/home/test", "testuser", nil)
+	args := p.HandleSSHForwarding(true, "agent", "/home/test/.ssh", "testuser", nil)
 
 	// Should return empty for macOS sockets
 	if len(args) != 0 {
@@ -90,7 +90,7 @@ func TestHandleSSHForwarding_Agent_ValidSocket(t *testing.T) {
 		}
 	}()
 
-	args := p.HandleSSHForwarding(true, "agent", homeDir, "testuser", nil)
+	args := p.HandleSSHForwarding(true, "agent", sshDir, "testuser", nil)
 
 	// Should mount the socket
 	expectedSocketMount := socketPath + ":/ssh-agent"

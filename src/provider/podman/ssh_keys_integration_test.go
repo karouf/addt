@@ -41,7 +41,7 @@ func TestSSHForwarding_Integration_KeysMode(t *testing.T) {
 	}
 
 	prov := createTestProvider(t)
-	args := prov.HandleSSHForwarding(true, "keys", tmpHome, "testuser", nil)
+	args := prov.HandleSSHForwarding(true, "keys", sshDir, "testuser", nil)
 
 	foundSSHMount := false
 	for i, arg := range args {

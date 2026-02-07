@@ -3,20 +3,20 @@ package extensions
 import (
 	"io/fs"
 	"os"
-	"os/user"
 	"path/filepath"
 	"sort"
 
+	"github.com/jedi4ever/addt/util"
 	"gopkg.in/yaml.v3"
 )
 
 // GetLocalExtensionsDir returns the path to local extensions directory (~/.addt/extensions)
 func GetLocalExtensionsDir() string {
-	currentUser, err := user.Current()
-	if err != nil {
+	addtHome := util.GetAddtHome()
+	if addtHome == "" {
 		return ""
 	}
-	return filepath.Join(currentUser.HomeDir, ".addt", "extensions")
+	return filepath.Join(addtHome, "extensions")
 }
 
 // GetExtensions reads all extension configs from embedded filesystem and local ~/.addt/extensions/

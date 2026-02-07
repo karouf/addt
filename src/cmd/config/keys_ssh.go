@@ -13,6 +13,7 @@ func GetSSHKeys() []KeyInfo {
 		{Key: "ssh.forward_keys", Description: "Enable SSH key forwarding (default: true)", Type: "bool", EnvVar: "ADDT_SSH_FORWARD_KEYS"},
 		{Key: "ssh.forward_mode", Description: "SSH forwarding mode: agent, keys, or proxy (default: proxy)", Type: "string", EnvVar: "ADDT_SSH_FORWARD_MODE"},
 		{Key: "ssh.allowed_keys", Description: "Key filters for proxy mode (comma-separated)", Type: "string", EnvVar: "ADDT_SSH_ALLOWED_KEYS"},
+		{Key: "ssh.dir", Description: "SSH directory path (default: ~/.ssh)", Type: "string", EnvVar: "ADDT_SSH_DIR"},
 	}
 }
 
@@ -30,6 +31,8 @@ func GetSSHValue(s *cfgtypes.SSHSettings, key string) string {
 		return s.ForwardMode
 	case "ssh.allowed_keys":
 		return strings.Join(s.AllowedKeys, ",")
+	case "ssh.dir":
+		return s.Dir
 	}
 	return ""
 }
@@ -48,6 +51,8 @@ func SetSSHValue(s *cfgtypes.SSHSettings, key, value string) {
 		} else {
 			s.AllowedKeys = strings.Split(value, ",")
 		}
+	case "ssh.dir":
+		s.Dir = value
 	}
 }
 
@@ -60,5 +65,7 @@ func UnsetSSHValue(s *cfgtypes.SSHSettings, key string) {
 		s.ForwardMode = ""
 	case "ssh.allowed_keys":
 		s.AllowedKeys = nil
+	case "ssh.dir":
+		s.Dir = ""
 	}
 }

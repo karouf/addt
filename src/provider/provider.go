@@ -52,10 +52,12 @@ type Config struct {
 	SSHForwardKeys          bool
 	SSHForwardMode          string
 	SSHAllowedKeys          []string
+	SSHDir                  string
 	TmuxForward             bool
 	HistoryPersist          bool
 	GPGForward              string   // "proxy", "agent", "keys", or "off"
 	GPGAllowedKeyIDs        []string // GPG key IDs (fingerprints) that are allowed
+	GPGDir                  string
 	DockerDindMode          string
 	EnvFileLoad             bool
 	EnvFile                 string

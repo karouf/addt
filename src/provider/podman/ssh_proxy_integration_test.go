@@ -19,7 +19,7 @@ func TestSSHForwarding_Integration_ProxyModeNoSocket(t *testing.T) {
 	}()
 
 	prov := createTestProvider(t)
-	args := prov.HandleSSHForwarding(true, "proxy", "/home/test", "testuser", nil)
+	args := prov.HandleSSHForwarding(true, "proxy", "/home/test/.ssh", "testuser", nil)
 
 	if len(args) != 0 {
 		t.Errorf("Expected empty args for proxy mode without SSH_AUTH_SOCK, got: %v", args)
@@ -38,7 +38,7 @@ func TestSSHForwarding_Integration_AllowedKeysNoSocket(t *testing.T) {
 	}()
 
 	prov := createTestProvider(t)
-	args := prov.HandleSSHForwarding(true, "agent", "/home/test", "testuser", []string{"github"})
+	args := prov.HandleSSHForwarding(true, "agent", "/home/test/.ssh", "testuser", []string{"github"})
 
 	if len(args) != 0 {
 		t.Errorf("Expected empty args for allowed keys without SSH_AUTH_SOCK, got: %v", args)

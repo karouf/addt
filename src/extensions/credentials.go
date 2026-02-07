@@ -99,10 +99,10 @@ func RunCredentialScript(ext *ExtensionConfig) (map[string]string, error) {
 func findCredentialScript(ext *ExtensionConfig) (string, error) {
 	scriptName := ext.CredentialScript
 
-	// Check local extension directory first (~/.addt/extensions/<name>/)
-	homeDir, err := os.UserHomeDir()
-	if err == nil {
-		localPath := filepath.Join(homeDir, ".addt", "extensions", ext.Name, scriptName)
+	// Check local extension directory first (<addt_home>/extensions/<name>/)
+	addtHome := util.GetAddtHome()
+	if addtHome != "" {
+		localPath := filepath.Join(addtHome, "extensions", ext.Name, scriptName)
 		if fileExists(localPath) {
 			return localPath, nil
 		}

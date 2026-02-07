@@ -16,23 +16,23 @@ import (
 //   - "keys": Mount ~/.ssh directory read-only
 //
 // If allowedKeys is set, proxy mode is automatically enabled for agent forwarding
-func (p *PodmanProvider) HandleSSHForwarding(forwardKeys bool, forwardMode, homeDir, username string, allowedKeys []string) []string {
+func (p *PodmanProvider) HandleSSHForwarding(forwardKeys bool, forwardMode, sshDir, username string, allowedKeys []string) []string {
 	if !forwardKeys {
 		return nil
 	}
 
 	// If allowed keys are specified, use proxy mode regardless of forwardMode setting
 	if len(allowedKeys) > 0 && (forwardMode == "agent" || forwardMode == "proxy") {
-		return p.handleSSHProxyForwarding(homeDir, username, allowedKeys)
+		return p.handleSSHProxyForwarding(sshDir, username, allowedKeys)
 	}
 
 	if forwardMode == "proxy" {
 		// Proxy mode without filters - just forward all keys through proxy
-		return p.handleSSHProxyForwarding(homeDir, username, nil)
+		return p.handleSSHProxyForwarding(sshDir, username, nil)
 	} else if forwardMode == "agent" {
-		return p.handleSSHAgentForwarding(homeDir, username)
+		return p.handleSSHAgentForwarding(sshDir, username)
 	} else if forwardMode == "keys" {
-		return p.handleSSHKeysForwarding(homeDir, username)
+		return p.handleSSHKeysForwarding(sshDir, username)
 	}
 
 	return nil
@@ -40,10 +40,9 @@ func (p *PodmanProvider) HandleSSHForwarding(forwardKeys bool, forwardMode, home
 
 // mountSafeSSHFiles creates a temp directory with only safe SSH files
 // (config, known_hosts, public keys) and returns mount arguments
-func (p *PodmanProvider) mountSafeSSHFiles(homeDir, username string) []string {
+func (p *PodmanProvider) mountSafeSSHFiles(sshDir, username string) []string {
 	var args []string
 
-	sshDir := filepath.Join(homeDir, ".ssh")
 	if _, err := os.Stat(sshDir); err != nil {
 		return args
 	}

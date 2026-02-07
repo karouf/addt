@@ -16,7 +16,7 @@ func TestHandleSSHForwarding_Proxy_NoSocket(t *testing.T) {
 		}
 	}()
 
-	args := p.HandleSSHForwarding(true, "proxy", "/home/test", "testuser", nil)
+	args := p.HandleSSHForwarding(true, "proxy", "/home/test/.ssh", "testuser", nil)
 
 	// Should return empty when no SSH agent
 	if len(args) != 0 {
@@ -37,7 +37,7 @@ func TestHandleSSHForwarding_AllowedKeys_ForcesProxy(t *testing.T) {
 
 	// Even in agent mode, allowed keys should force proxy mode
 	// Without SSH_AUTH_SOCK, proxy returns empty
-	args := p.HandleSSHForwarding(true, "agent", "/home/test", "testuser", []string{"github"})
+	args := p.HandleSSHForwarding(true, "agent", "/home/test/.ssh", "testuser", []string{"github"})
 	if len(args) != 0 {
 		t.Errorf("HandleSSHForwarding with allowedKeys but no SSH_AUTH_SOCK returned %v, want empty", args)
 	}

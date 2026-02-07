@@ -127,10 +127,22 @@ func (p *DockerProvider) addContainerVolumesAndEnv(dockerArgs []string, spec *pr
 	}
 
 	// SSH forwarding
-	dockerArgs = append(dockerArgs, p.HandleSSHForwarding(spec.SSHForwardKeys, spec.SSHForwardMode, ctx.homeDir, ctx.username, spec.SSHAllowedKeys)...)
+	sshDir := p.config.SSHDir
+	if sshDir == "" {
+		sshDir = filepath.Join(ctx.homeDir, ".ssh")
+	} else {
+		sshDir = util.ExpandTilde(sshDir)
+	}
+	dockerArgs = append(dockerArgs, p.HandleSSHForwarding(spec.SSHForwardKeys, spec.SSHForwardMode, sshDir, ctx.username, spec.SSHAllowedKeys)...)
 
 	// GPG forwarding
-	dockerArgs = append(dockerArgs, p.HandleGPGForwarding(spec.GPGForward, ctx.homeDir, ctx.username, spec.GPGAllowedKeyIDs)...)
+	gpgDir := p.config.GPGDir
+	if gpgDir == "" {
+		gpgDir = filepath.Join(ctx.homeDir, ".gnupg")
+	} else {
+		gpgDir = util.ExpandTilde(gpgDir)
+	}
+	dockerArgs = append(dockerArgs, p.HandleGPGForwarding(spec.GPGForward, gpgDir, ctx.username, spec.GPGAllowedKeyIDs)...)
 
 	// Tmux forwarding
 	dockerArgs = append(dockerArgs, p.HandleTmuxForwarding(spec.TmuxForward)...)
@@ -144,9 +156,12 @@ func (p *DockerProvider) addContainerVolumesAndEnv(dockerArgs []string, spec *pr
 		dockerArgs = append(dockerArgs, "--cap-add", "NET_ADMIN")
 
 		// Mount firewall config directory
-		firewallConfigDir := filepath.Join(ctx.homeDir, ".addt", "firewall")
-		if _, err := os.Stat(firewallConfigDir); err == nil {
-			dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:/home/%s/.addt/firewall", firewallConfigDir, ctx.username))
+		addtHome := util.GetAddtHome()
+		if addtHome != "" {
+			firewallConfigDir := filepath.Join(addtHome, "firewall")
+			if _, err := os.Stat(firewallConfigDir); err == nil {
+				dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:/home/%s/.addt/firewall", firewallConfigDir, ctx.username))
+			}
 		}
 	}
 

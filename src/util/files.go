@@ -3,8 +3,37 @@ package util
 import (
 	"io/fs"
 	"os"
+	"os/user"
 	"path/filepath"
+	"strings"
 )
+
+// GetAddtHome returns the base directory for addt data files.
+// Checks ADDT_HOME env var first, then falls back to ~/.addt.
+func GetAddtHome() string {
+	if v := os.Getenv("ADDT_HOME"); v != "" {
+		return ExpandTilde(v)
+	}
+	currentUser, err := user.Current()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(currentUser.HomeDir, ".addt")
+}
+
+// ExpandTilde expands a leading "~/" in a path to the user's home directory.
+// Returns the path unchanged if it doesn't start with "~/" or if the home
+// directory cannot be determined.
+func ExpandTilde(path string) string {
+	if !strings.HasPrefix(path, "~/") {
+		return path
+	}
+	homeDir, err := os.UserHomeDir()
+	if err != nil || homeDir == "" {
+		return path
+	}
+	return filepath.Join(homeDir, path[2:])
+}
 
 // SafeCopyFile copies a file if it exists
 func SafeCopyFile(src, dst string) {

@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/jedi4ever/addt/util"
 )
 
 // GPGProxyAgent creates a filtering proxy for gpg-agent
@@ -28,13 +30,13 @@ type GPGProxyAgent struct {
 // NewGPGProxyAgent creates a new GPG proxy agent
 // allowedKeyIDs can be full fingerprints or last 8/16 chars (short/long key ID)
 func NewGPGProxyAgent(upstreamSocket string, allowedKeyIDs []string) (*GPGProxyAgent, error) {
-	// Create socket directory in ~/.addt/sockets/ so Podman machine can access it
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get home dir: %w", err)
+	// Create socket directory in addt home sockets/ so Podman machine can access it
+	addtHome := util.GetAddtHome()
+	if addtHome == "" {
+		return nil, fmt.Errorf("failed to determine addt home directory")
 	}
 
-	socketsDir := filepath.Join(homeDir, ".addt", "sockets")
+	socketsDir := filepath.Join(addtHome, "sockets")
 	if err := os.MkdirAll(socketsDir, 0700); err != nil {
 		return nil, fmt.Errorf("failed to create sockets dir: %w", err)
 	}

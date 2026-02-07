@@ -8,7 +8,7 @@ import (
 )
 
 // handleSSHProxyForwarding creates a filtered SSH agent proxy
-func (p *DockerProvider) handleSSHProxyForwarding(homeDir, username string, allowedKeys []string) []string {
+func (p *DockerProvider) handleSSHProxyForwarding(sshDir, username string, allowedKeys []string) []string {
 	var args []string
 
 	sshAuthSock := os.Getenv("SSH_AUTH_SOCK")
@@ -39,7 +39,7 @@ func (p *DockerProvider) handleSSHProxyForwarding(homeDir, username string, allo
 	args = append(args, "-e", "SSH_AUTH_SOCK=/ssh-agent")
 
 	// Mount safe SSH files only (config, known_hosts, public keys)
-	args = append(args, p.mountSafeSSHFiles(homeDir, username)...)
+	args = append(args, p.mountSafeSSHFiles(sshDir, username)...)
 
 	if len(allowedKeys) > 0 {
 		fmt.Printf("SSH proxy active: only keys matching %v are accessible\n", allowedKeys)

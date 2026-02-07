@@ -55,7 +55,7 @@ func TestGPGForwarding_Integration_Enabled(t *testing.T) {
 	}
 
 	prov := &DockerProvider{tempDirs: []string{}}
-	args := prov.HandleGPGForwarding("keys", tmpHome, "testuser", nil)
+	args := prov.HandleGPGForwarding("keys", gnupgDir, "testuser", nil)
 
 	// Should have volume mount for .gnupg
 	foundGPGMount := false
@@ -130,7 +130,7 @@ func TestGPGForwarding_Integration_Disabled(t *testing.T) {
 	checkDockerForGPG(t)
 
 	prov := &DockerProvider{tempDirs: []string{}}
-	args := prov.HandleGPGForwarding("", "/home/test", "testuser", nil)
+	args := prov.HandleGPGForwarding("", "/home/test/.gnupg", "testuser", nil)
 
 	if len(args) != 0 {
 		t.Errorf("Expected empty args for disabled GPG forwarding, got: %v", args)
@@ -141,7 +141,7 @@ func TestGPGForwarding_Integration_NonExistentGnupgDir(t *testing.T) {
 	checkDockerForGPG(t)
 
 	prov := &DockerProvider{tempDirs: []string{}}
-	args := prov.HandleGPGForwarding("keys", "/nonexistent/path", "testuser", nil)
+	args := prov.HandleGPGForwarding("keys", "/nonexistent/path/.gnupg", "testuser", nil)
 
 	if len(args) != 0 {
 		t.Errorf("Expected empty args for non-existent .gnupg dir, got: %v", args)
@@ -181,7 +181,7 @@ func TestGPGForwarding_Integration_FullProviderWithGPG(t *testing.T) {
 		tempDirs: []string{},
 	}
 
-	args := prov.HandleGPGForwarding(cfg.GPGForward, tmpHome, "addt", cfg.GPGAllowedKeyIDs)
+	args := prov.HandleGPGForwarding(cfg.GPGForward, gnupgDir, "addt", cfg.GPGAllowedKeyIDs)
 
 	if len(args) == 0 {
 		t.Error("Expected GPG mount args")

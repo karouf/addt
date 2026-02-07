@@ -9,7 +9,7 @@ import (
 )
 
 // handleSSHProxyForwarding creates a filtered SSH agent proxy
-func (p *PodmanProvider) handleSSHProxyForwarding(homeDir, username string, allowedKeys []string) []string {
+func (p *PodmanProvider) handleSSHProxyForwarding(sshDir, username string, allowedKeys []string) []string {
 	var args []string
 
 	sshAuthSock := os.Getenv("SSH_AUTH_SOCK")
@@ -21,7 +21,7 @@ func (p *PodmanProvider) handleSSHProxyForwarding(homeDir, username string, allo
 	// On macOS, podman runs in a VM and can't mount Unix sockets via virtiofs.
 	// Use TCP mode: proxy listens on TCP, container connects via socat.
 	if runtime.GOOS == "darwin" {
-		return p.handleSSHProxyForwardingTCP(sshAuthSock, homeDir, username, allowedKeys)
+		return p.handleSSHProxyForwardingTCP(sshAuthSock, sshDir, username, allowedKeys)
 	}
 
 	// Linux: use Unix socket (can be mounted directly)
@@ -41,7 +41,7 @@ func (p *PodmanProvider) handleSSHProxyForwarding(homeDir, username string, allo
 	proxySocket := proxy.SocketPath()
 	args = append(args, "-v", fmt.Sprintf("%s:/ssh-agent", proxySocket))
 	args = append(args, "-e", "SSH_AUTH_SOCK=/ssh-agent")
-	args = append(args, p.mountSafeSSHFiles(homeDir, username)...)
+	args = append(args, p.mountSafeSSHFiles(sshDir, username)...)
 
 	if len(allowedKeys) > 0 {
 		fmt.Printf("SSH proxy active: only keys matching %v are accessible\n", allowedKeys)
@@ -54,7 +54,7 @@ func (p *PodmanProvider) handleSSHProxyForwarding(homeDir, username string, allo
 
 // handleSSHProxyForwardingTCP creates a TCP-based SSH agent proxy for macOS.
 // The proxy listens on a TCP port on the host; the container connects via socat.
-func (p *PodmanProvider) handleSSHProxyForwardingTCP(sshAuthSock, homeDir, username string, allowedKeys []string) []string {
+func (p *PodmanProvider) handleSSHProxyForwardingTCP(sshAuthSock, sshDir, username string, allowedKeys []string) []string {
 	var args []string
 
 	proxy, err := security.NewSSHProxyAgentTCP(sshAuthSock, allowedKeys)
@@ -83,7 +83,7 @@ func (p *PodmanProvider) handleSSHProxyForwardingTCP(sshAuthSock, homeDir, usern
 	args = append(args, "-e", fmt.Sprintf("ADDT_SSH_PROXY_PORT=%d", proxy.TCPPort()))
 
 	// Mount safe SSH files only (config, known_hosts, public keys)
-	args = append(args, p.mountSafeSSHFiles(homeDir, username)...)
+	args = append(args, p.mountSafeSSHFiles(sshDir, username)...)
 
 	if len(allowedKeys) > 0 {
 		fmt.Printf("SSH proxy active (TCP): only keys matching %v are accessible\n", allowedKeys)

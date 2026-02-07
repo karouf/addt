@@ -60,6 +60,35 @@ gpg:
 	}
 }
 
+func TestGPG_Addt_CustomDir(t *testing.T) {
+	_, cleanup := setupAddtDir(t, "", `
+gpg:
+  forward: "proxy"
+  dir: "/opt/custom/.gnupg"
+`)
+	defer cleanup()
+
+	output := captureOutput(t, func() {
+		configcmd.HandleCommand([]string{"list"})
+	})
+
+	if !strings.Contains(output, "gpg.dir") {
+		t.Errorf("Expected output to contain gpg.dir, got:\n%s", output)
+	}
+	if !strings.Contains(output, "/opt/custom/.gnupg") {
+		t.Errorf("Expected output to contain '/opt/custom/.gnupg', got:\n%s", output)
+	}
+
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "gpg.dir") {
+			if !strings.Contains(line, "project") {
+				t.Errorf("Expected gpg.dir source to be project, got line: %s", line)
+			}
+		}
+	}
+}
+
 func TestGPG_Addt_ProxyMode(t *testing.T) {
 	providers := requireProviders(t)
 	requireGPGAgent(t)

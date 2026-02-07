@@ -131,10 +131,22 @@ func (p *PodmanProvider) addContainerVolumesAndEnv(podmanArgs []string, spec *pr
 	}
 
 	// SSH forwarding
-	podmanArgs = append(podmanArgs, p.HandleSSHForwarding(spec.SSHForwardKeys, spec.SSHForwardMode, ctx.homeDir, ctx.username, spec.SSHAllowedKeys)...)
+	sshDir := p.config.SSHDir
+	if sshDir == "" {
+		sshDir = filepath.Join(ctx.homeDir, ".ssh")
+	} else {
+		sshDir = util.ExpandTilde(sshDir)
+	}
+	podmanArgs = append(podmanArgs, p.HandleSSHForwarding(spec.SSHForwardKeys, spec.SSHForwardMode, sshDir, ctx.username, spec.SSHAllowedKeys)...)
 
 	// GPG forwarding
-	podmanArgs = append(podmanArgs, p.HandleGPGForwarding(spec.GPGForward, ctx.homeDir, ctx.username, spec.GPGAllowedKeyIDs)...)
+	gpgDir := p.config.GPGDir
+	if gpgDir == "" {
+		gpgDir = filepath.Join(ctx.homeDir, ".gnupg")
+	} else {
+		gpgDir = util.ExpandTilde(gpgDir)
+	}
+	podmanArgs = append(podmanArgs, p.HandleGPGForwarding(spec.GPGForward, gpgDir, ctx.username, spec.GPGAllowedKeyIDs)...)
 
 	// Tmux forwarding
 	podmanArgs = append(podmanArgs, p.HandleTmuxForwarding(spec.TmuxForward)...)
@@ -154,9 +166,12 @@ func (p *PodmanProvider) addContainerVolumesAndEnv(podmanArgs []string, spec *pr
 		podmanArgs = append(podmanArgs, "--cap-add", "NET_ADMIN")
 
 		// Mount firewall config directory
-		firewallConfigDir := filepath.Join(ctx.homeDir, ".addt", "firewall")
-		if _, err := os.Stat(firewallConfigDir); err == nil {
-			podmanArgs = append(podmanArgs, "-v", fmt.Sprintf("%s:/home/%s/.addt/firewall", firewallConfigDir, ctx.username))
+		addtHome := util.GetAddtHome()
+		if addtHome != "" {
+			firewallConfigDir := filepath.Join(addtHome, "firewall")
+			if _, err := os.Stat(firewallConfigDir); err == nil {
+				podmanArgs = append(podmanArgs, "-v", fmt.Sprintf("%s:/home/%s/.addt/firewall", firewallConfigDir, ctx.username))
+			}
 		}
 	}
 

@@ -93,6 +93,8 @@ func GetDefaultValue(key string) string {
 		return ""
 	case "gpg.allowed_key_ids":
 		return ""
+	case "gpg.dir":
+		return ""
 	case "log.enabled":
 		return "false"
 	case "log.output":
@@ -132,6 +134,8 @@ func GetDefaultValue(key string) string {
 	case "ssh.forward_mode":
 		return "proxy"
 	case "ssh.allowed_keys":
+		return ""
+	case "ssh.dir":
 		return ""
 	case "history_persist":
 		return "false"

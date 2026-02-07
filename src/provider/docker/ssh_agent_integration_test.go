@@ -20,7 +20,7 @@ func TestSSHForwarding_Integration_AgentModeNoSocket(t *testing.T) {
 	}()
 
 	prov := createTestProvider(t)
-	args := prov.HandleSSHForwarding(true, "agent", "/home/test", "testuser", nil)
+	args := prov.HandleSSHForwarding(true, "agent", "/home/test/.ssh", "testuser", nil)
 
 	// Should return empty args when no socket
 	if len(args) > 0 {

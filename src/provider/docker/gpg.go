@@ -19,7 +19,7 @@ import (
 //   - "" or "off" or "false": No GPG forwarding
 //
 // If allowedKeyIDs is set, proxy mode is automatically enabled
-func (p *DockerProvider) HandleGPGForwarding(gpgForward, homeDir, username string, allowedKeyIDs []string) []string {
+func (p *DockerProvider) HandleGPGForwarding(gpgForward, gpgDir, username string, allowedKeyIDs []string) []string {
 	var args []string
 
 	// Normalize boolean-like values
@@ -32,16 +32,16 @@ func (p *DockerProvider) HandleGPGForwarding(gpgForward, homeDir, username strin
 
 	// If allowed key IDs are specified, use proxy mode
 	if len(allowedKeyIDs) > 0 && (gpgForward == "agent" || gpgForward == "true" || gpgForward == "proxy") {
-		return p.handleGPGProxyForwarding(homeDir, username, allowedKeyIDs)
+		return p.handleGPGProxyForwarding(gpgDir, username, allowedKeyIDs)
 	}
 
 	switch gpgForward {
 	case "proxy":
-		return p.handleGPGProxyForwarding(homeDir, username, nil)
+		return p.handleGPGProxyForwarding(gpgDir, username, nil)
 	case "agent":
-		return p.handleGPGAgentForwarding(homeDir, username)
+		return p.handleGPGAgentForwarding(gpgDir, username)
 	case "keys", "true":
-		return p.handleGPGKeysForwarding(homeDir, username)
+		return p.handleGPGKeysForwarding(gpgDir, username)
 	default:
 		// Unknown mode, treat as disabled
 		return args
@@ -49,10 +49,10 @@ func (p *DockerProvider) HandleGPGForwarding(gpgForward, homeDir, username strin
 }
 
 // handleGPGProxyForwarding creates a filtering GPG agent proxy
-func (p *DockerProvider) handleGPGProxyForwarding(homeDir, username string, allowedKeyIDs []string) []string {
+func (p *DockerProvider) handleGPGProxyForwarding(gpgDir, username string, allowedKeyIDs []string) []string {
 	var args []string
 
-	agentSocket := getGPGAgentSocket(homeDir)
+	agentSocket := getGPGAgentSocket(gpgDir)
 	if agentSocket == "" {
 		fmt.Println("Warning: GPG agent socket not found, cannot create GPG proxy")
 		return args
@@ -79,7 +79,7 @@ func (p *DockerProvider) handleGPGProxyForwarding(homeDir, username string, allo
 	args = append(args, "-v", fmt.Sprintf("%s:/home/%s/.gnupg/S.gpg-agent", proxy.SocketPath(), username))
 
 	// Mount safe GPG files only (public keys, config)
-	args = append(args, p.mountSafeGPGFiles(homeDir, username)...)
+	args = append(args, p.mountSafeGPGFiles(gpgDir, username)...)
 
 	// Set GPG_TTY for interactive operations
 	args = append(args, "-e", "GPG_TTY=/dev/console")
@@ -94,10 +94,10 @@ func (p *DockerProvider) handleGPGProxyForwarding(homeDir, username string, allo
 }
 
 // handleGPGAgentForwarding forwards the gpg-agent socket directly
-func (p *DockerProvider) handleGPGAgentForwarding(homeDir, username string) []string {
+func (p *DockerProvider) handleGPGAgentForwarding(gpgDir, username string) []string {
 	var args []string
 
-	agentSocket := getGPGAgentSocket(homeDir)
+	agentSocket := getGPGAgentSocket(gpgDir)
 	if agentSocket == "" {
 		fmt.Println("Warning: GPG agent socket not found")
 		return args
@@ -107,7 +107,7 @@ func (p *DockerProvider) handleGPGAgentForwarding(homeDir, username string) []st
 	args = append(args, "-v", fmt.Sprintf("%s:/home/%s/.gnupg/S.gpg-agent", agentSocket, username))
 
 	// Mount safe GPG files only
-	args = append(args, p.mountSafeGPGFiles(homeDir, username)...)
+	args = append(args, p.mountSafeGPGFiles(gpgDir, username)...)
 
 	// Set GPG_TTY
 	args = append(args, "-e", "GPG_TTY=/dev/console")
@@ -117,17 +117,16 @@ func (p *DockerProvider) handleGPGAgentForwarding(homeDir, username string) []st
 	return args
 }
 
-// handleGPGKeysForwarding mounts ~/.gnupg read-only (legacy mode)
-func (p *DockerProvider) handleGPGKeysForwarding(homeDir, username string) []string {
+// handleGPGKeysForwarding mounts the GPG directory read-only (legacy mode)
+func (p *DockerProvider) handleGPGKeysForwarding(gpgDir, username string) []string {
 	var args []string
 
-	gnupgDir := filepath.Join(homeDir, ".gnupg")
-	if _, err := os.Stat(gnupgDir); err != nil {
+	if _, err := os.Stat(gpgDir); err != nil {
 		return args
 	}
 
 	// Mount entire directory read-only
-	args = append(args, "-v", fmt.Sprintf("%s:/home/%s/.gnupg:ro", gnupgDir, username))
+	args = append(args, "-v", fmt.Sprintf("%s:/home/%s/.gnupg:ro", gpgDir, username))
 
 	// Set GPG_TTY
 	args = append(args, "-e", "GPG_TTY=/dev/console")
@@ -137,11 +136,10 @@ func (p *DockerProvider) handleGPGKeysForwarding(homeDir, username string) []str
 
 // mountSafeGPGFiles creates a temp directory with only safe GPG files
 // and returns mount arguments
-func (p *DockerProvider) mountSafeGPGFiles(homeDir, username string) []string {
+func (p *DockerProvider) mountSafeGPGFiles(gpgDir, username string) []string {
 	var args []string
 
-	gnupgDir := filepath.Join(homeDir, ".gnupg")
-	if _, err := os.Stat(gnupgDir); err != nil {
+	if _, err := os.Stat(gpgDir); err != nil {
 		return args
 	}
 
@@ -176,7 +174,7 @@ func (p *DockerProvider) mountSafeGPGFiles(homeDir, username string) []string {
 	}
 
 	for _, file := range safeFiles {
-		src := filepath.Join(gnupgDir, file)
+		src := filepath.Join(gpgDir, file)
 		dst := filepath.Join(tmpDir, file)
 
 		info, err := os.Stat(src)
@@ -199,7 +197,7 @@ func (p *DockerProvider) mountSafeGPGFiles(homeDir, username string) []string {
 }
 
 // getGPGAgentSocket returns the path to the gpg-agent socket
-func getGPGAgentSocket(homeDir string) string {
+func getGPGAgentSocket(gpgDir string) string {
 	// Try gpgconf first (most reliable)
 	cmd := exec.Command("gpgconf", "--list-dirs", "agent-socket")
 	output, err := cmd.Output()
@@ -212,7 +210,7 @@ func getGPGAgentSocket(homeDir string) string {
 
 	// Fall back to standard locations
 	standardPaths := []string{
-		filepath.Join(homeDir, ".gnupg", "S.gpg-agent"),
+		filepath.Join(gpgDir, "S.gpg-agent"),
 		"/run/user/" + fmt.Sprint(os.Getuid()) + "/gnupg/S.gpg-agent",
 	}
 

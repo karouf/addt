@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/jedi4ever/addt/util"
 )
 
 // SSH Agent protocol message types
@@ -41,13 +43,13 @@ func NewSSHProxyAgent(upstreamSocket string, allowedKeys []string) (*SSHProxyAge
 		return nil, fmt.Errorf("upstream SSH_AUTH_SOCK not set")
 	}
 
-	// Create socket directory in ~/.addt/sockets/ so Podman machine can access it
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get home dir: %w", err)
+	// Create socket directory in addt home sockets/ so Podman machine can access it
+	addtHome := util.GetAddtHome()
+	if addtHome == "" {
+		return nil, fmt.Errorf("failed to determine addt home directory")
 	}
 
-	socketsDir := filepath.Join(homeDir, ".addt", "sockets")
+	socketsDir := filepath.Join(addtHome, "sockets")
 	if err := os.MkdirAll(socketsDir, 0700); err != nil {
 		return nil, fmt.Errorf("failed to create sockets dir: %w", err)
 	}

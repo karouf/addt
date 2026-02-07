@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/jedi4ever/addt/config/security"
+	"github.com/jedi4ever/addt/util"
 )
 
 // tmuxProxy holds the proxy listener and connections
@@ -135,15 +136,15 @@ func (p *PodmanProvider) createTmuxProxyTCP(upstreamSocket string) (*tmuxProxy, 
 	return proxy, nil
 }
 
-// createTmuxProxy creates a Unix socket proxy from ~/.addt/sockets/ to the real tmux socket
+// createTmuxProxy creates a Unix socket proxy from addt sockets dir to the real tmux socket
 func (p *PodmanProvider) createTmuxProxy(upstreamSocket string) (string, string, error) {
-	// Create socket directory in ~/.addt/sockets/
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", "", fmt.Errorf("failed to get home dir: %w", err)
+	// Create socket directory in <addt_home>/sockets/
+	addtHome := util.GetAddtHome()
+	if addtHome == "" {
+		return "", "", fmt.Errorf("failed to determine addt home directory")
 	}
 
-	socketsDir := filepath.Join(homeDir, ".addt", "sockets")
+	socketsDir := filepath.Join(addtHome, "sockets")
 	if err := os.MkdirAll(socketsDir, 0700); err != nil {
 		return "", "", fmt.Errorf("failed to create sockets dir: %w", err)
 	}

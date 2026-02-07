@@ -21,7 +21,7 @@ func TestHandleSSHForwarding_Keys(t *testing.T) {
 	os.WriteFile(filepath.Join(sshDir, "id_rsa.pub"), []byte("public"), 0644)
 	os.WriteFile(filepath.Join(sshDir, "config"), []byte("Host *"), 0644)
 
-	args := p.HandleSSHForwarding(true, "keys", homeDir, "testuser", nil)
+	args := p.HandleSSHForwarding(true, "keys", sshDir, "testuser", nil)
 
 	// Should mount .ssh directory
 	expectedMount := sshDir + ":/home/testuser/.ssh:ro"
@@ -40,8 +40,9 @@ func TestHandleSSHForwarding_Keys_NoSSHDir(t *testing.T) {
 
 	// Create a temporary home directory WITHOUT .ssh
 	homeDir := t.TempDir()
+	sshDir := filepath.Join(homeDir, ".ssh")
 
-	args := p.HandleSSHForwarding(true, "keys", homeDir, "testuser", nil)
+	args := p.HandleSSHForwarding(true, "keys", sshDir, "testuser", nil)
 
 	// Should return empty when .ssh doesn't exist
 	if len(args) != 0 {
@@ -59,7 +60,7 @@ func TestHandleSSHForwarding_AllowedKeys_IgnoredForKeysMode(t *testing.T) {
 	os.WriteFile(filepath.Join(sshDir, "id_rsa"), []byte("private"), 0600)
 
 	// In keys mode, allowedKeys should be ignored (keys mode mounts full .ssh)
-	args := p.HandleSSHForwarding(true, "keys", homeDir, "testuser", []string{"github"})
+	args := p.HandleSSHForwarding(true, "keys", sshDir, "testuser", []string{"github"})
 
 	expectedMount := sshDir + ":/home/testuser/.ssh:ro"
 	if !containsVolume(args, expectedMount) {

@@ -1,10 +1,13 @@
 package security
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/jedi4ever/addt/util"
 )
 
 // ApplySettings applies Settings overrides to a Config
@@ -153,12 +156,12 @@ func InitAuditLog(cfg *Config) error {
 
 	logPath := cfg.AuditLogFile
 	if logPath == "" {
-		// Default to ~/.addt/audit.log
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return err
+		// Default to <addt_home>/audit.log
+		addtHome := util.GetAddtHome()
+		if addtHome == "" {
+			return fmt.Errorf("failed to determine addt home directory")
 		}
-		logPath = filepath.Join(homeDir, ".addt", "audit.log")
+		logPath = filepath.Join(addtHome, "audit.log")
 	}
 
 	// Ensure directory exists

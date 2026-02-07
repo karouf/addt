@@ -14,7 +14,7 @@ func TestHandleGPGForwarding_Disabled(t *testing.T) {
 
 	for _, mode := range testCases {
 		t.Run(mode, func(t *testing.T) {
-			args := p.HandleGPGForwarding(mode, "/home/test", "testuser", nil)
+			args := p.HandleGPGForwarding(mode, "/home/test/.gnupg", "testuser", nil)
 			if len(args) != 0 {
 				t.Errorf("HandleGPGForwarding(%q) returned %v, want empty", mode, args)
 			}
@@ -36,7 +36,7 @@ func TestHandleGPGForwarding_Keys(t *testing.T) {
 	os.WriteFile(filepath.Join(gnupgDir, "pubring.kbx"), []byte("pubring"), 0600)
 	os.WriteFile(filepath.Join(gnupgDir, "trustdb.gpg"), []byte("trustdb"), 0600)
 
-	args := p.HandleGPGForwarding("keys", homeDir, "testuser", nil)
+	args := p.HandleGPGForwarding("keys", gnupgDir, "testuser", nil)
 
 	// Should mount .gnupg directory read-only
 	foundMount := false
@@ -63,8 +63,9 @@ func TestHandleGPGForwarding_Keys_NoGnupgDir(t *testing.T) {
 
 	// Create a temporary home directory WITHOUT .gnupg
 	homeDir := t.TempDir()
+	gnupgDir := filepath.Join(homeDir, ".gnupg")
 
-	args := p.HandleGPGForwarding("keys", homeDir, "testuser", nil)
+	args := p.HandleGPGForwarding("keys", gnupgDir, "testuser", nil)
 
 	// Should return empty when .gnupg doesn't exist
 	if len(args) != 0 {
@@ -85,7 +86,7 @@ func TestHandleGPGForwarding_LegacyTrue(t *testing.T) {
 	os.WriteFile(filepath.Join(gnupgDir, "pubring.kbx"), []byte("pubring"), 0600)
 
 	// "true" should behave like "keys" for backward compatibility
-	args := p.HandleGPGForwarding("true", homeDir, "testuser", nil)
+	args := p.HandleGPGForwarding("true", gnupgDir, "testuser", nil)
 
 	if len(args) == 0 {
 		t.Errorf("HandleGPGForwarding(\"true\") returned empty args")
@@ -100,7 +101,7 @@ func TestHandleGPGForwarding_LegacyTrue(t *testing.T) {
 func TestHandleGPGForwarding_InvalidMode(t *testing.T) {
 	p := &DockerProvider{tempDirs: []string{}}
 
-	args := p.HandleGPGForwarding("invalid", "/home/test", "testuser", nil)
+	args := p.HandleGPGForwarding("invalid", "/home/test/.gnupg", "testuser", nil)
 
 	if len(args) != 0 {
 		t.Errorf("HandleGPGForwarding(\"invalid\") returned %v, want empty", args)

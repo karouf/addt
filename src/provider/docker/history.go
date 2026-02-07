@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/jedi4ever/addt/util"
 )
 
 // HandleHistoryPersist configures shell history persistence.
@@ -40,18 +42,18 @@ func (p *DockerProvider) HandleHistoryPersist(enabled bool, projectDir, username
 }
 
 // getProjectHistoryDir returns the history directory for a project
-// Creates ~/.addt/history/<project-hash>/ if it doesn't exist
+// Creates <addt_home>/history/<project-hash>/ if it doesn't exist
 func getProjectHistoryDir(projectDir string) (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("failed to get home dir: %w", err)
+	addtHome := util.GetAddtHome()
+	if addtHome == "" {
+		return "", fmt.Errorf("failed to determine addt home directory")
 	}
 
 	// Create hash of project directory for unique but consistent naming
 	hash := sha256.Sum256([]byte(projectDir))
 	projectHash := hex.EncodeToString(hash[:8]) // Use first 8 bytes (16 hex chars)
 
-	historyDir := filepath.Join(homeDir, ".addt", "history", projectHash)
+	historyDir := filepath.Join(addtHome, "history", projectHash)
 	if err := os.MkdirAll(historyDir, 0700); err != nil {
 		return "", fmt.Errorf("failed to create history dir: %w", err)
 	}

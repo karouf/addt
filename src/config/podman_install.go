@@ -23,11 +23,11 @@ var PodmanDownloadURLs = map[string]string{
 
 // GetBundledBinDir returns the path to bundled binaries directory
 func GetBundledBinDir() string {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
+	addtHome := util.GetAddtHome()
+	if addtHome == "" {
 		return ""
 	}
-	return filepath.Join(homeDir, ".addt", "bin")
+	return filepath.Join(addtHome, "bin")
 }
 
 // GetBundledPodmanPath returns the path to bundled Podman binary

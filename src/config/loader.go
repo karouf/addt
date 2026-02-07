@@ -133,6 +133,18 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 		cfg.SSHAllowedKeys = strings.Split(v, ",")
 	}
 
+	// SSH dir: default ("") -> global -> project -> env
+	cfg.SSHDir = ""
+	if globalCfg.SSH != nil && globalCfg.SSH.Dir != "" {
+		cfg.SSHDir = globalCfg.SSH.Dir
+	}
+	if projectCfg.SSH != nil && projectCfg.SSH.Dir != "" {
+		cfg.SSHDir = projectCfg.SSH.Dir
+	}
+	if v := os.Getenv("ADDT_SSH_DIR"); v != "" {
+		cfg.SSHDir = v
+	}
+
 	// Tmux forward: default (false) -> global -> project -> env
 	cfg.TmuxForward = false
 	if globalCfg.TmuxForward != nil {
@@ -185,6 +197,18 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 	}
 	if v := os.Getenv("ADDT_GPG_ALLOWED_KEY_IDS"); v != "" {
 		cfg.GPGAllowedKeyIDs = strings.Split(v, ",")
+	}
+
+	// GPG dir: default ("") -> global -> project -> env
+	cfg.GPGDir = ""
+	if globalCfg.GPG != nil && globalCfg.GPG.Dir != "" {
+		cfg.GPGDir = globalCfg.GPG.Dir
+	}
+	if projectCfg.GPG != nil && projectCfg.GPG.Dir != "" {
+		cfg.GPGDir = projectCfg.GPG.Dir
+	}
+	if v := os.Getenv("ADDT_GPG_DIR"); v != "" {
+		cfg.GPGDir = v
 	}
 
 	// DinD mode: default -> global -> project -> env

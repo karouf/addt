@@ -50,6 +50,7 @@ type SSHSettings struct {
 	ForwardKeys *bool    `yaml:"forward_keys,omitempty"`
 	ForwardMode string   `yaml:"forward_mode,omitempty"`
 	AllowedKeys []string `yaml:"allowed_keys,omitempty"`
+	Dir         string   `yaml:"dir,omitempty"`
 }
 
 // GitHubSettings holds GitHub token forwarding configuration
@@ -70,6 +71,7 @@ type FirewallSettings struct {
 type GPGSettings struct {
 	Forward       string   `yaml:"forward,omitempty"`         // "proxy", "agent", "keys", or "off"
 	AllowedKeyIDs []string `yaml:"allowed_key_ids,omitempty"` // GPG key IDs allowed
+	Dir           string   `yaml:"dir,omitempty"`
 }
 
 // LogSettings holds logging configuration
@@ -140,8 +142,10 @@ type Config struct {
 	SSHAllowedKeys           []string
 	TmuxForward              bool
 	HistoryPersist           bool     // Persist shell history between sessions (default: false)
+	SSHDir                   string   // SSH directory path (default: ~/.ssh)
 	GPGForward               string   // "proxy", "agent", "keys", or "off"
 	GPGAllowedKeyIDs         []string // GPG key IDs allowed for signing
+	GPGDir                   string   // GPG directory path (default: ~/.gnupg)
 	DockerDindMode           string
 	EnvFileLoad              bool
 	EnvFile                  string

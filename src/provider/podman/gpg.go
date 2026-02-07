@@ -20,7 +20,7 @@ import (
 //   - "" or "off" or "false": No GPG forwarding
 //
 // If allowedKeyIDs is set, proxy mode is automatically enabled
-func (p *PodmanProvider) HandleGPGForwarding(gpgForward, homeDir, username string, allowedKeyIDs []string) []string {
+func (p *PodmanProvider) HandleGPGForwarding(gpgForward, gpgDir, username string, allowedKeyIDs []string) []string {
 	var args []string
 
 	// Normalize boolean-like values
@@ -33,16 +33,16 @@ func (p *PodmanProvider) HandleGPGForwarding(gpgForward, homeDir, username strin
 
 	// If allowed key IDs are specified, use proxy mode
 	if len(allowedKeyIDs) > 0 && (gpgForward == "agent" || gpgForward == "true" || gpgForward == "proxy") {
-		return p.handleGPGProxyForwarding(homeDir, username, allowedKeyIDs)
+		return p.handleGPGProxyForwarding(gpgDir, username, allowedKeyIDs)
 	}
 
 	switch gpgForward {
 	case "proxy":
-		return p.handleGPGProxyForwarding(homeDir, username, nil)
+		return p.handleGPGProxyForwarding(gpgDir, username, nil)
 	case "agent":
-		return p.handleGPGAgentForwarding(homeDir, username)
+		return p.handleGPGAgentForwarding(gpgDir, username)
 	case "keys", "true":
-		return p.handleGPGKeysForwarding(homeDir, username)
+		return p.handleGPGKeysForwarding(gpgDir, username)
 	default:
 		// Unknown mode, treat as disabled
 		return args
@@ -50,10 +50,10 @@ func (p *PodmanProvider) HandleGPGForwarding(gpgForward, homeDir, username strin
 }
 
 // handleGPGProxyForwarding creates a filtering GPG agent proxy
-func (p *PodmanProvider) handleGPGProxyForwarding(homeDir, username string, allowedKeyIDs []string) []string {
+func (p *PodmanProvider) handleGPGProxyForwarding(gpgDir, username string, allowedKeyIDs []string) []string {
 	var args []string
 
-	agentSocket := getGPGAgentSocket(homeDir)
+	agentSocket := getGPGAgentSocket(gpgDir)
 	if agentSocket == "" {
 		fmt.Println("Warning: GPG agent socket not found, cannot create GPG proxy")
 		return args
@@ -62,7 +62,7 @@ func (p *PodmanProvider) handleGPGProxyForwarding(homeDir, username string, allo
 	// On macOS, podman runs in a VM and can't mount Unix sockets via virtiofs.
 	// Use TCP mode: proxy listens on TCP, container connects via socat.
 	if runtime.GOOS == "darwin" {
-		return p.handleGPGProxyForwardingTCP(agentSocket, homeDir, username, allowedKeyIDs)
+		return p.handleGPGProxyForwardingTCP(agentSocket, gpgDir, username, allowedKeyIDs)
 	}
 
 	// Linux: use Unix socket (can be mounted directly)
@@ -81,7 +81,7 @@ func (p *PodmanProvider) handleGPGProxyForwarding(homeDir, username string, allo
 
 	proxyDir := proxy.SocketDir()
 	args = append(args, "-v", fmt.Sprintf("%s:/home/%s/.gnupg/S.gpg-agent", proxy.SocketPath(), username))
-	args = append(args, p.mountSafeGPGFiles(homeDir, username)...)
+	args = append(args, p.mountSafeGPGFiles(gpgDir, username)...)
 	args = append(args, "-e", "GPG_TTY=/dev/console")
 
 	if len(allowedKeyIDs) > 0 {
@@ -95,7 +95,7 @@ func (p *PodmanProvider) handleGPGProxyForwarding(homeDir, username string, allo
 
 // handleGPGProxyForwardingTCP creates a TCP-based GPG agent proxy for macOS.
 // The proxy listens on a TCP port on the host; the container connects via socat.
-func (p *PodmanProvider) handleGPGProxyForwardingTCP(agentSocket, homeDir, username string, allowedKeyIDs []string) []string {
+func (p *PodmanProvider) handleGPGProxyForwardingTCP(agentSocket, gpgDir, username string, allowedKeyIDs []string) []string {
 	var args []string
 
 	proxy, err := security.NewGPGProxyAgentTCP(agentSocket, allowedKeyIDs)
@@ -123,7 +123,7 @@ func (p *PodmanProvider) handleGPGProxyForwardingTCP(agentSocket, homeDir, usern
 	args = append(args, "-e", fmt.Sprintf("ADDT_GPG_PROXY_PORT=%d", proxy.TCPPort()))
 
 	// Mount safe GPG files writable (socat needs to create S.gpg-agent socket inside)
-	args = append(args, p.mountSafeGPGFilesWritable(homeDir, username)...)
+	args = append(args, p.mountSafeGPGFilesWritable(gpgDir, username)...)
 
 	args = append(args, "-e", "GPG_TTY=/dev/console")
 
@@ -137,10 +137,10 @@ func (p *PodmanProvider) handleGPGProxyForwardingTCP(agentSocket, homeDir, usern
 }
 
 // handleGPGAgentForwarding forwards the gpg-agent socket directly
-func (p *PodmanProvider) handleGPGAgentForwarding(homeDir, username string) []string {
+func (p *PodmanProvider) handleGPGAgentForwarding(gpgDir, username string) []string {
 	var args []string
 
-	agentSocket := getGPGAgentSocket(homeDir)
+	agentSocket := getGPGAgentSocket(gpgDir)
 	if agentSocket == "" {
 		fmt.Println("Warning: GPG agent socket not found")
 		return args
@@ -156,7 +156,7 @@ func (p *PodmanProvider) handleGPGAgentForwarding(homeDir, username string) []st
 	args = append(args, "-v", fmt.Sprintf("%s:/home/%s/.gnupg/S.gpg-agent", agentSocket, username))
 
 	// Mount safe GPG files only
-	args = append(args, p.mountSafeGPGFiles(homeDir, username)...)
+	args = append(args, p.mountSafeGPGFiles(gpgDir, username)...)
 
 	// Set GPG_TTY
 	args = append(args, "-e", "GPG_TTY=/dev/console")
@@ -166,17 +166,16 @@ func (p *PodmanProvider) handleGPGAgentForwarding(homeDir, username string) []st
 	return args
 }
 
-// handleGPGKeysForwarding mounts ~/.gnupg read-only (legacy mode)
-func (p *PodmanProvider) handleGPGKeysForwarding(homeDir, username string) []string {
+// handleGPGKeysForwarding mounts the GPG directory read-only (legacy mode)
+func (p *PodmanProvider) handleGPGKeysForwarding(gpgDir, username string) []string {
 	var args []string
 
-	gnupgDir := filepath.Join(homeDir, ".gnupg")
-	if _, err := os.Stat(gnupgDir); err != nil {
+	if _, err := os.Stat(gpgDir); err != nil {
 		return args
 	}
 
 	// Mount entire directory read-only
-	args = append(args, "-v", fmt.Sprintf("%s:/home/%s/.gnupg:ro", gnupgDir, username))
+	args = append(args, "-v", fmt.Sprintf("%s:/home/%s/.gnupg:ro", gpgDir, username))
 
 	// Set GPG_TTY
 	args = append(args, "-e", "GPG_TTY=/dev/console")
@@ -186,11 +185,10 @@ func (p *PodmanProvider) handleGPGKeysForwarding(homeDir, username string) []str
 
 // mountSafeGPGFiles creates a temp directory with only safe GPG files
 // and returns mount arguments
-func (p *PodmanProvider) mountSafeGPGFiles(homeDir, username string) []string {
+func (p *PodmanProvider) mountSafeGPGFiles(gpgDir, username string) []string {
 	var args []string
 
-	gnupgDir := filepath.Join(homeDir, ".gnupg")
-	if _, err := os.Stat(gnupgDir); err != nil {
+	if _, err := os.Stat(gpgDir); err != nil {
 		return args
 	}
 
@@ -225,7 +223,7 @@ func (p *PodmanProvider) mountSafeGPGFiles(homeDir, username string) []string {
 	}
 
 	for _, file := range safeFiles {
-		src := filepath.Join(gnupgDir, file)
+		src := filepath.Join(gpgDir, file)
 		dst := filepath.Join(tmpDir, file)
 
 		info, err := os.Stat(src)
@@ -249,11 +247,10 @@ func (p *PodmanProvider) mountSafeGPGFiles(homeDir, username string) []string {
 
 // mountSafeGPGFilesWritable is like mountSafeGPGFiles but mounts writable.
 // Needed for TCP mode where socat creates the S.gpg-agent socket inside the directory.
-func (p *PodmanProvider) mountSafeGPGFilesWritable(homeDir, username string) []string {
+func (p *PodmanProvider) mountSafeGPGFilesWritable(gpgDir, username string) []string {
 	var args []string
 
-	gnupgDir := filepath.Join(homeDir, ".gnupg")
-	if _, err := os.Stat(gnupgDir); err != nil {
+	if _, err := os.Stat(gpgDir); err != nil {
 		return args
 	}
 
@@ -280,7 +277,7 @@ func (p *PodmanProvider) mountSafeGPGFilesWritable(homeDir, username string) []s
 	}
 
 	for _, file := range safeFiles {
-		src := filepath.Join(gnupgDir, file)
+		src := filepath.Join(gpgDir, file)
 		dst := filepath.Join(tmpDir, file)
 		info, err := os.Stat(src)
 		if err != nil {
@@ -300,7 +297,7 @@ func (p *PodmanProvider) mountSafeGPGFilesWritable(homeDir, username string) []s
 }
 
 // getGPGAgentSocket returns the path to the gpg-agent socket
-func getGPGAgentSocket(homeDir string) string {
+func getGPGAgentSocket(gpgDir string) string {
 	// Try gpgconf first (most reliable)
 	cmd := exec.Command("gpgconf", "--list-dirs", "agent-socket")
 	output, err := cmd.Output()
@@ -313,7 +310,7 @@ func getGPGAgentSocket(homeDir string) string {
 
 	// Fall back to standard locations
 	standardPaths := []string{
-		filepath.Join(homeDir, ".gnupg", "S.gpg-agent"),
+		filepath.Join(gpgDir, "S.gpg-agent"),
 		"/run/user/" + fmt.Sprint(os.Getuid()) + "/gnupg/S.gpg-agent",
 	}
 

@@ -143,6 +143,9 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 	// Load configuration
 	cfg := config.LoadConfig(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion, defaultPortRangeStart)
 
+	// Resolve ~ in LogDir
+	cfg.LogDir = util.ExpandTilde(cfg.LogDir)
+
 	// Initialize logger
 	util.InitLoggerFull(cfg.LogFile, cfg.LogDir, cfg.LogOutput, cfg.LogEnabled, cfg.LogLevel, cfg.LogModules, cfg.LogRotate, cfg.LogMaxSize, cfg.LogMaxFiles)
 	logger := util.Log("root")
@@ -168,8 +171,10 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 		SSHForwardKeys:          cfg.SSHForwardKeys,
 		SSHForwardMode:          cfg.SSHForwardMode,
 		SSHAllowedKeys:          cfg.SSHAllowedKeys,
+		SSHDir:                  cfg.SSHDir,
 		GPGForward:              cfg.GPGForward,
 		GPGAllowedKeyIDs:        cfg.GPGAllowedKeyIDs,
+		GPGDir:                  cfg.GPGDir,
 		TmuxForward:             cfg.TmuxForward,
 		HistoryPersist:          cfg.HistoryPersist,
 		DockerDindMode:          cfg.DockerDindMode,

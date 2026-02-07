@@ -7,7 +7,7 @@ import (
 )
 
 // handleSSHAgentForwarding forwards the SSH agent socket into the container
-func (p *PodmanProvider) handleSSHAgentForwarding(homeDir, username string) []string {
+func (p *PodmanProvider) handleSSHAgentForwarding(sshDir, username string) []string {
 	var args []string
 
 	sshAuthSock := os.Getenv("SSH_AUTH_SOCK")
@@ -31,7 +31,7 @@ func (p *PodmanProvider) handleSSHAgentForwarding(homeDir, username string) []st
 	args = append(args, "-e", "SSH_AUTH_SOCK=/ssh-agent")
 
 	// Mount safe SSH files only (config, known_hosts, public keys)
-	args = append(args, p.mountSafeSSHFiles(homeDir, username)...)
+	args = append(args, p.mountSafeSSHFiles(sshDir, username)...)
 
 	return args
 }

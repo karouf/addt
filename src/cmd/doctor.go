@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/jedi4ever/addt/config"
+	"github.com/jedi4ever/addt/util"
 )
 
 // DoctorCheck represents a single health check result
@@ -358,14 +359,14 @@ func checkDiskSpace() DoctorCheck {
 func checkGlobalConfig() DoctorCheck {
 	check := DoctorCheck{Name: "Global Config"}
 
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
+	addtHome := util.GetAddtHome()
+	if addtHome == "" {
 		check.Status = "warn"
-		check.Message = "could not determine home directory"
+		check.Message = "could not determine addt home directory"
 		return check
 	}
 
-	configPath := filepath.Join(homeDir, ".addt", "config.yaml")
+	configPath := filepath.Join(addtHome, "config.yaml")
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		check.Status = "ok"
 		check.Message = "not created (using defaults)"

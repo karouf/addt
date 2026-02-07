@@ -189,6 +189,35 @@ ssh:
 	}
 }
 
+func TestSSH_Addt_CustomDir(t *testing.T) {
+	_, cleanup := setupAddtDir(t, "", `
+ssh:
+  forward_keys: true
+  dir: "/opt/custom/.ssh"
+`)
+	defer cleanup()
+
+	output := captureOutput(t, func() {
+		configcmd.HandleCommand([]string{"list"})
+	})
+
+	if !strings.Contains(output, "ssh.dir") {
+		t.Errorf("Expected output to contain ssh.dir, got:\n%s", output)
+	}
+	if !strings.Contains(output, "/opt/custom/.ssh") {
+		t.Errorf("Expected output to contain '/opt/custom/.ssh', got:\n%s", output)
+	}
+
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "ssh.dir") {
+			if !strings.Contains(line, "project") {
+				t.Errorf("Expected ssh.dir source to be project, got line: %s", line)
+			}
+		}
+	}
+}
+
 func TestSSH_Addt_GithubConnect(t *testing.T) {
 	providers := requireProviders(t)
 	requireSSHAgent(t)
