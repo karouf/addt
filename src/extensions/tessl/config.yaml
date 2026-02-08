@@ -8,7 +8,7 @@ env_vars:
   - TESSL_TOKEN
 auto_mount: false
 dependencies:
-  - claude
+  - codex
 mounts:
   - source: ~/.tessl
     target: /home/addt/.tessl
