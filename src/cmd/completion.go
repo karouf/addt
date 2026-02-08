@@ -100,7 +100,7 @@ _addt_completions() {
     fi
 
     local commands="run update build shell containers config profile extensions firewall completion doctor version cli"
-    local config_cmds="list get set unset extension path"
+    local config_cmds="list get set unset audit extension path"
     local profile_cmds="list show apply"
     local profile_names="%s"
     local containers_cmds="list clean"
@@ -210,6 +210,7 @@ _addt() {
         'get:Get a configuration value'
         'set:Set a configuration value'
         'unset:Remove a configuration value'
+        'audit:Security audit of effective configuration'
         'extension:Manage extension configuration'
         'path:Show config file paths'
     )
@@ -360,6 +361,7 @@ func fishCompletion() string {
 	sb.WriteString("complete -c addt -n '__fish_seen_subcommand_from config' -a 'set' -d 'Set a configuration value'\n")
 	sb.WriteString("complete -c addt -n '__fish_seen_subcommand_from config' -a 'unset' -d 'Remove a configuration value'\n")
 	sb.WriteString("complete -c addt -n '__fish_seen_subcommand_from config' -a 'extension' -d 'Manage extension configuration'\n")
+	sb.WriteString("complete -c addt -n '__fish_seen_subcommand_from config' -a 'audit' -d 'Security audit of effective configuration'\n")
 	sb.WriteString("complete -c addt -n '__fish_seen_subcommand_from config' -a 'path' -d 'Show config file paths'\n")
 	sb.WriteString("\n")
 

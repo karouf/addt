@@ -89,6 +89,8 @@ func HandleCommand(args []string) {
 		} else {
 			unsetProject(args[1])
 		}
+	case "audit":
+		auditCommand()
 	case "extension":
 		handleExtension(args[1:], useGlobal)
 	case "path":
@@ -201,6 +203,7 @@ func printHelp() {
 	fmt.Println("  extension <name> get <key>              Get extension config value")
 	fmt.Println("  extension <name> set <key> <value>      Set extension config value")
 	fmt.Println("  extension <name> unset <key>            Remove extension config value")
+	fmt.Println("  audit                                   Security audit of effective config")
 	fmt.Println("  path                                    Show config file paths")
 	fmt.Println()
 	fmt.Println("Flags:")

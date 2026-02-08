@@ -22,7 +22,7 @@ Commands:
   addt containers [list|stop|rm]     Manage containers
   addt firewall [list|add|rm|reset]  Manage firewall
   addt extensions [list|info|new]    Manage extensions
-  addt config [list|set|get|unset] [-g]   Manage configuration
+  addt config [list|set|get|unset|audit] [-g]  Manage configuration
   addt config extension <name> [list|set|get|unset]  Extension config
   addt profile [list|show|apply]     Apply configuration presets
   addt completion [bash|zsh|fish]    Generate shell completions
@@ -55,7 +55,7 @@ Container management (via agent):
   <agent> addt containers [list|stop|rm]     Manage persistent containers
   <agent> addt firewall [list|add|rm|reset]  Manage network firewall
   <agent> addt extensions [list|info|new]    Manage extensions
-  <agent> addt config [list|set|get|unset] [-g]   Manage configuration
+  <agent> addt config [list|set|get|unset|audit] [-g]  Manage configuration
   <agent> addt config extension <name> [list|set|get|unset]  Extension config
   <agent> addt profile [list|show|apply]     Apply configuration presets
   <agent> addt cli [update]                  Manage addt CLI

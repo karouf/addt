@@ -4,8 +4,20 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/muesli/termenv"
+
 	"github.com/jedi4ever/addt/provider"
 )
+
+var colorProfile = termenv.ColorProfile()
+
+func greenText(s string) string {
+	return termenv.String(s).Foreground(colorProfile.Color("2")).String()
+}
+func yellowText(s string) string {
+	return termenv.String(s).Foreground(colorProfile.Color("3")).String()
+}
+func boldText(s string) string { return termenv.String(s).Bold().String() }
 
 // SecurityPostureLine builds a compact security posture summary from the config.
 // Returns the posture string (without prefix icon) and whether all settings are locked down.
@@ -97,22 +109,24 @@ func DisplayStatus(p provider.Provider, cfg *provider.Config, envName string) {
 	}
 
 	// Line 1: experimental warning
-	fmt.Printf("⚠ addt:%s is experimental - things are not perfect yet\n", extension)
+	fmt.Printf("%s addt:%s is experimental - things are not perfect yet\n",
+		yellowText("⚠"), extension)
 
 	// Line 2: provider + features status
-	fmt.Printf("✓ %s\n", status)
+	fmt.Printf("%s %s\n", greenText("✓"), status)
 
 	// Line 3: security posture
 	posture, allLocked := SecurityPostureLine(cfg)
 	if allLocked {
-		fmt.Printf("✓ %s\n", posture)
+		fmt.Printf("%s %s\n", greenText("✓"), greenText(posture))
 	} else {
-		fmt.Printf("⚠ %s\n", posture)
+		fmt.Printf("%s %s\n", yellowText("⚠"), yellowText(posture))
 	}
 
 	// Line 4: yolo warning (conditional, at end)
 	if cfg.Security.Yolo {
-		fmt.Printf("⚠ security.yolo is enabled - extensions will run with --yolo flag\n")
+		fmt.Printf("%s %s\n", yellowText("⚠"),
+			boldText(yellowText("security.yolo is enabled - extensions will run with --yolo flag")))
 	}
 }
 
