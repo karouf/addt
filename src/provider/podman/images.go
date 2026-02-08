@@ -3,11 +3,15 @@ package podman
 import (
 	"crypto/sha256"
 	"fmt"
+	"hash"
 	"io/fs"
+	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"strings"
 
+	"github.com/jedi4ever/addt/extensions"
 	"github.com/jedi4ever/addt/util"
 )
 
@@ -58,6 +62,30 @@ func (p *PodmanProvider) assetsHash() string {
 	return fmt.Sprintf("%x", h.Sum(nil))[:8]
 }
 
+// hashDir walks a filesystem directory and hashes each file's relative path and content.
+// Non-existent or empty directories are silently skipped.
+func hashDir(h hash.Hash, dir string, logger *util.ModuleLogger, fileCount *int, totalBytes *int) {
+	if dir == "" {
+		return
+	}
+	filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return nil
+		}
+		relPath, _ := filepath.Rel(dir, path)
+		h.Write([]byte(relPath))
+		h.Write(content)
+		*fileCount++
+		*totalBytes += len(content)
+		logger.Debugf("  hashing: %s (%d bytes)", relPath, len(content))
+		return nil
+	})
+}
+
 // extAssetsHash returns a short hash of the extension layer assets
 // (Dockerfile, install.sh, extensions/) so changes trigger an extension image rebuild
 func (p *PodmanProvider) extAssetsHash() string {
@@ -82,6 +110,13 @@ func (p *PodmanProvider) extAssetsHash() string {
 		logger.Debugf("  hashing: %s (%d bytes)", path, len(content))
 		return nil
 	})
+
+	// Hash local extensions (~/.addt/extensions/) so changes trigger rebuild
+	hashDir(h, extensions.GetLocalExtensionsDir(), logger, &fileCount, &totalBytes)
+
+	// Hash extra extensions (ADDT_EXTENSIONS_DIR) so changes trigger rebuild
+	hashDir(h, extensions.GetExtraExtensionsDir(), logger, &fileCount, &totalBytes)
+
 	hash := fmt.Sprintf("%x", h.Sum(nil))[:8]
 	logger.Debugf("extAssetsHash: %d files, %d bytes total -> %s", fileCount, totalBytes, hash)
 	return hash
