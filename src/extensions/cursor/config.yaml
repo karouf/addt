@@ -3,6 +3,9 @@ description: Cursor CLI Agent - AI-powered code editor agent
 entrypoint: cursor
 default_version: latest
 dependencies: []
+env_vars:
+  - CURSOR_API_KEY
+auto_mount: false
 mounts:
   - source: ~/.cursor
     target: /home/addt/.cursor
