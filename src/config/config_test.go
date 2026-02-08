@@ -325,7 +325,7 @@ func TestLoadConfig_ExtensionConfigAutomountPrecedence(t *testing.T) {
 	// Global: automount=true
 	writeGlobalConfig(t, globalDir, &GlobalConfig{
 		Extensions: map[string]*ExtensionSettings{
-			"claude": {Automount: &trueVal},
+			"claude": {Config: &ConfigSettings{Automount: &trueVal}},
 		},
 	})
 	cfg := LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
@@ -336,7 +336,7 @@ func TestLoadConfig_ExtensionConfigAutomountPrecedence(t *testing.T) {
 	// Project: automount=false
 	writeProjectConfig(t, projectDir, &GlobalConfig{
 		Extensions: map[string]*ExtensionSettings{
-			"claude": {Automount: &falseVal},
+			"claude": {Config: &ConfigSettings{Automount: &falseVal}},
 		},
 	})
 	cfg = LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)

@@ -3,6 +3,7 @@ package core
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/jedi4ever/addt/provider"
 	"github.com/jedi4ever/addt/util"
@@ -76,20 +77,18 @@ func BuildRunOptions(p provider.Provider, cfg *provider.Config, name string, arg
 		optionsLogger.Debug("Command logging disabled")
 	}
 
-	// Add env file path if exists and loading is enabled
+	// Load env file vars directly into spec.Env if enabled
 	if cfg.EnvFileLoad {
-		addEnvFilePath(spec, cfg, cwd)
-		if spec.Env["ADDT_ENV_FILE"] != "" {
-			optionsLogger.Debugf("Env file found: %s", spec.Env["ADDT_ENV_FILE"])
-		}
+		loadEnvFileVars(spec, cfg, cwd)
 	}
 
 	optionsLogger.Debugf("BuildRunOptions completed: spec.Args=%v, spec.Env count=%d", spec.Args, len(spec.Env))
 	return spec
 }
 
-// addEnvFilePath adds the env file path to the spec if it exists
-func addEnvFilePath(spec *provider.RunSpec, cfg *provider.Config, cwd string) {
+// loadEnvFileVars reads the env file and adds its variables directly to spec.Env.
+// This ensures env file vars work regardless of IsolateSecrets mode.
+func loadEnvFileVars(spec *provider.RunSpec, cfg *provider.Config, cwd string) {
 	envFilePath := cfg.EnvFile
 	if envFilePath == "" {
 		envFilePath = ".env"
@@ -97,7 +96,54 @@ func addEnvFilePath(spec *provider.RunSpec, cfg *provider.Config, cwd string) {
 	if !filepath.IsAbs(envFilePath) {
 		envFilePath = filepath.Join(cwd, envFilePath)
 	}
-	if info, err := os.Stat(envFilePath); err == nil && !info.IsDir() {
-		spec.Env["ADDT_ENV_FILE"] = envFilePath
+	info, err := os.Stat(envFilePath)
+	if err != nil || info.IsDir() {
+		return
 	}
+
+	vars, err := parseEnvFile(envFilePath)
+	if err != nil {
+		optionsLogger.Debugf("Failed to parse env file %s: %v", envFilePath, err)
+		return
+	}
+
+	for k, v := range vars {
+		spec.Env[k] = v
+	}
+	spec.Env["ADDT_ENV_FILE"] = envFilePath
+	optionsLogger.Debugf("Loaded %d vars from env file: %s", len(vars), envFilePath)
+}
+
+// parseEnvFile reads a .env file and returns key=value pairs.
+// Supports comments (#), empty lines, and simple KEY=VALUE format.
+func parseEnvFile(path string) (map[string]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	vars := make(map[string]string)
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, value, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+		// Strip surrounding quotes
+		if len(value) >= 2 {
+			if (value[0] == '"' && value[len(value)-1] == '"') ||
+				(value[0] == '\'' && value[len(value)-1] == '\'') {
+				value = value[1 : len(value)-1]
+			}
+		}
+		if key != "" {
+			vars[key] = value
+		}
+	}
+	return vars, nil
 }

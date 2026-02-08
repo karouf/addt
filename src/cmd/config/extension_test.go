@@ -15,8 +15,8 @@ func TestExtensionSettings(t *testing.T) {
 	cfg := &cfgtypes.GlobalConfig{
 		Extensions: map[string]*cfgtypes.ExtensionSettings{
 			"claude": {
-				Version:   "1.0.5",
-				Automount: &automount,
+				Version: "1.0.5",
+				Config:  &cfgtypes.ConfigSettings{Automount: &automount},
 			},
 		},
 	}
@@ -44,8 +44,8 @@ func TestExtensionSettings(t *testing.T) {
 	if claudeCfg.Version != "1.0.5" {
 		t.Errorf("claude.Version = %q, want %q", claudeCfg.Version, "1.0.5")
 	}
-	if claudeCfg.Automount == nil || *claudeCfg.Automount != true {
-		t.Errorf("claude.Automount = %v, want true", claudeCfg.Automount)
+	if claudeCfg.Config == nil || claudeCfg.Config.Automount == nil || *claudeCfg.Config.Automount != true {
+		t.Errorf("claude.Config.Automount = %v, want true", claudeCfg.Config)
 	}
 }
 
@@ -58,7 +58,7 @@ func TestExtensionSettingsInProjectConfig(t *testing.T) {
 	cfg := &cfgtypes.GlobalConfig{
 		Extensions: map[string]*cfgtypes.ExtensionSettings{
 			"claude": {
-				Automount: &automount,
+				Config: &cfgtypes.ConfigSettings{Automount: &automount},
 			},
 		},
 	}
@@ -83,7 +83,7 @@ func TestExtensionSettingsInProjectConfig(t *testing.T) {
 		t.Fatal("claude extension config is nil")
 	}
 
-	if claudeCfg.Automount == nil || *claudeCfg.Automount != false {
-		t.Errorf("claude.Automount = %v, want false", claudeCfg.Automount)
+	if claudeCfg.Config == nil || claudeCfg.Config.Automount == nil || *claudeCfg.Config.Automount != false {
+		t.Errorf("claude.Config.Automount = %v, want false", claudeCfg.Config)
 	}
 }

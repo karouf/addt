@@ -38,6 +38,23 @@ var PodmanInitFirewall []byte
 //go:embed podman/install.sh
 var PodmanInstallSh []byte
 
+// OrbStack provider assets
+//
+//go:embed orbstack/Dockerfile
+var OrbStackDockerfile []byte
+
+//go:embed orbstack/Dockerfile.base
+var OrbStackDockerfileBase []byte
+
+//go:embed orbstack/orbstack-entrypoint.sh
+var OrbStackEntrypoint []byte
+
+//go:embed orbstack/init-firewall.sh
+var OrbStackInitFirewall []byte
+
+//go:embed orbstack/install.sh
+var OrbStackInstallSh []byte
+
 // Daytona provider assets
 //
 //go:embed daytona/Dockerfile

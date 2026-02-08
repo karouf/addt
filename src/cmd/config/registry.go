@@ -12,6 +12,9 @@ import (
 //go:embed config_keys.yaml
 var keysYAML []byte
 
+//go:embed config_extension_keys.yaml
+var extensionKeysYAML []byte
+
 // KeyDef holds metadata for a single config key, loaded from config_keys.yaml
 type KeyDef struct {
 	Key         string `yaml:"key"`
@@ -27,8 +30,10 @@ type keysFile struct {
 }
 
 var (
-	allKeyDefs []KeyDef
-	keyDefMap  map[string]*KeyDef
+	allKeyDefs          []KeyDef
+	keyDefMap           map[string]*KeyDef
+	allExtensionKeyDefs []KeyDef
+	extensionKeyDefMap  map[string]*KeyDef
 )
 
 func init() {
@@ -48,6 +53,17 @@ func init() {
 		if _, ok := resolveField(cfg, kd.Key, false); !ok {
 			panic(fmt.Sprintf("config: key %q does not resolve against GlobalConfig struct", kd.Key))
 		}
+	}
+
+	// Load extension keys
+	var ekf keysFile
+	if err := yaml.Unmarshal(extensionKeysYAML, &ekf); err != nil {
+		panic(fmt.Sprintf("config: failed to parse config_extension_keys.yaml: %v", err))
+	}
+	allExtensionKeyDefs = ekf.Keys
+	extensionKeyDefMap = make(map[string]*KeyDef, len(allExtensionKeyDefs))
+	for i := range allExtensionKeyDefs {
+		extensionKeyDefMap[allExtensionKeyDefs[i].Key] = &allExtensionKeyDefs[i]
 	}
 }
 
@@ -117,4 +133,35 @@ func GetKeyDef(key string) *KeyDef {
 // GetAllKeyDefs returns all key definitions (for audit, display, etc.)
 func GetAllKeyDefs() []KeyDef {
 	return allKeyDefs
+}
+
+// registryGetExtensionKeys returns all extension keys as KeyInfo, sorted alphabetically
+func registryGetExtensionKeys() []KeyInfo {
+	keys := make([]KeyInfo, len(allExtensionKeyDefs))
+	for i, kd := range allExtensionKeyDefs {
+		keys[i] = KeyInfo{
+			Key:         kd.Key,
+			Description: kd.Description,
+			Type:        kd.Type,
+			EnvVar:      kd.EnvVar,
+		}
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i].Key < keys[j].Key
+	})
+	return keys
+}
+
+// GetExtensionKeyDef returns the raw KeyDef for an extension key, or nil if not found.
+func GetExtensionKeyDef(key string) *KeyDef {
+	kd, ok := extensionKeyDefMap[key]
+	if !ok {
+		return nil
+	}
+	return kd
+}
+
+// GetAllExtensionKeyDefs returns all extension key definitions.
+func GetAllExtensionKeyDefs() []KeyDef {
+	return allExtensionKeyDefs
 }

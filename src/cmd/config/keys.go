@@ -52,14 +52,7 @@ func UnsetValue(cfg *cfgtypes.GlobalConfig, key string) {
 
 // GetExtensionKeys returns all valid extension config keys with their metadata
 func GetExtensionKeys() []KeyInfo {
-	return []KeyInfo{
-		{Key: "version", Description: "Extension version", Type: "string", EnvVar: "ADDT_%s_VERSION"},
-		{Key: "config.automount", Description: "Auto-mount extension config directories", Type: "bool", EnvVar: "ADDT_%s_CONFIG_AUTOMOUNT"},
-		{Key: "config.readonly", Description: "Mount extension config directories as read-only", Type: "bool", EnvVar: "ADDT_%s_CONFIG_READONLY"},
-		{Key: "workdir.autotrust", Description: "Trust the /workspace directory on first launch", Type: "bool", EnvVar: "ADDT_%s_WORKDIR_AUTOTRUST"},
-		{Key: "auth.autologin", Description: "Automatically handle authentication on first launch", Type: "bool", EnvVar: "ADDT_%s_AUTH_AUTOLOGIN"},
-		{Key: "auth.method", Description: "Authentication method: native, env, auto (default: auto)", Type: "string", EnvVar: "ADDT_%s_AUTH_METHOD"},
-	}
+	return registryGetExtensionKeys()
 }
 
 // GetExtensionFlagKeys returns dynamic extension keys derived from an extension's config.yaml flags

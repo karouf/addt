@@ -66,23 +66,25 @@ func listExtension(extName string, useGlobal, verbose bool) {
 			case "version":
 				configValue = extCfg.Version
 			case "config.automount":
-				if extCfg.Automount != nil {
-					configValue = fmt.Sprintf("%v", *extCfg.Automount)
+				if extCfg.Config != nil && extCfg.Config.Automount != nil {
+					configValue = fmt.Sprintf("%v", *extCfg.Config.Automount)
 				}
 			case "config.readonly":
-				if extCfg.Readonly != nil {
-					configValue = fmt.Sprintf("%v", *extCfg.Readonly)
+				if extCfg.Config != nil && extCfg.Config.Readonly != nil {
+					configValue = fmt.Sprintf("%v", *extCfg.Config.Readonly)
 				}
 			case "workdir.autotrust":
-				if extCfg.Autotrust != nil {
-					configValue = fmt.Sprintf("%v", *extCfg.Autotrust)
+				if extCfg.Workdir != nil && extCfg.Workdir.Autotrust != nil {
+					configValue = fmt.Sprintf("%v", *extCfg.Workdir.Autotrust)
 				}
 			case "auth.autologin":
-				if extCfg.Autologin != nil {
-					configValue = fmt.Sprintf("%v", *extCfg.Autologin)
+				if extCfg.Auth != nil && extCfg.Auth.Autologin != nil {
+					configValue = fmt.Sprintf("%v", *extCfg.Auth.Autologin)
 				}
 			case "auth.method":
-				configValue = extCfg.AuthMethod
+				if extCfg.Auth != nil {
+					configValue = extCfg.Auth.Method
+				}
 			default:
 				// Check flag keys
 				if IsFlagKey(k.Key, extName) && extCfg.Flags != nil {
@@ -188,23 +190,25 @@ func getExtension(extName, key string, useGlobal bool) {
 	case "version":
 		val = extCfg.Version
 	case "config.automount":
-		if extCfg.Automount != nil {
-			val = fmt.Sprintf("%v", *extCfg.Automount)
+		if extCfg.Config != nil && extCfg.Config.Automount != nil {
+			val = fmt.Sprintf("%v", *extCfg.Config.Automount)
 		}
 	case "config.readonly":
-		if extCfg.Readonly != nil {
-			val = fmt.Sprintf("%v", *extCfg.Readonly)
+		if extCfg.Config != nil && extCfg.Config.Readonly != nil {
+			val = fmt.Sprintf("%v", *extCfg.Config.Readonly)
 		}
 	case "workdir.autotrust":
-		if extCfg.Autotrust != nil {
-			val = fmt.Sprintf("%v", *extCfg.Autotrust)
+		if extCfg.Workdir != nil && extCfg.Workdir.Autotrust != nil {
+			val = fmt.Sprintf("%v", *extCfg.Workdir.Autotrust)
 		}
 	case "auth.autologin":
-		if extCfg.Autologin != nil {
-			val = fmt.Sprintf("%v", *extCfg.Autologin)
+		if extCfg.Auth != nil && extCfg.Auth.Autologin != nil {
+			val = fmt.Sprintf("%v", *extCfg.Auth.Autologin)
 		}
 	case "auth.method":
-		val = extCfg.AuthMethod
+		if extCfg.Auth != nil {
+			val = extCfg.Auth.Method
+		}
 	default:
 		// Check flag keys
 		if IsFlagKey(key, extName) && extCfg.Flags != nil {
@@ -264,19 +268,34 @@ func setExtension(extName, key, value string, useGlobal bool) {
 	case "version":
 		extCfg.Version = value
 	case "config.automount":
+		if extCfg.Config == nil {
+			extCfg.Config = &cfgtypes.ConfigSettings{}
+		}
 		b := value == "true"
-		extCfg.Automount = &b
+		extCfg.Config.Automount = &b
 	case "config.readonly":
+		if extCfg.Config == nil {
+			extCfg.Config = &cfgtypes.ConfigSettings{}
+		}
 		b := value == "true"
-		extCfg.Readonly = &b
+		extCfg.Config.Readonly = &b
 	case "workdir.autotrust":
+		if extCfg.Workdir == nil {
+			extCfg.Workdir = &cfgtypes.ExtensionWorkdirSettings{}
+		}
 		b := value == "true"
-		extCfg.Autotrust = &b
+		extCfg.Workdir.Autotrust = &b
 	case "auth.autologin":
+		if extCfg.Auth == nil {
+			extCfg.Auth = &cfgtypes.AuthSettings{}
+		}
 		b := value == "true"
-		extCfg.Autologin = &b
+		extCfg.Auth.Autologin = &b
 	case "auth.method":
-		extCfg.AuthMethod = value
+		if extCfg.Auth == nil {
+			extCfg.Auth = &cfgtypes.AuthSettings{}
+		}
+		extCfg.Auth.Method = value
 	default:
 		// Handle flag keys
 		if IsFlagKey(key, extName) {
@@ -338,15 +357,25 @@ func unsetExtension(extName, key string, useGlobal bool) {
 	case "version":
 		extCfg.Version = ""
 	case "config.automount":
-		extCfg.Automount = nil
+		if extCfg.Config != nil {
+			extCfg.Config.Automount = nil
+		}
 	case "config.readonly":
-		extCfg.Readonly = nil
+		if extCfg.Config != nil {
+			extCfg.Config.Readonly = nil
+		}
 	case "workdir.autotrust":
-		extCfg.Autotrust = nil
+		if extCfg.Workdir != nil {
+			extCfg.Workdir.Autotrust = nil
+		}
 	case "auth.autologin":
-		extCfg.Autologin = nil
+		if extCfg.Auth != nil {
+			extCfg.Auth.Autologin = nil
+		}
 	case "auth.method":
-		extCfg.AuthMethod = ""
+		if extCfg.Auth != nil {
+			extCfg.Auth.Method = ""
+		}
 	default:
 		// Handle flag keys
 		if IsFlagKey(key, extName) && extCfg.Flags != nil {
@@ -358,7 +387,7 @@ func unsetExtension(extName, key string, useGlobal bool) {
 	}
 
 	// Clean up empty extension config
-	if extCfg.Version == "" && extCfg.Automount == nil && extCfg.Readonly == nil && extCfg.Autotrust == nil && extCfg.Autologin == nil && extCfg.AuthMethod == "" && len(extCfg.Flags) == 0 {
+	if isExtensionSettingsEmpty(extCfg) {
 		delete(cfg.Extensions, extName)
 	}
 
@@ -379,4 +408,21 @@ func unsetExtension(extName, key string, useGlobal bool) {
 		}
 	}
 	fmt.Printf("Unset %s.%s (%s)\n", extName, key, scope)
+}
+
+// isExtensionSettingsEmpty returns true if all fields are zero/nil
+func isExtensionSettingsEmpty(e *cfgtypes.ExtensionSettings) bool {
+	if e.Version != "" || len(e.Flags) > 0 || len(e.FirewallAllowed) > 0 || len(e.FirewallDenied) > 0 {
+		return false
+	}
+	if e.Config != nil && (e.Config.Automount != nil || e.Config.Readonly != nil) {
+		return false
+	}
+	if e.Workdir != nil && e.Workdir.Autotrust != nil {
+		return false
+	}
+	if e.Auth != nil && (e.Auth.Autologin != nil || e.Auth.Method != "") {
+		return false
+	}
+	return true
 }

@@ -1,0 +1,42 @@
+keys:
+  - key: version
+    description: "Extension version"
+    type: string
+    env_var: "ADDT_%s_VERSION"
+    default: ""
+    namespace: general
+
+  - key: config.automount
+    description: "Auto-mount extension config directories"
+    type: bool
+    env_var: "ADDT_%s_CONFIG_AUTOMOUNT"
+    default: "false"
+    namespace: config
+
+  - key: config.readonly
+    description: "Mount extension config directories as read-only"
+    type: bool
+    env_var: "ADDT_%s_CONFIG_READONLY"
+    default: "false"
+    namespace: config
+
+  - key: workdir.autotrust
+    description: "Trust the /workspace directory on first launch"
+    type: bool
+    env_var: "ADDT_%s_WORKDIR_AUTOTRUST"
+    default: "true"
+    namespace: workdir
+
+  - key: auth.autologin
+    description: "Automatically handle authentication on first launch"
+    type: bool
+    env_var: "ADDT_%s_AUTH_AUTOLOGIN"
+    default: "true"
+    namespace: auth
+
+  - key: auth.method
+    description: "Authentication method: native, env, auto"
+    type: string
+    env_var: "ADDT_%s_AUTH_METHOD"
+    default: "auto"
+    namespace: auth

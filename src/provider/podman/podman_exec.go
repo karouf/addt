@@ -131,11 +131,8 @@ func (p *PodmanProvider) addContainerVolumesAndEnv(podmanArgs []string, spec *pr
 		}
 	}
 
-	// Add env file if exists (skip when isolate_secrets is on — values are
-	// already in spec.Env and will go through the secrets file instead)
-	if spec.Env["ADDT_ENV_FILE"] != "" && !p.config.Security.IsolateSecrets {
-		podmanArgs = append(podmanArgs, "--env-file", spec.Env["ADDT_ENV_FILE"])
-	}
+	// Env file vars are loaded into spec.Env by BuildRunOptions (see core/options.go)
+	// so they go through the same -e mechanism as other env vars.
 
 	// SSH forwarding
 	sshDir := p.config.SSHDir
@@ -353,13 +350,15 @@ func (p *PodmanProvider) Run(spec *provider.RunSpec) error {
 func (p *PodmanProvider) runPersistent(baseArgs []string, spec *provider.RunSpec, secretsJSON string) error {
 	// Strip interactive/init flags — not needed for detached sleep process
 	var runArgs []string
-	interactive := false
+	needsTTY := false
+	needsStdin := false
 	for _, arg := range baseArgs {
 		switch arg {
 		case "-it":
-			interactive = true
+			needsTTY = true
+			needsStdin = true
 		case "-i":
-			interactive = true
+			needsStdin = true
 		case "-t", "--init":
 			// not needed for detached sleep process
 		default:
@@ -389,9 +388,9 @@ func (p *PodmanProvider) runPersistent(baseArgs []string, spec *provider.RunSpec
 
 	// Exec entrypoint — output goes directly to terminal
 	execArgs := []string{"exec"}
-	if interactive {
+	if needsTTY {
 		execArgs = append(execArgs, "-it")
-	} else {
+	} else if needsStdin {
 		execArgs = append(execArgs, "-i")
 	}
 	execArgs = append(execArgs, spec.Name, "/usr/local/bin/podman-entrypoint.sh")
@@ -408,13 +407,15 @@ func (p *PodmanProvider) runWithSecrets(baseArgs []string, spec *provider.RunSpe
 	// Strip interactive flags from run args — they'll be added to exec instead.
 	// The detached sleep process doesn't need stdin or TTY.
 	var runArgs []string
-	interactive := false
+	needsTTY := false
+	needsStdin := false
 	for _, arg := range baseArgs {
 		switch arg {
 		case "-it":
-			interactive = true
+			needsTTY = true
+			needsStdin = true
 		case "-i":
-			interactive = true
+			needsStdin = true
 		case "-t", "--init":
 			// not needed for detached sleep process
 		default:
@@ -443,9 +444,9 @@ func (p *PodmanProvider) runWithSecrets(baseArgs []string, spec *provider.RunSpe
 	// Exec entrypoint — output goes directly to terminal
 	// Note: secrets file ownership is fixed by root phase of entrypoint before dropping to addt
 	execArgs := []string{"exec"}
-	if interactive {
+	if needsTTY {
 		execArgs = append(execArgs, "-it")
-	} else {
+	} else if needsStdin {
 		execArgs = append(execArgs, "-i")
 	}
 	execArgs = append(execArgs, spec.Name, "/usr/local/bin/podman-entrypoint.sh")
@@ -513,13 +514,15 @@ func (p *PodmanProvider) Shell(spec *provider.RunSpec) error {
 func (p *PodmanProvider) shellPersistent(baseArgs []string, spec *provider.RunSpec, ctx *containerContext) error {
 	// Strip interactive/init flags — not needed for detached sleep process
 	var runArgs []string
-	interactive := false
+	needsTTY := false
+	needsStdin := false
 	for _, arg := range baseArgs {
 		switch arg {
 		case "-it":
-			interactive = true
+			needsTTY = true
+			needsStdin = true
 		case "-i":
-			interactive = true
+			needsStdin = true
 		case "-t", "--init":
 			// not needed for detached sleep process
 		default:
@@ -539,9 +542,9 @@ func (p *PodmanProvider) shellPersistent(baseArgs []string, spec *provider.RunSp
 
 	// Exec entrypoint with bash override
 	execArgs := []string{"exec"}
-	if interactive {
+	if needsTTY {
 		execArgs = append(execArgs, "-it")
-	} else {
+	} else if needsStdin {
 		execArgs = append(execArgs, "-i")
 	}
 	execArgs = append(execArgs, "-e", "ADDT_COMMAND=/bin/bash")

@@ -1,4 +1,4 @@
-package docker
+package orbstack
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ import (
 	"github.com/jedi4ever/addt/util"
 )
 
-var dockerLogger = util.Log("docker")
+var dockerLogger = util.Log("orbstack")
 
 // containerContext holds common container setup information
 type containerContext struct {
@@ -23,7 +23,7 @@ type containerContext struct {
 }
 
 // setupContainerContext prepares common container context and checks for existing containers
-func (p *DockerProvider) setupContainerContext(spec *provider.RunSpec) (*containerContext, error) {
+func (p *OrbStackProvider) setupContainerContext(spec *provider.RunSpec) (*containerContext, error) {
 	currentUser, err := user.Current()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current user: %w", err)
@@ -68,7 +68,7 @@ func (p *DockerProvider) setupContainerContext(spec *provider.RunSpec) (*contain
 }
 
 // buildBaseDockerArgs creates the base docker arguments for run/exec commands
-func (p *DockerProvider) buildBaseDockerArgs(spec *provider.RunSpec, ctx *containerContext) []string {
+func (p *OrbStackProvider) buildBaseDockerArgs(spec *provider.RunSpec, ctx *containerContext) []string {
 	var dockerArgs []string
 
 	if ctx.useExistingContainer {
@@ -95,7 +95,7 @@ func (p *DockerProvider) buildBaseDockerArgs(spec *provider.RunSpec, ctx *contai
 }
 
 // addContainerVolumesAndEnv adds volumes, mounts, and environment variables for new containers
-func (p *DockerProvider) addContainerVolumesAndEnv(dockerArgs []string, spec *provider.RunSpec, ctx *containerContext) ([]string, func()) {
+func (p *OrbStackProvider) addContainerVolumesAndEnv(dockerArgs []string, spec *provider.RunSpec, ctx *containerContext) ([]string, func()) {
 	// Cleanup function for secrets directory (caller should defer this)
 	cleanup := func() {}
 	// Add volumes
@@ -225,7 +225,7 @@ func (p *DockerProvider) addContainerVolumesAndEnv(dockerArgs []string, spec *pr
 }
 
 // executeDockerCommand runs the docker command with standard I/O
-func (p *DockerProvider) executeDockerCommand(dockerArgs []string) error {
+func (p *OrbStackProvider) executeDockerCommand(dockerArgs []string) error {
 	dockerLogger.Debugf("Executing: docker %v", dockerArgs)
 	cmd := exec.Command("docker", dockerArgs...)
 
@@ -280,7 +280,7 @@ func (p *DockerProvider) executeDockerCommand(dockerArgs []string) error {
 }
 
 // Run runs a new container
-func (p *DockerProvider) Run(spec *provider.RunSpec) error {
+func (p *OrbStackProvider) Run(spec *provider.RunSpec) error {
 	ctx, err := p.setupContainerContext(spec)
 	if err != nil {
 		return err
@@ -337,8 +337,9 @@ func (p *DockerProvider) Run(spec *provider.RunSpec) error {
 // runPersistent creates a persistent container with sleep infinity as PID 1,
 // then execs the entrypoint. This ensures the container stays alive after
 // the agent exits, so subsequent runs can reuse it via docker exec.
-func (p *DockerProvider) runPersistent(baseArgs []string, spec *provider.RunSpec, secretsJSON string) error {
+func (p *OrbStackProvider) runPersistent(baseArgs []string, spec *provider.RunSpec, secretsJSON string) error {
 	// Strip interactive/init flags — not needed for detached sleep process
+	// Track -i vs -it separately: Docker requires a real TTY for -it.
 	var runArgs []string
 	needsTTY := false
 	needsStdin := false
@@ -377,6 +378,7 @@ func (p *DockerProvider) runPersistent(baseArgs []string, spec *provider.RunSpec
 	}
 
 	// Exec entrypoint — output goes directly to terminal
+	// Use -it only when original run had TTY; otherwise just -i
 	execArgs := []string{"exec"}
 	if needsTTY {
 		execArgs = append(execArgs, "-it")
@@ -393,7 +395,7 @@ func (p *DockerProvider) runPersistent(baseArgs []string, spec *provider.RunSpec
 // runWithSecrets starts a container, copies secrets, then execs the entrypoint.
 // Uses a simple approach: start with sleep, copy secrets, exec entrypoint.
 // Entrypoint output goes directly to terminal via exec (no attach needed).
-func (p *DockerProvider) runWithSecrets(baseArgs []string, spec *provider.RunSpec, secretsJSON string) error {
+func (p *OrbStackProvider) runWithSecrets(baseArgs []string, spec *provider.RunSpec, secretsJSON string) error {
 	// Strip interactive flags from run args — they'll be added to exec instead.
 	// The detached sleep process doesn't need stdin or TTY.
 	// Track -i vs -it separately: Docker requires a real TTY for -it.
@@ -464,7 +466,7 @@ func (p *DockerProvider) runWithSecrets(baseArgs []string, spec *provider.RunSpe
 }
 
 // Shell opens a shell in a container
-func (p *DockerProvider) Shell(spec *provider.RunSpec) error {
+func (p *OrbStackProvider) Shell(spec *provider.RunSpec) error {
 	ctx, err := p.setupContainerContext(spec)
 	if err != nil {
 		return err
@@ -535,8 +537,9 @@ exec gosu addt /bin/bash "$@"
 
 // shellPersistent creates a persistent container with sleep infinity as PID 1,
 // then execs the entrypoint with ADDT_COMMAND=/bin/bash for shell access.
-func (p *DockerProvider) shellPersistent(baseArgs []string, spec *provider.RunSpec, ctx *containerContext) error {
+func (p *OrbStackProvider) shellPersistent(baseArgs []string, spec *provider.RunSpec, ctx *containerContext) error {
 	// Strip interactive/init flags — not needed for detached sleep process
+	// Track -i vs -it separately: Docker requires a real TTY for -it.
 	var runArgs []string
 	needsTTY := false
 	needsStdin := false
@@ -565,6 +568,7 @@ func (p *DockerProvider) shellPersistent(baseArgs []string, spec *provider.RunSp
 	}
 
 	// Exec entrypoint with bash override
+	// Use -it only when original run had TTY; otherwise just -i
 	execArgs := []string{"exec"}
 	if needsTTY {
 		execArgs = append(execArgs, "-it")
@@ -580,7 +584,7 @@ func (p *DockerProvider) shellPersistent(baseArgs []string, spec *provider.RunSp
 }
 
 // addSecuritySettings adds container security hardening options
-func (p *DockerProvider) addSecuritySettings(dockerArgs []string) []string {
+func (p *OrbStackProvider) addSecuritySettings(dockerArgs []string) []string {
 	sec := p.config.Security
 
 	// Process limits

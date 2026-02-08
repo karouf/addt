@@ -108,5 +108,9 @@ func resolveValueAndSource(k KeyInfo, projectCfg, globalCfg *cfgtypes.GlobalConf
 	if v := GetDefaultValue(k.Key); v != "" {
 		return v, "default"
 	}
+	// Key exists in registry but has empty default — still report as "default"
+	if IsValidKey(k.Key) {
+		return "-", "default"
+	}
 	return "-", ""
 }

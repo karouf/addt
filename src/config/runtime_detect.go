@@ -31,8 +31,16 @@ func DetectContainerRuntime() string {
 }
 
 // EnsureContainerRuntime ensures a container runtime is available
-// Downloads Podman automatically if needed (unless Docker is explicitly selected)
+// Downloads Podman automatically if needed (unless Docker or OrbStack is explicitly selected)
 func EnsureContainerRuntime() (string, error) {
+	// If OrbStack is explicitly selected, verify it's running
+	if provider := os.Getenv("ADDT_PROVIDER"); provider == "orbstack" {
+		if !isOrbstackRunning() {
+			return "", fmt.Errorf("OrbStack is explicitly selected but not running")
+		}
+		return "orbstack", nil
+	}
+
 	// If Docker is explicitly selected, use it without auto-download
 	if provider := os.Getenv("ADDT_PROVIDER"); provider == "docker" {
 		if !isDockerRunning() {
@@ -70,6 +78,21 @@ func EnsureContainerRuntime() (string, error) {
 	}
 
 	return "", fmt.Errorf("Podman downloaded but not working")
+}
+
+// isOrbstackRunning checks if OrbStack is installed and running
+func isOrbstackRunning() bool {
+	orbctlPath, err := exec.LookPath("orbctl")
+	if err != nil {
+		return false
+	}
+
+	cmd := exec.Command(orbctlPath, "status")
+	output, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	return strings.TrimSpace(string(output)) == "Running"
 }
 
 // isDockerRunning checks if Docker daemon is running
@@ -168,6 +191,8 @@ func GetRuntimeInfo() (runtime string, version string, extras []string) {
 	switch runtime {
 	case "docker":
 		version = getDockerVersion()
+	case "orbstack":
+		version = getOrbstackVersion()
 	case "podman":
 		version = getPodmanVersion()
 		if hasPasta() {
@@ -176,6 +201,19 @@ func GetRuntimeInfo() (runtime string, version string, extras []string) {
 	}
 
 	return runtime, version, extras
+}
+
+func getOrbstackVersion() string {
+	orbctlPath, err := exec.LookPath("orbctl")
+	if err != nil {
+		return "unknown"
+	}
+	cmd := exec.Command(orbctlPath, "version")
+	output, err := cmd.Output()
+	if err != nil {
+		return "unknown"
+	}
+	return strings.TrimSpace(string(output))
 }
 
 func getDockerVersion() string {

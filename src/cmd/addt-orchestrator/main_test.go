@@ -15,9 +15,9 @@ func TestNewSessionManager(t *testing.T) {
 		t.Fatal("expected non-nil sessions map")
 	}
 
-	// Runtime should be detected (either "docker" or "podman")
-	if sm.runtime != "docker" && sm.runtime != "podman" {
-		t.Errorf("expected runtime to be 'docker' or 'podman', got '%s'", sm.runtime)
+	// Runtime should be detected (either "docker", "podman", or "orbstack")
+	if sm.runtime != "docker" && sm.runtime != "podman" && sm.runtime != "orbstack" {
+		t.Errorf("expected runtime to be 'docker', 'podman', or 'orbstack', got '%s'", sm.runtime)
 	}
 }
 

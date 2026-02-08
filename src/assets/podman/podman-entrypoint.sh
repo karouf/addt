@@ -182,8 +182,8 @@ SETUP_MARKER="$HOME/.addt/.setup-done"
 
 if [ -f "$EXTENSIONS_JSON" ] && [ ! -f "$SETUP_MARKER" ]; then
     debug_log "Running extension setup scripts"
-    # Extract extension names from JSON
-    extensions=$(grep -oE '"[a-z]+":' "$EXTENSIONS_JSON" | tr -d '":' | sort -u)
+    # Extract extension names from the top-level "extensions" object in JSON
+    extensions=$(node -e "const d=JSON.parse(require('fs').readFileSync('$EXTENSIONS_JSON','utf8'));Object.keys(d.extensions||{}).forEach(e=>console.log(e))" 2>/dev/null)
 
     for ext in $extensions; do
         # Convert extension name to uppercase env var prefix (e.g., claude -> CLAUDE)

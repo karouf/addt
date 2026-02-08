@@ -628,20 +628,20 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 			if extCfg.Version != "" {
 				cfg.ExtensionVersions[extName] = extCfg.Version
 			}
-			if extCfg.Automount != nil {
-				cfg.ExtensionConfigAutomount[extName] = *extCfg.Automount
+			if extCfg.Config != nil && extCfg.Config.Automount != nil {
+				cfg.ExtensionConfigAutomount[extName] = *extCfg.Config.Automount
 			}
-			if extCfg.Readonly != nil {
-				cfg.ExtensionConfigReadonly[extName] = *extCfg.Readonly
+			if extCfg.Config != nil && extCfg.Config.Readonly != nil {
+				cfg.ExtensionConfigReadonly[extName] = *extCfg.Config.Readonly
 			}
-			if extCfg.Autotrust != nil {
-				cfg.ExtensionWorkdirAutotrust[extName] = *extCfg.Autotrust
+			if extCfg.Workdir != nil && extCfg.Workdir.Autotrust != nil {
+				cfg.ExtensionWorkdirAutotrust[extName] = *extCfg.Workdir.Autotrust
 			}
-			if extCfg.Autologin != nil {
-				cfg.ExtensionAuthAutologin[extName] = *extCfg.Autologin
+			if extCfg.Auth != nil && extCfg.Auth.Autologin != nil {
+				cfg.ExtensionAuthAutologin[extName] = *extCfg.Auth.Autologin
 			}
-			if extCfg.AuthMethod != "" {
-				cfg.ExtensionAuthMethod[extName] = extCfg.AuthMethod
+			if extCfg.Auth != nil && extCfg.Auth.Method != "" {
+				cfg.ExtensionAuthMethod[extName] = extCfg.Auth.Method
 			}
 		}
 	}
@@ -650,20 +650,20 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 			if extCfg.Version != "" {
 				cfg.ExtensionVersions[extName] = extCfg.Version
 			}
-			if extCfg.Automount != nil {
-				cfg.ExtensionConfigAutomount[extName] = *extCfg.Automount
+			if extCfg.Config != nil && extCfg.Config.Automount != nil {
+				cfg.ExtensionConfigAutomount[extName] = *extCfg.Config.Automount
 			}
-			if extCfg.Readonly != nil {
-				cfg.ExtensionConfigReadonly[extName] = *extCfg.Readonly
+			if extCfg.Config != nil && extCfg.Config.Readonly != nil {
+				cfg.ExtensionConfigReadonly[extName] = *extCfg.Config.Readonly
 			}
-			if extCfg.Autotrust != nil {
-				cfg.ExtensionWorkdirAutotrust[extName] = *extCfg.Autotrust
+			if extCfg.Workdir != nil && extCfg.Workdir.Autotrust != nil {
+				cfg.ExtensionWorkdirAutotrust[extName] = *extCfg.Workdir.Autotrust
 			}
-			if extCfg.Autologin != nil {
-				cfg.ExtensionAuthAutologin[extName] = *extCfg.Autologin
+			if extCfg.Auth != nil && extCfg.Auth.Autologin != nil {
+				cfg.ExtensionAuthAutologin[extName] = *extCfg.Auth.Autologin
 			}
-			if extCfg.AuthMethod != "" {
-				cfg.ExtensionAuthMethod[extName] = extCfg.AuthMethod
+			if extCfg.Auth != nil && extCfg.Auth.Method != "" {
+				cfg.ExtensionAuthMethod[extName] = extCfg.Auth.Method
 			}
 		}
 	}

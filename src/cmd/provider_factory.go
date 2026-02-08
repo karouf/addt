@@ -9,6 +9,7 @@ import (
 	"github.com/jedi4ever/addt/provider"
 	"github.com/jedi4ever/addt/provider/daytona"
 	"github.com/jedi4ever/addt/provider/docker"
+	"github.com/jedi4ever/addt/provider/orbstack"
 	"github.com/jedi4ever/addt/provider/podman"
 )
 
@@ -30,11 +31,13 @@ func NewProvider(providerType string, cfg *provider.Config) (provider.Provider, 
 	switch providerType {
 	case "docker":
 		return docker.NewDockerProvider(cfg, assets.DockerDockerfile, assets.DockerDockerfileBase, assets.DockerEntrypoint, assets.DockerInitFirewall, assets.DockerInstallSh, extensions.FS)
+	case "orbstack":
+		return orbstack.NewOrbStackProvider(cfg, assets.OrbStackDockerfile, assets.OrbStackDockerfileBase, assets.OrbStackEntrypoint, assets.OrbStackInitFirewall, assets.OrbStackInstallSh, extensions.FS)
 	case "podman", "":
 		return podman.NewPodmanProvider(cfg, assets.PodmanDockerfile, assets.PodmanDockerfileBase, assets.PodmanEntrypoint, assets.PodmanInitFirewall, assets.PodmanInstallSh, extensions.FS)
 	case "daytona":
 		return daytona.NewDaytonaProvider(cfg, assets.DaytonaDockerfile, assets.DaytonaEntrypoint)
 	default:
-		return nil, fmt.Errorf("unknown provider type: %s (supported: docker, podman, daytona)", providerType)
+		return nil, fmt.Errorf("unknown provider type: %s (supported: docker, podman, orbstack, daytona)", providerType)
 	}
 }

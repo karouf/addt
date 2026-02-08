@@ -56,6 +56,7 @@
 - [ ] MULTI EXTENSION / DEPENDENCY
 - [x] COMPLETIONS (completion_test.go: 6 tests - bash/zsh/fish output, help, extensions included, config keys included)
 - [ ] ALIASES
+- [ ] YOLO mode
 
 ## Other
 - [ ] UPDATING CLI / extension

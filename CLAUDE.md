@@ -22,3 +22,5 @@
   - for addt tests avoid running any provider commands directly
   - for addt tests when you want to run a shell command change the addt_command, for extensions specific tests keep the existing command
   - for addt tests , make them read as user scenarios in the comments
+  - for addt tests you typically use a testdata debug extension not one of the extensions itself
+  - when running the addt tests, run them in groups as they run quite long
