@@ -43,14 +43,23 @@ func (p *DockerProvider) GetExtensionMountsWithNames(imageName string) []extensi
 		return mounts
 	}
 
-	// Collect all mounts from all extensions, with extension name and auto_mount
+	// Collect all mounts from all extensions, with extension name and config settings
 	for extName, ext := range config.Extensions {
-		for _, mount := range ext.Mounts {
+		var configAutomount *bool
+		var configReadonly *bool
+		var configMounts []extensions.ExtensionMount
+		if ext.Config != nil {
+			configAutomount = ext.Config.Automount
+			configReadonly = ext.Config.Readonly
+			configMounts = ext.Config.Mounts
+		}
+		for _, mount := range configMounts {
 			mounts = append(mounts, extensions.ExtensionMountWithName{
-				Source:        mount.Source,
-				Target:        mount.Target,
-				ExtensionName: extName,
-				AutoMount:     ext.AutoMount, // from extension level
+				Source:          mount.Source,
+				Target:          mount.Target,
+				ExtensionName:   extName,
+				ConfigAutomount: configAutomount,
+				ConfigReadonly:  configReadonly,
 			})
 		}
 	}
@@ -62,24 +71,45 @@ func (p *DockerProvider) GetExtensionMountsWithNames(imageName string) []extensi
 func (p *DockerProvider) AddExtensionMounts(dockerArgs []string, imageName, homeDir string) []string {
 	extMounts := p.GetExtensionMountsWithNames(imageName)
 	for _, extMount := range extMounts {
-		// Determine if mount should be enabled based on auto_mount and explicit config
-		// Default is false - extensions must explicitly set auto_mount: true
-		autoMount := extMount.AutoMount != nil && *extMount.AutoMount
+		// Determine if mount should be enabled based on mounts.automount and explicit config
+		// Default is false - extensions must explicitly set mounts.automount: true
+		autoMount := extMount.ConfigAutomount != nil && *extMount.ConfigAutomount
 
-		if p.config.ExtensionAutomount != nil {
-			if mountEnabled, exists := p.config.ExtensionAutomount[extMount.ExtensionName]; exists {
+		if p.config.ExtensionConfigAutomount != nil {
+			if mountEnabled, exists := p.config.ExtensionConfigAutomount[extMount.ExtensionName]; exists {
 				if !mountEnabled {
 					// Mount explicitly disabled by user config
 					continue
 				}
-				// Mount explicitly enabled by user config - proceed even if auto_mount is false
+				// Mount explicitly enabled by user config - proceed even if mounts.automount is false
 			} else if !autoMount {
-				// No user config and auto_mount not enabled in extension - skip
+				// No user config and mounts.automount not enabled in extension - skip
 				continue
 			}
 		} else if !autoMount {
-			// No user config and auto_mount not enabled in extension - skip
+			// No user config and mounts.automount not enabled in extension - skip
 			continue
+		}
+
+		// Determine if mount should be read-only
+		// Precedence: per-extension user config > global config > extension default
+		readonly := false
+		if extMount.ConfigReadonly != nil && *extMount.ConfigReadonly {
+			readonly = true
+		}
+		if p.config.ConfigReadonly {
+			readonly = true
+		}
+		if p.config.ExtensionConfigReadonly != nil {
+			if ro, exists := p.config.ExtensionConfigReadonly[extMount.ExtensionName]; exists {
+				readonly = ro
+			}
+		}
+
+		// Build mount suffix
+		mountSuffix := ""
+		if readonly {
+			mountSuffix = ":ro"
 		}
 
 		// Expand ~ to home directory
@@ -91,18 +121,18 @@ func (p *DockerProvider) AddExtensionMounts(dockerArgs []string, imageName, home
 		// Check if source exists, create if it's a directory path
 		if info, err := os.Stat(source); err == nil {
 			// Source exists (file or directory)
-			dockerArgs = append(dockerArgs, "-v", source+":"+extMount.Target)
+			dockerArgs = append(dockerArgs, "-v", source+":"+extMount.Target+mountSuffix)
 		} else if os.IsNotExist(err) {
 			// Source doesn't exist - create directory if path doesn't look like a file
 			if !strings.Contains(filepath.Base(source), ".") {
 				// Looks like a directory (no extension)
 				if err := os.MkdirAll(source, 0755); err == nil {
-					dockerArgs = append(dockerArgs, "-v", source+":"+extMount.Target)
+					dockerArgs = append(dockerArgs, "-v", source+":"+extMount.Target+mountSuffix)
 				}
 			}
 			// Skip files that don't exist (e.g., ~/.claude.json on fresh install)
 		} else if info != nil {
-			dockerArgs = append(dockerArgs, "-v", source+":"+extMount.Target)
+			dockerArgs = append(dockerArgs, "-v", source+":"+extMount.Target+mountSuffix)
 		}
 	}
 	return dockerArgs

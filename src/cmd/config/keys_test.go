@@ -39,7 +39,7 @@ func TestKeyValidation(t *testing.T) {
 
 func TestExtensionKeyValidation(t *testing.T) {
 	// Static keys are valid for any extension
-	validKeys := []string{"version", "automount"}
+	validKeys := []string{"version", "config.automount"}
 	for _, key := range validKeys {
 		if !IsValidExtensionKey(key, "claude") {
 			t.Errorf("IsValidExtensionKey(%q, \"claude\") = false, want true", key)

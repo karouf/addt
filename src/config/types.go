@@ -9,9 +9,10 @@ import (
 type ExtensionSettings struct {
 	Version         string           `yaml:"version,omitempty"`
 	Automount       *bool            `yaml:"automount,omitempty"`
+	Readonly        *bool            `yaml:"readonly,omitempty"`
 	Autotrust       *bool            `yaml:"autotrust,omitempty"`
-	AutoLogin       *bool            `yaml:"auto_login,omitempty"`
-	LoginMethod     string           `yaml:"login_method,omitempty"`
+	Autologin       *bool            `yaml:"autologin,omitempty"`
+	AuthMethod      string           `yaml:"auth_method,omitempty"`
 	FirewallAllowed []string         `yaml:"firewall_allowed,omitempty"`
 	FirewallDenied  []string         `yaml:"firewall_denied,omitempty"`
 	Flags           map[string]*bool `yaml:"flags,omitempty"`
@@ -99,6 +100,18 @@ type LogSettings struct {
 	MaxFiles *int   `yaml:"max_files,omitempty"` // Number of rotated files to keep (default: 5)
 }
 
+// AuthSettings holds authentication configuration
+type AuthSettings struct {
+	Autologin *bool  `yaml:"autologin,omitempty"` // Automatically handle authentication on first launch (default: true)
+	Method    string `yaml:"method,omitempty"`    // How to authenticate: native, env, auto (default: auto)
+}
+
+// ConfigSettings holds config section settings (extension config directory mounting)
+type ConfigSettings struct {
+	Automount *bool `yaml:"automount,omitempty"` // Auto-mount extension config directories (default: false)
+	Readonly  *bool `yaml:"readonly,omitempty"`  // Mount extension config directories as read-only (default: false)
+}
+
 // WorkdirSettings holds working directory configuration
 type WorkdirSettings struct {
 	Path      string `yaml:"path,omitempty"`      // Override working directory (default: current directory)
@@ -128,6 +141,8 @@ type GlobalConfig struct {
 	HistoryPersist *bool              `yaml:"history_persist,omitempty"` // Persist shell history between sessions
 	UvVersion      string             `yaml:"uv_version,omitempty"`
 	Workdir        *WorkdirSettings   `yaml:"workdir,omitempty"`
+	Auth           *AuthSettings      `yaml:"auth,omitempty"`
+	Config         *ConfigSettings    `yaml:"config,omitempty"`
 
 	// Per-extension configuration
 	Extensions map[string]*ExtensionSettings `yaml:"extensions,omitempty"`
@@ -141,68 +156,73 @@ type GlobalConfig struct {
 
 // Config holds all configuration options
 type Config struct {
-	AddtVersion              string
-	NodeVersion              string
-	GoVersion                string
-	UvVersion                string
-	EnvVars                  []string
-	GitHubForwardToken       bool
-	GitHubTokenSource        string
-	GitHubScopeToken         bool
-	GitHubScopeRepos         []string
-	Ports                    []string
-	PortRangeStart           int
-	PortsInjectSystemPrompt  bool
-	SSHForwardKeys           bool
-	SSHForwardMode           string
-	SSHAllowedKeys           []string
-	TmuxForward              bool
-	HistoryPersist           bool     // Persist shell history between sessions (default: false)
-	SSHDir                   string   // SSH directory path (default: ~/.ssh)
-	GitDisableHooks          bool     // Neutralize git hooks inside container (default: true)
-	GitForwardConfig         bool     // Forward .gitconfig to container (default: true)
-	GitConfigPath            string   // Custom .gitconfig file path
-	GPGForward               string   // "proxy", "agent", "keys", or "off"
-	GPGAllowedKeyIDs         []string // GPG key IDs allowed for signing
-	GPGDir                   string   // GPG directory path (default: ~/.gnupg)
-	DockerDindMode           string
-	EnvFileLoad              bool
-	EnvFile                  string
-	LogEnabled               bool
-	LogOutput                string // stderr, stdout, file (default: stderr)
-	LogFile                  string
-	LogLevel                 string // DEBUG, INFO, WARN, ERROR (default: INFO)
-	LogDir                   string // Log directory (default: ~/.addt/logs)
-	LogModules               string // Comma-separated module filter (default: * for all)
-	LogRotate                bool   // Enable log rotation
-	LogMaxSize               string // Max file size before rotating (e.g. "10m")
-	LogMaxFiles              int    // Number of rotated files to keep
-	ImageName                string
-	Persistent               bool                       // Enable persistent container mode
-	WorkdirAutomount         bool                       // Auto-mount working directory
-	WorkdirReadonly          bool                       // Mount working directory as read-only
-	WorkdirAutotrust         bool                       // Trust the /workspace directory on first launch (default: true)
-	Workdir                  string                     // Override working directory (default: current directory)
-	FirewallEnabled          bool                       // Enable network firewall
-	FirewallMode             string                     // Firewall mode: strict, permissive, off
-	GlobalFirewallAllowed    []string                   // Global allowed domains
-	GlobalFirewallDenied     []string                   // Global denied domains
-	ProjectFirewallAllowed   []string                   // Project allowed domains
-	ProjectFirewallDenied    []string                   // Project denied domains
-	ExtensionFirewallAllowed []string                   // Extension allowed domains
-	ExtensionFirewallDenied  []string                   // Extension denied domains
-	Mode                     string                     // container or shell
-	Provider                 string                     // Provider type: docker or daytona
-	Extensions               string                     // Comma-separated list of extensions to install (e.g., "claude,codex")
-	Command                  string                     // Command to run instead of claude (e.g., "gt" for gastown)
-	ExtensionVersions        map[string]string          // Per-extension versions (e.g., {"claude": "1.0.5", "codex": "latest"})
-	ExtensionAutomount       map[string]bool            // Per-extension automount control (e.g., {"claude": true, "codex": false})
-	ExtensionAutotrust       map[string]bool            // Per-extension workspace trust override
-	ExtensionAutoLogin       map[string]bool            // Per-extension auto-login override
-	ExtensionLoginMethod     map[string]string          // Per-extension login method override (native, env, auto)
-	ExtensionFlagSettings    map[string]map[string]bool // Per-extension flag settings from config (e.g., {"claude": {"yolo": true}})
-	ContainerCPUs            string                     // Container CPU limit (e.g., "2", "0.5", "1.5")
-	ContainerMemory          string                     // Container memory limit (e.g., "512m", "2g", "4gb")
+	AddtVersion               string
+	NodeVersion               string
+	GoVersion                 string
+	UvVersion                 string
+	EnvVars                   []string
+	GitHubForwardToken        bool
+	GitHubTokenSource         string
+	GitHubScopeToken          bool
+	GitHubScopeRepos          []string
+	Ports                     []string
+	PortRangeStart            int
+	PortsInjectSystemPrompt   bool
+	SSHForwardKeys            bool
+	SSHForwardMode            string
+	SSHAllowedKeys            []string
+	TmuxForward               bool
+	HistoryPersist            bool     // Persist shell history between sessions (default: false)
+	SSHDir                    string   // SSH directory path (default: ~/.ssh)
+	GitDisableHooks           bool     // Neutralize git hooks inside container (default: true)
+	GitForwardConfig          bool     // Forward .gitconfig to container (default: true)
+	GitConfigPath             string   // Custom .gitconfig file path
+	GPGForward                string   // "proxy", "agent", "keys", or "off"
+	GPGAllowedKeyIDs          []string // GPG key IDs allowed for signing
+	GPGDir                    string   // GPG directory path (default: ~/.gnupg)
+	DockerDindMode            string
+	EnvFileLoad               bool
+	EnvFile                   string
+	LogEnabled                bool
+	LogOutput                 string // stderr, stdout, file (default: stderr)
+	LogFile                   string
+	LogLevel                  string // DEBUG, INFO, WARN, ERROR (default: INFO)
+	LogDir                    string // Log directory (default: ~/.addt/logs)
+	LogModules                string // Comma-separated module filter (default: * for all)
+	LogRotate                 bool   // Enable log rotation
+	LogMaxSize                string // Max file size before rotating (e.g. "10m")
+	LogMaxFiles               int    // Number of rotated files to keep
+	ImageName                 string
+	Persistent                bool                       // Enable persistent container mode
+	WorkdirAutomount          bool                       // Auto-mount working directory
+	WorkdirReadonly           bool                       // Mount working directory as read-only
+	WorkdirAutotrust          bool                       // Trust the /workspace directory on first launch (default: true)
+	Workdir                   string                     // Override working directory (default: current directory)
+	FirewallEnabled           bool                       // Enable network firewall
+	FirewallMode              string                     // Firewall mode: strict, permissive, off
+	GlobalFirewallAllowed     []string                   // Global allowed domains
+	GlobalFirewallDenied      []string                   // Global denied domains
+	ProjectFirewallAllowed    []string                   // Project allowed domains
+	ProjectFirewallDenied     []string                   // Project denied domains
+	ExtensionFirewallAllowed  []string                   // Extension allowed domains
+	ExtensionFirewallDenied   []string                   // Extension denied domains
+	Mode                      string                     // container or shell
+	Provider                  string                     // Provider type: docker or daytona
+	Extensions                string                     // Comma-separated list of extensions to install (e.g., "claude,codex")
+	Command                   string                     // Command to run instead of claude (e.g., "gt" for gastown)
+	ExtensionVersions         map[string]string          // Per-extension versions (e.g., {"claude": "1.0.5", "codex": "latest"})
+	ExtensionConfigAutomount  map[string]bool            // Per-extension config.automount override
+	ExtensionConfigReadonly   map[string]bool            // Per-extension config.readonly override
+	ExtensionWorkdirAutotrust map[string]bool            // Per-extension workdir.autotrust override
+	ConfigAutomount           bool                       // Global config automount (default: false)
+	ConfigReadonly            bool                       // Global config readonly (default: false)
+	AuthAutologin             bool                       // Global auth auto-login (default: true)
+	AuthMethod                string                     // Global auth method (default: auto)
+	ExtensionAuthAutologin    map[string]bool            // Per-extension auth.autologin override
+	ExtensionAuthMethod       map[string]string          // Per-extension auth.method override (native, env, auto)
+	ExtensionFlagSettings     map[string]map[string]bool // Per-extension flag settings from config (e.g., {"claude": {"yolo": true}})
+	ContainerCPUs             string                     // Container CPU limit (e.g., "2", "0.5", "1.5")
+	ContainerMemory           string                     // Container memory limit (e.g., "512m", "2g", "4gb")
 
 	// Security settings
 	Security security.Config

@@ -44,6 +44,10 @@ func GetKeys() []KeyInfo {
 	keys = append(keys, GetPortsKeys()...)
 	// Add SSH keys
 	keys = append(keys, GetSSHKeys()...)
+	// Add auth keys
+	keys = append(keys, GetAuthKeys()...)
+	// Add config keys
+	keys = append(keys, GetConfigKeys()...)
 	// Add workdir keys
 	keys = append(keys, GetWorkdirKeys()...)
 	// Add container keys
@@ -63,16 +67,25 @@ func GetKeys() []KeyInfo {
 func GetExtensionKeys() []KeyInfo {
 	return []KeyInfo{
 		{Key: "version", Description: "Extension version", Type: "string", EnvVar: "ADDT_%s_VERSION"},
-		{Key: "automount", Description: "Auto-mount extension config directories", Type: "bool", EnvVar: "ADDT_%s_AUTOMOUNT"},
-		{Key: "workdir.autotrust", Description: "Trust the /workspace directory on first launch", Type: "bool", EnvVar: "ADDT_%s_AUTOTRUST"},
-		{Key: "auto_login", Description: "Automatically handle authentication on first launch", Type: "bool", EnvVar: "ADDT_%s_AUTO_LOGIN"},
-		{Key: "login_method", Description: "Authentication method: native, env, auto (default: auto)", Type: "string", EnvVar: "ADDT_%s_LOGIN_METHOD"},
+		{Key: "config.automount", Description: "Auto-mount extension config directories", Type: "bool", EnvVar: "ADDT_%s_CONFIG_AUTOMOUNT"},
+		{Key: "config.readonly", Description: "Mount extension config directories as read-only", Type: "bool", EnvVar: "ADDT_%s_CONFIG_READONLY"},
+		{Key: "workdir.autotrust", Description: "Trust the /workspace directory on first launch", Type: "bool", EnvVar: "ADDT_%s_WORKDIR_AUTOTRUST"},
+		{Key: "auth.autologin", Description: "Automatically handle authentication on first launch", Type: "bool", EnvVar: "ADDT_%s_AUTH_AUTOLOGIN"},
+		{Key: "auth.method", Description: "Authentication method: native, env, auto (default: auto)", Type: "string", EnvVar: "ADDT_%s_AUTH_METHOD"},
 	}
 }
 
 // GetDefaultValue returns the default value for a config key
 func GetDefaultValue(key string) string {
 	switch key {
+	case "auth.autologin":
+		return "true"
+	case "auth.method":
+		return "auto"
+	case "config.automount":
+		return "false"
+	case "config.readonly":
+		return "false"
 	case "container.cpus":
 		return "2"
 	case "container.memory":
@@ -331,6 +344,14 @@ func GetValue(cfg *cfgtypes.GlobalConfig, key string) string {
 	case "uv_version":
 		return cfg.UvVersion
 	}
+	// Check auth keys
+	if strings.HasPrefix(key, "auth.") {
+		return GetAuthValue(cfg.Auth, key)
+	}
+	// Check config keys
+	if strings.HasPrefix(key, "config.") {
+		return GetConfigValue(cfg.Config, key)
+	}
 	// Check workdir keys
 	if strings.HasPrefix(key, "workdir.") {
 		return GetWorkdirValue(cfg.Workdir, key)
@@ -410,6 +431,20 @@ func SetValue(cfg *cfgtypes.GlobalConfig, key, value string) {
 	case "uv_version":
 		cfg.UvVersion = value
 	default:
+		// Check auth keys
+		if strings.HasPrefix(key, "auth.") {
+			if cfg.Auth == nil {
+				cfg.Auth = &cfgtypes.AuthSettings{}
+			}
+			SetAuthValue(cfg.Auth, key, value)
+		}
+		// Check config keys
+		if strings.HasPrefix(key, "config.") {
+			if cfg.Config == nil {
+				cfg.Config = &cfgtypes.ConfigSettings{}
+			}
+			SetConfigValue(cfg.Config, key, value)
+		}
 		// Check workdir keys
 		if strings.HasPrefix(key, "workdir.") {
 			if cfg.Workdir == nil {
@@ -524,6 +559,14 @@ func UnsetValue(cfg *cfgtypes.GlobalConfig, key string) {
 	case "uv_version":
 		cfg.UvVersion = ""
 	default:
+		// Check auth keys
+		if strings.HasPrefix(key, "auth.") && cfg.Auth != nil {
+			UnsetAuthValue(cfg.Auth, key)
+		}
+		// Check config keys
+		if strings.HasPrefix(key, "config.") && cfg.Config != nil {
+			UnsetConfigValue(cfg.Config, key)
+		}
 		// Check workdir keys
 		if strings.HasPrefix(key, "workdir.") && cfg.Workdir != nil {
 			UnsetWorkdirValue(cfg.Workdir, key)

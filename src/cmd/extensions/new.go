@@ -51,10 +51,15 @@ func Create(name string) {
 description: Description of your extension
 entrypoint: %s
 default_version: latest
-auto_mount: false
 dependencies: []
+auth:
+  autologin: false
+  method: auto
+config:
+  automount: false
+  readonly: false
+  mounts: []
 env_vars: []
-mounts: []
 flags: []
 `, name, name)
 

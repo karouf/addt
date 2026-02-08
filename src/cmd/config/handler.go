@@ -242,7 +242,7 @@ func printExtensionHelp() {
 	fmt.Println()
 	fmt.Println("Available keys:")
 	fmt.Println("  version     Extension version (e.g., \"1.0.5\", \"latest\", \"stable\")")
-	fmt.Println("  automount   Auto-mount extension config directories (true/false)")
+	fmt.Println("  config.automount   Auto-mount extension config directories (true/false)")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  addt config extension claude list")

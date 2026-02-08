@@ -25,7 +25,7 @@ BYPASS="${ADDT_EXTENSION_CLAUDE_YOLO:-false}"
 echo "Setup [claude]: bypassPermissionsModeAccepted=$BYPASS"
 
 # Build the base config JSON
-if [ "$ADDT_EXT_AUTOTRUST" = "true" ]; then
+if [ "$ADDT_EXT_WORKDIR_AUTOTRUST" = "true" ]; then
     echo "Setup [claude]: Auto-trusting /workspace directory"
     cat > "$CLAUDE_JSON" << EOF
 {
@@ -60,10 +60,10 @@ cat > "$CLAUDE_INTERNAL_JSON" << 'EOF'
 }
 EOF
 
-# If auto_login is enabled, configure authentication based on login_method
-# login_method: env = API key, native = OAuth, auto = try env first then native
-if [ "$ADDT_EXT_AUTO_LOGIN" = "true" ]; then
-    method="${ADDT_EXT_LOGIN_METHOD:-auto}"
+# If autologin is enabled, configure authentication based on auth_method
+# auth_method: env = API key, native = OAuth, auto = try env first then native
+if [ "$ADDT_EXT_AUTH_AUTOLOGIN" = "true" ]; then
+    method="${ADDT_EXT_AUTH_METHOD:-auto}"
 
     # env or auto: configure API key authentication if ANTHROPIC_API_KEY is available
     if [ "$method" = "env" ] || [ "$method" = "auto" ]; then

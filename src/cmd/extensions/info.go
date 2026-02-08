@@ -36,7 +36,7 @@ func ShowInfo(name string) {
 			fmt.Println("Configuration:")
 			fmt.Printf("  Entrypoint:  %s\n", ext.Entrypoint)
 			fmt.Printf("  Version:     %s\n", version)
-			fmt.Printf("  Auto-mount:  %v\n", ext.AutoMount)
+			fmt.Printf("  Auto-mount:  %v\n", ext.Config.Automount)
 			fmt.Printf("  Source:      %s\n", source)
 
 			if len(ext.Dependencies) > 0 {
@@ -57,9 +57,9 @@ func ShowInfo(name string) {
 				}
 			}
 
-			if len(ext.Mounts) > 0 {
+			if len(ext.Config.Mounts) > 0 {
 				fmt.Println("\nMounts:")
-				for _, m := range ext.Mounts {
+				for _, m := range ext.Config.Mounts {
 					fmt.Printf("  - %s -> %s\n", m.Source, m.Target)
 				}
 			}

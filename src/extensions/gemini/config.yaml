@@ -2,14 +2,16 @@ name: gemini
 description: Gemini CLI - AI coding agent by Google
 entrypoint: gemini
 default_version: latest
-auto_mount: false
-autotrust: false
-auto_login: true
-login_method: auth
 dependencies: []
+auth:
+  autologin: true
+  method: auto
+config:
+  automount: false
+  readonly: false
+  mounts:
+    - source: ~/.gemini
+      target: /home/addt/.gemini
 env_vars:
   - GEMINI_API_KEY
   - GOOGLE_API_KEY
-mounts:
-  - source: ~/.gemini
-    target: /home/addt/.gemini

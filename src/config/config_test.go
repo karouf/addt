@@ -306,16 +306,16 @@ func TestLoadConfig_ExtensionVersionPrecedence(t *testing.T) {
 	}
 }
 
-func TestLoadConfig_ExtensionAutomountPrecedence(t *testing.T) {
+func TestLoadConfig_ExtensionConfigAutomountPrecedence(t *testing.T) {
 	globalDir, projectDir, cleanup := setupTestEnv(t)
 	defer cleanup()
 
 	// Save and clear extension env var
-	origAutomount := os.Getenv("ADDT_CLAUDE_AUTOMOUNT")
-	os.Unsetenv("ADDT_CLAUDE_AUTOMOUNT")
+	origAutomount := os.Getenv("ADDT_CLAUDE_CONFIG_AUTOMOUNT")
+	os.Unsetenv("ADDT_CLAUDE_CONFIG_AUTOMOUNT")
 	defer func() {
 		if origAutomount != "" {
-			os.Setenv("ADDT_CLAUDE_AUTOMOUNT", origAutomount)
+			os.Setenv("ADDT_CLAUDE_CONFIG_AUTOMOUNT", origAutomount)
 		}
 	}()
 
@@ -329,8 +329,8 @@ func TestLoadConfig_ExtensionAutomountPrecedence(t *testing.T) {
 		},
 	})
 	cfg := LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
-	if cfg.ExtensionAutomount["claude"] != true {
-		t.Errorf("claude automount = %v, want true (from global)", cfg.ExtensionAutomount["claude"])
+	if cfg.ExtensionConfigAutomount["claude"] != true {
+		t.Errorf("claude automount = %v, want true (from global)", cfg.ExtensionConfigAutomount["claude"])
 	}
 
 	// Project: automount=false
@@ -340,15 +340,15 @@ func TestLoadConfig_ExtensionAutomountPrecedence(t *testing.T) {
 		},
 	})
 	cfg = LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
-	if cfg.ExtensionAutomount["claude"] != false {
-		t.Errorf("claude automount = %v, want false (from project)", cfg.ExtensionAutomount["claude"])
+	if cfg.ExtensionConfigAutomount["claude"] != false {
+		t.Errorf("claude automount = %v, want false (from project)", cfg.ExtensionConfigAutomount["claude"])
 	}
 
 	// Env: automount=true
-	os.Setenv("ADDT_CLAUDE_AUTOMOUNT", "true")
+	os.Setenv("ADDT_CLAUDE_CONFIG_AUTOMOUNT", "true")
 	cfg = LoadConfig("0.0.0-test", "20", "1.21", "0.1.0", 30000)
-	if cfg.ExtensionAutomount["claude"] != true {
-		t.Errorf("claude automount = %v, want true (from env)", cfg.ExtensionAutomount["claude"])
+	if cfg.ExtensionConfigAutomount["claude"] != true {
+		t.Errorf("claude automount = %v, want true (from env)", cfg.ExtensionConfigAutomount["claude"])
 	}
 }
 

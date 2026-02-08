@@ -43,6 +43,30 @@ yaml_get() {
     grep "^${key}:" "$file" 2>/dev/null | sed "s/^${key}:[[:space:]]*//" | tr -d '"' || echo ""
 }
 
+# YAML parser for nested keys (one level deep, e.g. "auth" "autologin")
+yaml_get_nested() {
+    local file="$1"
+    local section="$2"
+    local key="$3"
+    local in_section=false
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^${section}: ]]; then
+            in_section=true
+            continue
+        fi
+        if $in_section; then
+            if [[ "$line" =~ ^[a-z] ]] && [[ ! "$line" =~ ^[[:space:]] ]]; then
+                break
+            fi
+            if [[ "$line" =~ ^[[:space:]]+${key}:[[:space:]]*(.*) ]]; then
+                echo "${BASH_REMATCH[1]}" | tr -d '"'
+                return
+            fi
+        fi
+    done < "$file"
+    echo ""
+}
+
 # Parse entrypoint which can be either a string or array
 # Returns JSON array format: ["cmd"] or ["cmd", "arg1", "arg2"]
 yaml_get_entrypoint_json() {
@@ -187,9 +211,11 @@ yaml_get_env_vars_json() {
     echo -n "]"
 }
 
-# Parse mounts from YAML (returns JSON array of {source, target} objects)
-yaml_get_mounts_json() {
+# Parse config.mounts from YAML (returns JSON array of {source, target} objects)
+# Expects nested structure: config: { mounts: [- source: ..., target: ...] }
+yaml_get_config_mounts_json() {
     local file="$1"
+    local in_config=false
     local in_mounts=false
     local current_source=""
     local current_target=""
@@ -212,31 +238,38 @@ yaml_get_mounts_json() {
     }
 
     while IFS= read -r line || [[ -n "$line" ]]; do
-        if [[ "$line" =~ ^mounts: ]]; then
-            if [[ "$line" =~ \[\] ]]; then
-                echo -n "]"
-                return
-            fi
-            in_mounts=true
+        if [[ "$line" =~ ^config: ]]; then
+            in_config=true
             continue
         fi
-        if $in_mounts; then
+        if $in_config; then
             # Stop if we hit another top-level key
             if [[ "$line" =~ ^[a-z] ]] && [[ ! "$line" =~ ^[[:space:]] ]]; then
                 output_mount
                 break
             fi
-            # New mount entry starts with "- source:"
-            if [[ "$line" =~ ^[[:space:]]*-[[:space:]]*source:[[:space:]]*(.+) ]]; then
-                output_mount
-                current_source="${BASH_REMATCH[1]}"
-            # Source without dash (continuation)
-            elif [[ "$line" =~ ^[[:space:]]+source:[[:space:]]*(.+) ]]; then
-                current_source="${BASH_REMATCH[1]}"
+            # Look for mounts: subsection within config:
+            if [[ "$line" =~ ^[[:space:]]+mounts: ]]; then
+                if [[ "$line" =~ \[\] ]]; then
+                    echo -n "]"
+                    return
+                fi
+                in_mounts=true
+                continue
             fi
-            # Parse target
-            if [[ "$line" =~ ^[[:space:]]*target:[[:space:]]*(.+) ]]; then
-                current_target="${BASH_REMATCH[1]}"
+            if $in_mounts; then
+                # New mount entry starts with "- source:"
+                if [[ "$line" =~ ^[[:space:]]*-[[:space:]]*source:[[:space:]]*(.+) ]]; then
+                    output_mount
+                    current_source="${BASH_REMATCH[1]}"
+                # Source without dash (continuation)
+                elif [[ "$line" =~ ^[[:space:]]+source:[[:space:]]*(.+) ]]; then
+                    current_source="${BASH_REMATCH[1]}"
+                fi
+                # Parse target
+                if [[ "$line" =~ ^[[:space:]]*target:[[:space:]]*(.+) ]]; then
+                    current_target="${BASH_REMATCH[1]}"
+                fi
             fi
         fi
     done < "$file"
@@ -394,11 +427,11 @@ echo "Extensions: Writing metadata to $METADATA_FILE"
         name=$(yaml_get "$config" "name")
         description=$(yaml_get "$config" "description")
         entrypoint=$(yaml_get_entrypoint_json "$config")
-        auto_mount=$(yaml_get "$config" "auto_mount")
-        autotrust=$(yaml_get "$config" "autotrust")
-        auto_login=$(yaml_get "$config" "auto_login")
-        login_method=$(yaml_get "$config" "login_method")
-        mounts=$(yaml_get_mounts_json "$config")
+        auth_autologin=$(yaml_get_nested "$config" "auth" "autologin")
+        auth_method=$(yaml_get_nested "$config" "auth" "method")
+        config_automount=$(yaml_get_nested "$config" "config" "automount")
+        config_readonly=$(yaml_get_nested "$config" "config" "readonly")
+        config_mounts=$(yaml_get_config_mounts_json "$config")
         flags=$(yaml_get_flags_json "$config")
         env_vars=$(yaml_get_env_vars_json "$config")
 
@@ -407,12 +440,23 @@ echo "Extensions: Writing metadata to $METADATA_FILE"
         # Note: entrypoint is already JSON array format
         printf '"%s":{"name":"%s","description":"%s","entrypoint":%s' \
             "$ext" "$name" "$description" "$entrypoint"
-        # Add optional fields
-        [ -n "$auto_mount" ] && printf ',"auto_mount":%s' "$auto_mount"
-        [ -n "$autotrust" ] && printf ',"autotrust":%s' "$autotrust"
-        [ -n "$auto_login" ] && printf ',"auto_login":%s' "$auto_login"
-        [ -n "$login_method" ] && printf ',"login_method":"%s"' "$login_method"
-        printf ',"mounts":%s,"flags":%s,"env_vars":%s}' "$mounts" "$flags" "$env_vars"
+        # Add nested auth object if either field is set
+        if [ -n "$auth_autologin" ] || [ -n "$auth_method" ]; then
+            printf ',"auth":{'
+            local auth_first=true
+            if [ -n "$auth_autologin" ]; then
+                printf '"autologin":%s' "$auth_autologin"
+                auth_first=false
+            fi
+            if [ -n "$auth_method" ]; then
+                [ "$auth_first" = false ] && printf ','
+                printf '"method":"%s"' "$auth_method"
+            fi
+            printf '}'
+        fi
+        # Add nested config object
+        printf ',"config":{"automount":%s,"readonly":%s,"mounts":%s}' "${config_automount:-false}" "${config_readonly:-false}" "$config_mounts"
+        printf ',"flags":%s,"env_vars":%s}' "$flags" "$env_vars"
     done
     echo '}}'
 } > "$METADATA_FILE"

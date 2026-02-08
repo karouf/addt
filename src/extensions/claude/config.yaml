@@ -1,14 +1,18 @@
 name: claude
 description: Claude Code - AI coding assistant by Anthropic
-entrypoint2:
-  - bash
-  - -i
 entrypoint: claude
 default_version: stable
-auto_mount: false
-autotrust: true
-auto_login: true
-login_method: env
+auth:
+  autologin: true
+  method: env
+config:
+  automount: false
+  readonly: false
+  mounts:
+    - source: ~/.claude
+      target: /home/addt/.claude
+    - source: ~/.claude.json
+      target: /home/addt/.claude.json
 dependencies: []
 credential_script: credentials.sh
 
@@ -36,11 +40,6 @@ otel_vars:
   - OTEL_LOGS_EXPORTER=otlp
   - OTEL_METRIC_EXPORT_INTERVAL=10000
   - OTEL_LOGS_EXPORT_INTERVAL=10000
-mounts:
-  - source: ~/.claude
-    target: /home/addt/.claude
-  - source: ~/.claude.json
-    target: /home/addt/.claude.json
 flags:
   - flag: "--yolo"
     description: "Bypass permission checks"

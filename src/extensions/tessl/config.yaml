@@ -4,14 +4,16 @@ entrypoint:
   - bash
   - -i
 default_version: latest
-env_vars:
-  - TESSL_TOKEN
-auto_mount: false
-autotrust: false
-auto_login: true
-login_method: auto
 dependencies:
   - codex
-mounts:
-  - source: ~/.tessl
-    target: /home/addt/.tessl
+auth:
+  autologin: true
+  method: auto
+config:
+  automount: false
+  readonly: false
+  mounts:
+    - source: ~/.tessl
+      target: /home/addt/.tessl
+env_vars:
+  - TESSL_TOKEN

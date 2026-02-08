@@ -81,40 +81,60 @@ func (e Entrypoint) Args() []string {
 	return e[1:]
 }
 
+// ExtensionAuthConfig holds auth settings in extension config.yaml
+type ExtensionAuthConfig struct {
+	Autologin bool   `yaml:"autologin" json:"autologin"` // Automatically handle authentication on first launch
+	Method    string `yaml:"method" json:"method"`       // How to authenticate: native, env, auto
+}
+
+// ExtensionCfgSection holds the config: section in extension config.yaml
+type ExtensionCfgSection struct {
+	Automount bool             `yaml:"automount" json:"automount"` // Auto-mount extension config directories
+	Readonly  bool             `yaml:"readonly" json:"readonly"`   // Mount extension config directories as read-only
+	Mounts    []ExtensionMount `yaml:"mounts" json:"mounts,omitempty"`
+}
+
 // ExtensionConfig represents the config.yaml structure for extension source files
 // Used when reading extension configs from embedded filesystem or local ~/.addt/extensions/
 type ExtensionConfig struct {
-	Name             string           `yaml:"name" json:"name"`
-	Description      string           `yaml:"description" json:"description"`
-	Entrypoint       Entrypoint       `yaml:"entrypoint" json:"entrypoint"`
-	DefaultVersion   string           `yaml:"default_version" json:"default_version,omitempty"`
-	AutoMount        bool             `yaml:"auto_mount" json:"auto_mount"`
-	Autotrust        bool             `yaml:"autotrust" json:"autotrust"`       // Trust the /workspace directory on first launch
-	AutoLogin        bool             `yaml:"auto_login" json:"auto_login"`     // Automatically handle authentication on first launch
-	LoginMethod      string           `yaml:"login_method" json:"login_method"` // How to authenticate: native, env, auto
-	Dependencies     []string         `yaml:"dependencies" json:"dependencies,omitempty"`
-	EnvVars          []string         `yaml:"env_vars" json:"env_vars,omitempty"`
-	OtelVars         []string         `yaml:"otel_vars" json:"otel_vars,omitempty"` // OpenTelemetry env vars; supports "VAR" or "VAR=default"
-	Mounts           []ExtensionMount `yaml:"mounts" json:"mounts,omitempty"`
-	Flags            []ExtensionFlag  `yaml:"flags" json:"flags,omitempty"`
-	CredentialScript string           `yaml:"credential_script,omitempty" json:"credential_script,omitempty"` // Script to run on host for credentials
-	IsLocal          bool             `yaml:"-" json:"-"`                                                     // Runtime flag, not serialized
+	Name             string              `yaml:"name" json:"name"`
+	Description      string              `yaml:"description" json:"description"`
+	Entrypoint       Entrypoint          `yaml:"entrypoint" json:"entrypoint"`
+	DefaultVersion   string              `yaml:"default_version" json:"default_version,omitempty"`
+	Auth             ExtensionAuthConfig `yaml:"auth" json:"auth"`
+	Config           ExtensionCfgSection `yaml:"config" json:"config"`
+	Dependencies     []string            `yaml:"dependencies" json:"dependencies,omitempty"`
+	EnvVars          []string            `yaml:"env_vars" json:"env_vars,omitempty"`
+	OtelVars         []string            `yaml:"otel_vars" json:"otel_vars,omitempty"` // OpenTelemetry env vars; supports "VAR" or "VAR=default"
+	Flags            []ExtensionFlag     `yaml:"flags" json:"flags,omitempty"`
+	CredentialScript string              `yaml:"credential_script,omitempty" json:"credential_script,omitempty"` // Script to run on host for credentials
+	IsLocal          bool                `yaml:"-" json:"-"`                                                     // Runtime flag, not serialized
+}
+
+// ExtensionAuthMetadata holds auth settings in extensions.json inside Docker images
+type ExtensionAuthMetadata struct {
+	Autologin *bool  `json:"autologin,omitempty"` // true = auto login on first launch
+	Method    string `json:"method,omitempty"`    // native, env, auto
+}
+
+// ExtensionCfgSectionMetadata holds the config: section in extensions.json
+type ExtensionCfgSectionMetadata struct {
+	Automount *bool            `json:"automount,omitempty"` // true = auto mount config dirs, nil or false = disabled
+	Readonly  *bool            `json:"readonly,omitempty"`  // true = mount config dirs as read-only
+	Mounts    []ExtensionMount `json:"mounts,omitempty"`
 }
 
 // ExtensionMetadata represents metadata for an installed extension inside a Docker image
 // Used when reading extensions.json from built Docker images
 type ExtensionMetadata struct {
-	Name        string           `json:"name"`
-	Description string           `json:"description"`
-	Entrypoint  Entrypoint       `json:"entrypoint"`
-	AutoMount   *bool            `json:"auto_mount,omitempty"`   // true = auto mount, nil or false = disabled (default)
-	Autotrust   *bool            `json:"autotrust,omitempty"`    // true = trust /workspace on first launch
-	AutoLogin   *bool            `json:"auto_login,omitempty"`   // true = auto login on first launch
-	LoginMethod string           `json:"login_method,omitempty"` // native, env, auto
-	Mounts      []ExtensionMount `json:"mounts,omitempty"`
-	Flags       []ExtensionFlag  `json:"flags,omitempty"`
-	EnvVars     []string         `json:"env_vars,omitempty"`
-	OtelVars    []string         `json:"otel_vars,omitempty"` // OpenTelemetry env vars; supports "VAR" or "VAR=default"
+	Name        string                       `json:"name"`
+	Description string                       `json:"description"`
+	Entrypoint  Entrypoint                   `json:"entrypoint"`
+	Auth        *ExtensionAuthMetadata       `json:"auth,omitempty"`
+	Config      *ExtensionCfgSectionMetadata `json:"config,omitempty"`
+	Flags       []ExtensionFlag              `json:"flags,omitempty"`
+	EnvVars     []string                     `json:"env_vars,omitempty"`
+	OtelVars    []string                     `json:"otel_vars,omitempty"` // OpenTelemetry env vars; supports "VAR" or "VAR=default"
 }
 
 // ExtensionsJSONConfig represents the extensions.json file structure inside Docker images
@@ -124,8 +144,9 @@ type ExtensionsJSONConfig struct {
 
 // ExtensionMountWithName includes the extension name for mount filtering
 type ExtensionMountWithName struct {
-	Source        string
-	Target        string
-	ExtensionName string
-	AutoMount     *bool // from extension level
+	Source          string
+	Target          string
+	ExtensionName   string
+	ConfigAutomount *bool // from extension-level config.automount
+	ConfigReadonly  *bool // from extension-level config.readonly
 }

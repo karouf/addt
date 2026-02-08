@@ -18,13 +18,14 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 
 	// Start with defaults, then apply global config, then project config, then env vars
 	cfg := &Config{
-		AddtVersion:           addtVersion,
-		ExtensionVersions:     make(map[string]string),
-		ExtensionAutomount:    make(map[string]bool),
-		ExtensionAutotrust:    make(map[string]bool),
-		ExtensionAutoLogin:    make(map[string]bool),
-		ExtensionLoginMethod:  make(map[string]string),
-		ExtensionFlagSettings: make(map[string]map[string]bool),
+		AddtVersion:               addtVersion,
+		ExtensionVersions:         make(map[string]string),
+		ExtensionConfigAutomount:  make(map[string]bool),
+		ExtensionConfigReadonly:   make(map[string]bool),
+		ExtensionWorkdirAutotrust: make(map[string]bool),
+		ExtensionAuthAutologin:    make(map[string]bool),
+		ExtensionAuthMethod:       make(map[string]string),
+		ExtensionFlagSettings:     make(map[string]map[string]bool),
 	}
 
 	// Node version: default -> global -> project -> env
@@ -564,6 +565,54 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 		cfg.EnvFile = v
 	}
 
+	// Config automount: default (false) -> global -> project -> env
+	cfg.ConfigAutomount = false
+	if globalCfg.Config != nil && globalCfg.Config.Automount != nil {
+		cfg.ConfigAutomount = *globalCfg.Config.Automount
+	}
+	if projectCfg.Config != nil && projectCfg.Config.Automount != nil {
+		cfg.ConfigAutomount = *projectCfg.Config.Automount
+	}
+	if v := os.Getenv("ADDT_CONFIG_AUTOMOUNT"); v != "" {
+		cfg.ConfigAutomount = v == "true"
+	}
+
+	// Config readonly: default (false) -> global -> project -> env
+	cfg.ConfigReadonly = false
+	if globalCfg.Config != nil && globalCfg.Config.Readonly != nil {
+		cfg.ConfigReadonly = *globalCfg.Config.Readonly
+	}
+	if projectCfg.Config != nil && projectCfg.Config.Readonly != nil {
+		cfg.ConfigReadonly = *projectCfg.Config.Readonly
+	}
+	if v := os.Getenv("ADDT_CONFIG_READONLY"); v != "" {
+		cfg.ConfigReadonly = v == "true"
+	}
+
+	// Auth autologin: default (true) -> global -> project -> env
+	cfg.AuthAutologin = true
+	if globalCfg.Auth != nil && globalCfg.Auth.Autologin != nil {
+		cfg.AuthAutologin = *globalCfg.Auth.Autologin
+	}
+	if projectCfg.Auth != nil && projectCfg.Auth.Autologin != nil {
+		cfg.AuthAutologin = *projectCfg.Auth.Autologin
+	}
+	if v := os.Getenv("ADDT_AUTH_AUTOLOGIN"); v != "" {
+		cfg.AuthAutologin = v == "true"
+	}
+
+	// Auth method: default (auto) -> global -> project -> env
+	cfg.AuthMethod = "auto"
+	if globalCfg.Auth != nil && globalCfg.Auth.Method != "" {
+		cfg.AuthMethod = globalCfg.Auth.Method
+	}
+	if projectCfg.Auth != nil && projectCfg.Auth.Method != "" {
+		cfg.AuthMethod = projectCfg.Auth.Method
+	}
+	if v := os.Getenv("ADDT_AUTH_METHOD"); v != "" {
+		cfg.AuthMethod = v
+	}
+
 	// These don't have global config equivalents
 	cfg.EnvVars = strings.Split(getEnvOrDefault("ADDT_ENV_VARS", "ANTHROPIC_API_KEY,GH_TOKEN"), ",")
 	cfg.Mode = getEnvOrDefault("ADDT_MODE", "container")
@@ -580,16 +629,19 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 				cfg.ExtensionVersions[extName] = extCfg.Version
 			}
 			if extCfg.Automount != nil {
-				cfg.ExtensionAutomount[extName] = *extCfg.Automount
+				cfg.ExtensionConfigAutomount[extName] = *extCfg.Automount
+			}
+			if extCfg.Readonly != nil {
+				cfg.ExtensionConfigReadonly[extName] = *extCfg.Readonly
 			}
 			if extCfg.Autotrust != nil {
-				cfg.ExtensionAutotrust[extName] = *extCfg.Autotrust
+				cfg.ExtensionWorkdirAutotrust[extName] = *extCfg.Autotrust
 			}
-			if extCfg.AutoLogin != nil {
-				cfg.ExtensionAutoLogin[extName] = *extCfg.AutoLogin
+			if extCfg.Autologin != nil {
+				cfg.ExtensionAuthAutologin[extName] = *extCfg.Autologin
 			}
-			if extCfg.LoginMethod != "" {
-				cfg.ExtensionLoginMethod[extName] = extCfg.LoginMethod
+			if extCfg.AuthMethod != "" {
+				cfg.ExtensionAuthMethod[extName] = extCfg.AuthMethod
 			}
 		}
 	}
@@ -599,16 +651,19 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 				cfg.ExtensionVersions[extName] = extCfg.Version
 			}
 			if extCfg.Automount != nil {
-				cfg.ExtensionAutomount[extName] = *extCfg.Automount
+				cfg.ExtensionConfigAutomount[extName] = *extCfg.Automount
+			}
+			if extCfg.Readonly != nil {
+				cfg.ExtensionConfigReadonly[extName] = *extCfg.Readonly
 			}
 			if extCfg.Autotrust != nil {
-				cfg.ExtensionAutotrust[extName] = *extCfg.Autotrust
+				cfg.ExtensionWorkdirAutotrust[extName] = *extCfg.Autotrust
 			}
-			if extCfg.AutoLogin != nil {
-				cfg.ExtensionAutoLogin[extName] = *extCfg.AutoLogin
+			if extCfg.Autologin != nil {
+				cfg.ExtensionAuthAutologin[extName] = *extCfg.Autologin
 			}
-			if extCfg.LoginMethod != "" {
-				cfg.ExtensionLoginMethod[extName] = extCfg.LoginMethod
+			if extCfg.AuthMethod != "" {
+				cfg.ExtensionAuthMethod[extName] = extCfg.AuthMethod
 			}
 		}
 	}
@@ -651,37 +706,45 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 			}
 		}
 
-		// Check for ADDT_<EXT>_AUTOMOUNT pattern
-		if strings.HasPrefix(key, "ADDT_") && strings.HasSuffix(key, "_AUTOMOUNT") {
-			// Extract extension name (e.g., "ADDT_CLAUDE_AUTOMOUNT" -> "claude")
+		// Check for ADDT_<EXT>_CONFIG_AUTOMOUNT pattern
+		if strings.HasPrefix(key, "ADDT_") && strings.HasSuffix(key, "_CONFIG_AUTOMOUNT") {
+			// Extract extension name (e.g., "ADDT_CLAUDE_CONFIG_AUTOMOUNT" -> "claude")
 			extName := strings.TrimPrefix(key, "ADDT_")
-			extName = strings.TrimSuffix(extName, "_AUTOMOUNT")
+			extName = strings.TrimSuffix(extName, "_CONFIG_AUTOMOUNT")
 			extName = strings.ToLower(extName)
-			cfg.ExtensionAutomount[extName] = value != "false"
+			cfg.ExtensionConfigAutomount[extName] = value != "false"
 		}
 
-		// Check for ADDT_<EXT>_AUTOTRUST pattern
-		if strings.HasPrefix(key, "ADDT_") && strings.HasSuffix(key, "_AUTOTRUST") {
+		// Check for ADDT_<EXT>_CONFIG_READONLY pattern
+		if strings.HasPrefix(key, "ADDT_") && strings.HasSuffix(key, "_CONFIG_READONLY") {
 			extName := strings.TrimPrefix(key, "ADDT_")
-			extName = strings.TrimSuffix(extName, "_AUTOTRUST")
+			extName = strings.TrimSuffix(extName, "_CONFIG_READONLY")
 			extName = strings.ToLower(extName)
-			cfg.ExtensionAutotrust[extName] = value == "true"
+			cfg.ExtensionConfigReadonly[extName] = value == "true"
 		}
 
-		// Check for ADDT_<EXT>_AUTO_LOGIN pattern
-		if strings.HasPrefix(key, "ADDT_") && strings.HasSuffix(key, "_AUTO_LOGIN") {
+		// Check for ADDT_<EXT>_WORKDIR_AUTOTRUST pattern
+		if strings.HasPrefix(key, "ADDT_") && strings.HasSuffix(key, "_WORKDIR_AUTOTRUST") {
 			extName := strings.TrimPrefix(key, "ADDT_")
-			extName = strings.TrimSuffix(extName, "_AUTO_LOGIN")
+			extName = strings.TrimSuffix(extName, "_WORKDIR_AUTOTRUST")
 			extName = strings.ToLower(extName)
-			cfg.ExtensionAutoLogin[extName] = value == "true"
+			cfg.ExtensionWorkdirAutotrust[extName] = value == "true"
 		}
 
-		// Check for ADDT_<EXT>_LOGIN_METHOD pattern
-		if strings.HasPrefix(key, "ADDT_") && strings.HasSuffix(key, "_LOGIN_METHOD") {
+		// Check for ADDT_<EXT>_AUTH_AUTOLOGIN pattern
+		if strings.HasPrefix(key, "ADDT_") && strings.HasSuffix(key, "_AUTH_AUTOLOGIN") {
 			extName := strings.TrimPrefix(key, "ADDT_")
-			extName = strings.TrimSuffix(extName, "_LOGIN_METHOD")
+			extName = strings.TrimSuffix(extName, "_AUTH_AUTOLOGIN")
 			extName = strings.ToLower(extName)
-			cfg.ExtensionLoginMethod[extName] = value
+			cfg.ExtensionAuthAutologin[extName] = value == "true"
+		}
+
+		// Check for ADDT_<EXT>_AUTH_METHOD pattern
+		if strings.HasPrefix(key, "ADDT_") && strings.HasSuffix(key, "_AUTH_METHOD") {
+			extName := strings.TrimPrefix(key, "ADDT_")
+			extName = strings.TrimSuffix(extName, "_AUTH_METHOD")
+			extName = strings.ToLower(extName)
+			cfg.ExtensionAuthMethod[extName] = value
 		}
 	}
 

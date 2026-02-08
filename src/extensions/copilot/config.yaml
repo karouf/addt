@@ -2,15 +2,17 @@ name: copilot
 description: GitHub Copilot CLI - AI coding assistant by GitHub
 entrypoint: copilot
 default_version: latest
-auto_mount: false
-autotrust: true
-auto_login: true
-login_method: auto
 dependencies: []
+auth:
+  autologin: true
+  method: auto
+config:
+  automount: false
+  readonly: false
+  mounts:
+    - source: ~/.copilot
+      target: /home/addt/.copilot
 env_vars:
   - GH_TOKEN
   - GITHUB_TOKEN
   - COPILOT_GITHUB_TOKEN
-mounts:
-  - source: ~/.copilot
-    target: /home/addt/.copilot

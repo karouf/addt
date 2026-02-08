@@ -39,56 +39,61 @@ type Provider interface {
 
 // Config holds provider configuration
 type Config struct {
-	AddtVersion             string
-	NodeVersion             string
-	GoVersion               string
-	UvVersion               string
-	EnvVars                 []string
-	GitHubForwardToken      bool
-	GitHubTokenSource       string
-	GitHubScopeToken        bool
-	GitHubScopeRepos        []string
-	Ports                   []string
-	PortRangeStart          int
-	PortsInjectSystemPrompt bool
-	SSHForwardKeys          bool
-	SSHForwardMode          string
-	SSHAllowedKeys          []string
-	SSHDir                  string
-	TmuxForward             bool
-	HistoryPersist          bool
-	GitDisableHooks         bool     // Neutralize git hooks inside container (default: true)
-	GitForwardConfig        bool     // Forward .gitconfig to container (default: true)
-	GitConfigPath           string   // Custom .gitconfig file path
-	GPGForward              string   // "proxy", "agent", "keys", or "off"
-	GPGAllowedKeyIDs        []string // GPG key IDs (fingerprints) that are allowed
-	GPGDir                  string
-	DockerDindMode          string
-	EnvFileLoad             bool
-	EnvFile                 string
-	LogEnabled              bool
-	LogFile                 string
-	ImageName               string
-	Persistent              bool
-	WorkdirAutomount        bool
-	WorkdirReadonly         bool
-	WorkdirAutotrust        bool
-	Workdir                 string
-	FirewallEnabled         bool
-	FirewallMode            string
-	Mode                    string
-	Provider                string
-	Extensions              string
-	Command                 string
-	ExtensionVersions       map[string]string          // Per-extension versions (e.g., {"claude": "1.0.5", "codex": "latest"})
-	ExtensionAutomount      map[string]bool            // Per-extension automount control (e.g., {"claude": true, "codex": false})
-	ExtensionAutotrust      map[string]bool            // Per-extension workspace trust override
-	ExtensionAutoLogin      map[string]bool            // Per-extension auto-login override
-	ExtensionLoginMethod    map[string]string          // Per-extension login method override (native, env, auto)
-	ExtensionFlagSettings   map[string]map[string]bool // Per-extension flag settings from config (e.g., {"claude": {"yolo": true}})
-	NoCache                 bool                       // Disable Docker cache for builds
-	ContainerCPUs           string                     // Container CPU limit (e.g., "2", "0.5", "1.5")
-	ContainerMemory         string                     // Container memory limit (e.g., "512m", "2g", "4gb")
+	AddtVersion               string
+	NodeVersion               string
+	GoVersion                 string
+	UvVersion                 string
+	EnvVars                   []string
+	GitHubForwardToken        bool
+	GitHubTokenSource         string
+	GitHubScopeToken          bool
+	GitHubScopeRepos          []string
+	Ports                     []string
+	PortRangeStart            int
+	PortsInjectSystemPrompt   bool
+	SSHForwardKeys            bool
+	SSHForwardMode            string
+	SSHAllowedKeys            []string
+	SSHDir                    string
+	TmuxForward               bool
+	HistoryPersist            bool
+	GitDisableHooks           bool     // Neutralize git hooks inside container (default: true)
+	GitForwardConfig          bool     // Forward .gitconfig to container (default: true)
+	GitConfigPath             string   // Custom .gitconfig file path
+	GPGForward                string   // "proxy", "agent", "keys", or "off"
+	GPGAllowedKeyIDs          []string // GPG key IDs (fingerprints) that are allowed
+	GPGDir                    string
+	DockerDindMode            string
+	EnvFileLoad               bool
+	EnvFile                   string
+	LogEnabled                bool
+	LogFile                   string
+	ImageName                 string
+	Persistent                bool
+	WorkdirAutomount          bool
+	WorkdirReadonly           bool
+	WorkdirAutotrust          bool
+	Workdir                   string
+	FirewallEnabled           bool
+	FirewallMode              string
+	Mode                      string
+	Provider                  string
+	Extensions                string
+	Command                   string
+	ExtensionVersions         map[string]string          // Per-extension versions (e.g., {"claude": "1.0.5", "codex": "latest"})
+	ExtensionConfigAutomount  map[string]bool            // Per-extension automount control (e.g., {"claude": true, "codex": false})
+	ExtensionConfigReadonly   map[string]bool            // Per-extension readonly control for config mounts
+	ExtensionWorkdirAutotrust map[string]bool            // Per-extension workspace trust override
+	ConfigAutomount           bool                       // Global config automount (default: false)
+	ConfigReadonly            bool                       // Global config readonly (default: false)
+	AuthAutologin             bool                       // Global auth auto-login (default: true)
+	AuthMethod                string                     // Global auth method (default: auto)
+	ExtensionAuthAutologin    map[string]bool            // Per-extension auto-login override
+	ExtensionAuthMethod       map[string]string          // Per-extension auth method override (native, env, auto)
+	ExtensionFlagSettings     map[string]map[string]bool // Per-extension flag settings from config (e.g., {"claude": {"yolo": true}})
+	NoCache                   bool                       // Disable Docker cache for builds
+	ContainerCPUs             string                     // Container CPU limit (e.g., "2", "0.5", "1.5")
+	ContainerMemory           string                     // Container memory limit (e.g., "512m", "2g", "4gb")
 
 	// Security settings
 	Security security.Config

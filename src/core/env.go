@@ -22,7 +22,7 @@ func BuildEnvironment(p provider.Provider, cfg *provider.Config) map[string]stri
 	// Add extension-required environment variables
 	addExtensionEnvVars(env, p, cfg)
 
-	// Add per-extension config overrides (autotrust, auto_login)
+	// Add per-extension config overrides (autotrust, autologin)
 	addExtensionConfigEnvVars(env, cfg)
 
 	// Add user-configured environment variables
@@ -254,25 +254,43 @@ func addExtensionConfigEnvVars(env map[string]string, cfg *provider.Config) {
 	// Pass global workdir.autotrust setting
 	env["ADDT_WORKDIR_AUTOTRUST"] = fmt.Sprintf("%v", cfg.WorkdirAutotrust)
 
+	// Pass global config settings
+	env["ADDT_CONFIG_AUTOMOUNT"] = fmt.Sprintf("%v", cfg.ConfigAutomount)
+	env["ADDT_CONFIG_READONLY"] = fmt.Sprintf("%v", cfg.ConfigReadonly)
+
+	// Pass global auth settings
+	env["ADDT_AUTH_AUTOLOGIN"] = fmt.Sprintf("%v", cfg.AuthAutologin)
+	env["ADDT_AUTH_METHOD"] = cfg.AuthMethod
+
 	extNames := getActiveExtensionNames(cfg)
 
 	for _, extName := range extNames {
 		extName = strings.TrimSpace(extName)
 		extUpper := strings.ToUpper(strings.ReplaceAll(extName, "-", "_"))
 
-		// Pass autotrust override
-		if val, ok := cfg.ExtensionAutotrust[extName]; ok {
-			env[fmt.Sprintf("ADDT_%s_AUTOTRUST", extUpper)] = fmt.Sprintf("%v", val)
+		// Pass config.automount override
+		if val, ok := cfg.ExtensionConfigAutomount[extName]; ok {
+			env[fmt.Sprintf("ADDT_%s_CONFIG_AUTOMOUNT", extUpper)] = fmt.Sprintf("%v", val)
 		}
 
-		// Pass auto_login override
-		if val, ok := cfg.ExtensionAutoLogin[extName]; ok {
-			env[fmt.Sprintf("ADDT_%s_AUTO_LOGIN", extUpper)] = fmt.Sprintf("%v", val)
+		// Pass config.readonly override
+		if val, ok := cfg.ExtensionConfigReadonly[extName]; ok {
+			env[fmt.Sprintf("ADDT_%s_CONFIG_READONLY", extUpper)] = fmt.Sprintf("%v", val)
 		}
 
-		// Pass login_method override
-		if val, ok := cfg.ExtensionLoginMethod[extName]; ok {
-			env[fmt.Sprintf("ADDT_%s_LOGIN_METHOD", extUpper)] = val
+		// Pass workdir.autotrust override
+		if val, ok := cfg.ExtensionWorkdirAutotrust[extName]; ok {
+			env[fmt.Sprintf("ADDT_%s_WORKDIR_AUTOTRUST", extUpper)] = fmt.Sprintf("%v", val)
+		}
+
+		// Pass auth.autologin override
+		if val, ok := cfg.ExtensionAuthAutologin[extName]; ok {
+			env[fmt.Sprintf("ADDT_%s_AUTH_AUTOLOGIN", extUpper)] = fmt.Sprintf("%v", val)
+		}
+
+		// Pass auth.method override
+		if val, ok := cfg.ExtensionAuthMethod[extName]; ok {
+			env[fmt.Sprintf("ADDT_%s_AUTH_METHOD", extUpper)] = val
 		}
 	}
 }
