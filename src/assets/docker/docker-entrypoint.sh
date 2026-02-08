@@ -179,14 +179,16 @@ if [ -f "$EXTENSIONS_JSON" ] && [ ! -f "$SETUP_MARKER" ]; then
         ext_upper=$(echo "$ext" | tr '[:lower:]-' '[:upper:]_')
 
         # Check for config override env vars first (set by host), fall back to extensions.json
-        override_trust_var="ADDT_${ext_upper}_AUTO_TRUST_WORKSPACE"
+        override_trust_var="ADDT_${ext_upper}_AUTOTRUST"
         override_login_var="ADDT_${ext_upper}_AUTO_LOGIN"
         override_method_var="ADDT_${ext_upper}_LOGIN_METHOD"
 
         if [ -n "${!override_trust_var}" ]; then
-            auto_trust_workspace="${!override_trust_var}"
+            autotrust="${!override_trust_var}"
+        elif [ -n "$ADDT_WORKDIR_AUTOTRUST" ]; then
+            autotrust="$ADDT_WORKDIR_AUTOTRUST"
         else
-            auto_trust_workspace=$(node -e "const d=JSON.parse(require('fs').readFileSync('$EXTENSIONS_JSON','utf8'));console.log(d.extensions['$ext']?.auto_trust_workspace||false)" 2>/dev/null || echo "false")
+            autotrust=$(node -e "const d=JSON.parse(require('fs').readFileSync('$EXTENSIONS_JSON','utf8'));console.log(d.extensions['$ext']?.autotrust||false)" 2>/dev/null || echo "false")
         fi
 
         if [ -n "${!override_login_var}" ]; then
@@ -201,10 +203,10 @@ if [ -f "$EXTENSIONS_JSON" ] && [ ! -f "$SETUP_MARKER" ]; then
             login_method=$(node -e "const d=JSON.parse(require('fs').readFileSync('$EXTENSIONS_JSON','utf8'));console.log(d.extensions['$ext']?.login_method||'auto')" 2>/dev/null || echo "auto")
         fi
 
-        export ADDT_EXT_AUTO_TRUST_WORKSPACE="$auto_trust_workspace"
+        export ADDT_EXT_AUTOTRUST="$autotrust"
         export ADDT_EXT_AUTO_LOGIN="$auto_login"
         export ADDT_EXT_LOGIN_METHOD="$login_method"
-        debug_log "Extension $ext: auto_trust_workspace=$auto_trust_workspace, auto_login=$auto_login, login_method=$login_method"
+        debug_log "Extension $ext: autotrust=$autotrust, auto_login=$auto_login, login_method=$login_method"
 
         setup_script="$EXTENSIONS_DIR/$ext/setup.sh"
         if [ -f "$setup_script" ]; then

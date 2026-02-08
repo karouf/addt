@@ -18,13 +18,13 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 
 	// Start with defaults, then apply global config, then project config, then env vars
 	cfg := &Config{
-		AddtVersion:                 addtVersion,
-		ExtensionVersions:           make(map[string]string),
-		ExtensionAutomount:          make(map[string]bool),
-		ExtensionAutoTrustWorkspace: make(map[string]bool),
-		ExtensionAutoLogin:          make(map[string]bool),
-		ExtensionLoginMethod:        make(map[string]string),
-		ExtensionFlagSettings:       make(map[string]map[string]bool),
+		AddtVersion:           addtVersion,
+		ExtensionVersions:     make(map[string]string),
+		ExtensionAutomount:    make(map[string]bool),
+		ExtensionAutotrust:    make(map[string]bool),
+		ExtensionAutoLogin:    make(map[string]bool),
+		ExtensionLoginMethod:  make(map[string]string),
+		ExtensionFlagSettings: make(map[string]map[string]bool),
 	}
 
 	// Node version: default -> global -> project -> env
@@ -376,6 +376,18 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 		cfg.WorkdirReadonly = v == "true"
 	}
 
+	// Workdir autotrust: default (true) -> global -> project -> env
+	cfg.WorkdirAutotrust = true
+	if globalCfg.Workdir != nil && globalCfg.Workdir.Autotrust != nil {
+		cfg.WorkdirAutotrust = *globalCfg.Workdir.Autotrust
+	}
+	if projectCfg.Workdir != nil && projectCfg.Workdir.Autotrust != nil {
+		cfg.WorkdirAutotrust = *projectCfg.Workdir.Autotrust
+	}
+	if v := os.Getenv("ADDT_WORKDIR_AUTOTRUST"); v != "" {
+		cfg.WorkdirAutotrust = v == "true"
+	}
+
 	// Firewall: default (false) -> global -> project -> env
 	cfg.FirewallEnabled = false
 	if globalCfg.Firewall != nil && globalCfg.Firewall.Enabled != nil {
@@ -570,8 +582,8 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 			if extCfg.Automount != nil {
 				cfg.ExtensionAutomount[extName] = *extCfg.Automount
 			}
-			if extCfg.AutoTrustWorkspace != nil {
-				cfg.ExtensionAutoTrustWorkspace[extName] = *extCfg.AutoTrustWorkspace
+			if extCfg.Autotrust != nil {
+				cfg.ExtensionAutotrust[extName] = *extCfg.Autotrust
 			}
 			if extCfg.AutoLogin != nil {
 				cfg.ExtensionAutoLogin[extName] = *extCfg.AutoLogin
@@ -589,8 +601,8 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 			if extCfg.Automount != nil {
 				cfg.ExtensionAutomount[extName] = *extCfg.Automount
 			}
-			if extCfg.AutoTrustWorkspace != nil {
-				cfg.ExtensionAutoTrustWorkspace[extName] = *extCfg.AutoTrustWorkspace
+			if extCfg.Autotrust != nil {
+				cfg.ExtensionAutotrust[extName] = *extCfg.Autotrust
 			}
 			if extCfg.AutoLogin != nil {
 				cfg.ExtensionAutoLogin[extName] = *extCfg.AutoLogin
@@ -648,12 +660,12 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 			cfg.ExtensionAutomount[extName] = value != "false"
 		}
 
-		// Check for ADDT_<EXT>_AUTO_TRUST_WORKSPACE pattern
-		if strings.HasPrefix(key, "ADDT_") && strings.HasSuffix(key, "_AUTO_TRUST_WORKSPACE") {
+		// Check for ADDT_<EXT>_AUTOTRUST pattern
+		if strings.HasPrefix(key, "ADDT_") && strings.HasSuffix(key, "_AUTOTRUST") {
 			extName := strings.TrimPrefix(key, "ADDT_")
-			extName = strings.TrimSuffix(extName, "_AUTO_TRUST_WORKSPACE")
+			extName = strings.TrimSuffix(extName, "_AUTOTRUST")
 			extName = strings.ToLower(extName)
-			cfg.ExtensionAutoTrustWorkspace[extName] = value == "true"
+			cfg.ExtensionAutotrust[extName] = value == "true"
 		}
 
 		// Check for ADDT_<EXT>_AUTO_LOGIN pattern

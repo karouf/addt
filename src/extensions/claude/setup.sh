@@ -25,7 +25,7 @@ BYPASS="${ADDT_EXTENSION_CLAUDE_YOLO:-false}"
 echo "Setup [claude]: bypassPermissionsModeAccepted=$BYPASS"
 
 # Build the base config JSON
-if [ "$ADDT_EXT_AUTO_TRUST_WORKSPACE" = "true" ]; then
+if [ "$ADDT_EXT_AUTOTRUST" = "true" ]; then
     echo "Setup [claude]: Auto-trusting /workspace directory"
     cat > "$CLAUDE_JSON" << EOF
 {

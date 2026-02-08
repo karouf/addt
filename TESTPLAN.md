@@ -2,8 +2,10 @@
 
 ## Extensions
 - [ ] CLAUDE NATIVE
-- [ ] CLAUDE ENV
+- [ ] CLAUDE ENV / API
 - [ ] CLAUDE AUTOMOUNT
+- [ ] RESUME SESSION CLAUDE
+
 - [ ] OPENAI env (codex)
 
 ## Forwarding / Mounts
@@ -26,6 +28,8 @@
 - [x] PERSISTENT (persistent_test.go: 7 tests - default value, config loaded, config via set, state preserved, ephemeral no state, container listed, container cleaned)
 - [ ] REBUILD logic
 - [ ] PRUNE
+- [X] DIND
+
 
 ## Arguments / Flags
 - [ ] PASS ARG
@@ -42,7 +46,7 @@
 - [ ] LOGGER
 
 ## Provider Support
-- [ ] DOCKER / PODMAN (parallel test execution)
+- [X] DOCKER / PODMAN (parallel test execution)
 
 ## Extensions System
 - [ ] LOCAL EXTENSIONS / NEW
@@ -51,8 +55,9 @@
 - [ ] ALIASES
 
 ## Other
-- [ ] UPDATING
-- [ ] RESUME SESSION CLAUDE
+- [ ] UPDATING CLI / extension
 - [ ] DOCTOR
-- [ ] `<extension> addt` command
+- [X] `<extension> addt` command
 - [x] CODEX API KEY (codex_test.go: 3 tests - key forwarded, not leaked to env, absent when unset)
+- [ ] Automount
+- [ ] Seccomp

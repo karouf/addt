@@ -3,7 +3,7 @@ description: Gemini CLI - AI coding agent by Google
 entrypoint: gemini
 default_version: latest
 auto_mount: false
-auto_trust_workspace: false
+autotrust: false
 auto_login: true
 login_method: auth
 dependencies: []

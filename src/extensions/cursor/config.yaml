@@ -6,7 +6,7 @@ dependencies: []
 env_vars:
   - CURSOR_API_KEY
 auto_mount: false
-auto_trust_workspace: true
+autotrust: true
 auto_login: true
 login_method: auto
 mounts:

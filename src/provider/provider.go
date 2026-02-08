@@ -72,6 +72,7 @@ type Config struct {
 	Persistent              bool
 	WorkdirAutomount        bool
 	WorkdirReadonly         bool
+	WorkdirAutotrust        bool
 	Workdir                 string
 	FirewallEnabled         bool
 	FirewallMode            string
@@ -80,11 +81,11 @@ type Config struct {
 	Extensions              string
 	Command                 string
 	ExtensionVersions       map[string]string          // Per-extension versions (e.g., {"claude": "1.0.5", "codex": "latest"})
-	ExtensionAutomount          map[string]bool            // Per-extension automount control (e.g., {"claude": true, "codex": false})
-	ExtensionAutoTrustWorkspace map[string]bool            // Per-extension workspace trust override
-	ExtensionAutoLogin          map[string]bool            // Per-extension auto-login override
-	ExtensionLoginMethod        map[string]string          // Per-extension login method override (native, env, auto)
-	ExtensionFlagSettings       map[string]map[string]bool // Per-extension flag settings from config (e.g., {"claude": {"yolo": true}})
+	ExtensionAutomount      map[string]bool            // Per-extension automount control (e.g., {"claude": true, "codex": false})
+	ExtensionAutotrust      map[string]bool            // Per-extension workspace trust override
+	ExtensionAutoLogin      map[string]bool            // Per-extension auto-login override
+	ExtensionLoginMethod    map[string]string          // Per-extension login method override (native, env, auto)
+	ExtensionFlagSettings   map[string]map[string]bool // Per-extension flag settings from config (e.g., {"claude": {"yolo": true}})
 	NoCache                 bool                       // Disable Docker cache for builds
 	ContainerCPUs           string                     // Container CPU limit (e.g., "2", "0.5", "1.5")
 	ContainerMemory         string                     // Container memory limit (e.g., "512m", "2g", "4gb")

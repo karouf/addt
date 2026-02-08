@@ -395,7 +395,7 @@ echo "Extensions: Writing metadata to $METADATA_FILE"
         description=$(yaml_get "$config" "description")
         entrypoint=$(yaml_get_entrypoint_json "$config")
         auto_mount=$(yaml_get "$config" "auto_mount")
-        auto_trust_workspace=$(yaml_get "$config" "auto_trust_workspace")
+        autotrust=$(yaml_get "$config" "autotrust")
         auto_login=$(yaml_get "$config" "auto_login")
         login_method=$(yaml_get "$config" "login_method")
         mounts=$(yaml_get_mounts_json "$config")
@@ -409,7 +409,7 @@ echo "Extensions: Writing metadata to $METADATA_FILE"
             "$ext" "$name" "$description" "$entrypoint"
         # Add optional fields
         [ -n "$auto_mount" ] && printf ',"auto_mount":%s' "$auto_mount"
-        [ -n "$auto_trust_workspace" ] && printf ',"auto_trust_workspace":%s' "$auto_trust_workspace"
+        [ -n "$autotrust" ] && printf ',"autotrust":%s' "$autotrust"
         [ -n "$auto_login" ] && printf ',"auto_login":%s' "$auto_login"
         [ -n "$login_method" ] && printf ',"login_method":"%s"' "$login_method"
         printf ',"mounts":%s,"flags":%s,"env_vars":%s}' "$mounts" "$flags" "$env_vars"

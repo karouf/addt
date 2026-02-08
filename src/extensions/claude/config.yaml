@@ -6,7 +6,7 @@ entrypoint2:
 entrypoint: claude
 default_version: stable
 auto_mount: false
-auto_trust_workspace: true
+autotrust: true
 auto_login: true
 login_method: env
 dependencies: []

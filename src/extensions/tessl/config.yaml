@@ -7,7 +7,7 @@ default_version: latest
 env_vars:
   - TESSL_TOKEN
 auto_mount: false
-auto_trust_workspace: false
+autotrust: false
 auto_login: true
 login_method: auto
 dependencies:

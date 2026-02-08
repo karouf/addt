@@ -89,9 +89,9 @@ type ExtensionConfig struct {
 	Entrypoint       Entrypoint       `yaml:"entrypoint" json:"entrypoint"`
 	DefaultVersion   string           `yaml:"default_version" json:"default_version,omitempty"`
 	AutoMount        bool             `yaml:"auto_mount" json:"auto_mount"`
-	AutoTrustWorkspace bool           `yaml:"auto_trust_workspace" json:"auto_trust_workspace"` // Trust the /workspace directory on first launch
-	AutoLogin          bool           `yaml:"auto_login" json:"auto_login"`                  // Automatically handle authentication on first launch
-	LoginMethod        string         `yaml:"login_method" json:"login_method"`              // How to authenticate: native, env, auto
+	Autotrust        bool             `yaml:"autotrust" json:"autotrust"`       // Trust the /workspace directory on first launch
+	AutoLogin        bool             `yaml:"auto_login" json:"auto_login"`     // Automatically handle authentication on first launch
+	LoginMethod      string           `yaml:"login_method" json:"login_method"` // How to authenticate: native, env, auto
 	Dependencies     []string         `yaml:"dependencies" json:"dependencies,omitempty"`
 	EnvVars          []string         `yaml:"env_vars" json:"env_vars,omitempty"`
 	OtelVars         []string         `yaml:"otel_vars" json:"otel_vars,omitempty"` // OpenTelemetry env vars; supports "VAR" or "VAR=default"
@@ -107,10 +107,10 @@ type ExtensionMetadata struct {
 	Name        string           `json:"name"`
 	Description string           `json:"description"`
 	Entrypoint  Entrypoint       `json:"entrypoint"`
-	AutoMount   *bool            `json:"auto_mount,omitempty"`  // true = auto mount, nil or false = disabled (default)
-	AutoTrustWorkspace *bool      `json:"auto_trust_workspace,omitempty"` // true = trust /workspace on first launch
-	AutoLogin          *bool     `json:"auto_login,omitempty"`           // true = auto login on first launch
-	LoginMethod        string   `json:"login_method,omitempty"`         // native, env, auto
+	AutoMount   *bool            `json:"auto_mount,omitempty"`   // true = auto mount, nil or false = disabled (default)
+	Autotrust   *bool            `json:"autotrust,omitempty"`    // true = trust /workspace on first launch
+	AutoLogin   *bool            `json:"auto_login,omitempty"`   // true = auto login on first launch
+	LoginMethod string           `json:"login_method,omitempty"` // native, env, auto
 	Mounts      []ExtensionMount `json:"mounts,omitempty"`
 	Flags       []ExtensionFlag  `json:"flags,omitempty"`
 	EnvVars     []string         `json:"env_vars,omitempty"`

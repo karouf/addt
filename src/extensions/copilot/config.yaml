@@ -3,7 +3,7 @@ description: GitHub Copilot CLI - AI coding assistant by GitHub
 entrypoint: copilot
 default_version: latest
 auto_mount: false
-auto_trust_workspace: true
+autotrust: true
 auto_login: true
 login_method: auto
 dependencies: []
