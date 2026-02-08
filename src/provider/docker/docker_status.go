@@ -13,6 +13,15 @@ import (
 func (p *DockerProvider) GetStatus(cfg *provider.Config, envName string) string {
 	var parts []string
 
+	// Provider name
+	parts = append(parts, "docker")
+
+	// Resource limits
+	resources := buildResourceString(cfg)
+	if resources != "" {
+		parts = append(parts, resources)
+	}
+
 	// Get Node version from image labels
 	cmd := exec.Command("docker", "inspect", cfg.ImageName, "--format", "{{index .Config.Labels \"tools.node.version\"}}")
 	if output, err := cmd.Output(); err == nil {
@@ -27,7 +36,11 @@ func (p *DockerProvider) GetStatus(cfg *provider.Config, envName string) string 
 		workdir, _ = os.Getwd()
 	}
 	if cfg.WorkdirAutomount {
-		parts = append(parts, fmt.Sprintf("%s [RW]", workdir))
+		if cfg.WorkdirReadonly {
+			parts = append(parts, fmt.Sprintf("%s [RO]", workdir))
+		} else {
+			parts = append(parts, fmt.Sprintf("%s [RW]", workdir))
+		}
 	} else {
 		parts = append(parts, "[not mounted]")
 	}
@@ -61,4 +74,16 @@ func (p *DockerProvider) GetStatus(cfg *provider.Config, envName string) string 
 	}
 
 	return strings.Join(parts, " | ")
+}
+
+// buildResourceString builds a compact cpu/mem resource string
+func buildResourceString(cfg *provider.Config) string {
+	var res []string
+	if cfg.ContainerCPUs != "" {
+		res = append(res, fmt.Sprintf("cpu:%s", cfg.ContainerCPUs))
+	}
+	if cfg.ContainerMemory != "" {
+		res = append(res, fmt.Sprintf("mem:%s", cfg.ContainerMemory))
+	}
+	return strings.Join(res, " ")
 }
