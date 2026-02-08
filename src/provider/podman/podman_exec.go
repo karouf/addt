@@ -127,7 +127,7 @@ func (p *PodmanProvider) addContainerVolumesAndEnv(podmanArgs []string, spec *pr
 			gitconfigPath = util.ExpandTilde(gitconfigPath)
 		}
 		if _, err := os.Stat(gitconfigPath); err == nil {
-			podmanArgs = append(podmanArgs, "-v", fmt.Sprintf("%s:/home/%s/.gitconfig:ro", gitconfigPath, ctx.username))
+			podmanArgs = append(podmanArgs, "-v", fmt.Sprintf("%s:/home/%s/.gitconfig.host:ro", gitconfigPath, ctx.username))
 		}
 	}
 

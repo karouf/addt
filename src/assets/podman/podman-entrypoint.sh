@@ -73,6 +73,13 @@ fi
 echo "Entrypoint: Running as addt user (uid=$(id -u))" >&2
 debug_log "Running as addt user"
 
+# Copy host .gitconfig to writable location (bind-mounted single files can't be
+# atomically replaced by git, causing "Device or resource busy" errors)
+if [ -f "$HOME/.gitconfig.host" ]; then
+    cp "$HOME/.gitconfig.host" "$HOME/.gitconfig"
+    debug_log "Copied .gitconfig.host to .gitconfig"
+fi
+
 # Set up SSH agent proxy via TCP (macOS + podman: Unix sockets can't be mounted)
 # The host runs an SSH proxy on TCP; socat bridges it to a local Unix socket.
 if [ -n "$ADDT_SSH_PROXY_HOST" ] && [ -n "$ADDT_SSH_PROXY_PORT" ]; then

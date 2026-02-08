@@ -119,7 +119,7 @@ func (p *DockerProvider) addContainerVolumesAndEnv(dockerArgs []string, spec *pr
 			gitconfigPath = util.ExpandTilde(gitconfigPath)
 		}
 		if _, err := os.Stat(gitconfigPath); err == nil {
-			dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:/home/%s/.gitconfig:ro", gitconfigPath, ctx.username))
+			dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:/home/%s/.gitconfig.host:ro", gitconfigPath, ctx.username))
 		}
 	}
 
