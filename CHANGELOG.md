@@ -8,9 +8,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **OrbStack provider**: Native OrbStack support as a container provider alongside Docker and Podman
+- **Config audit command**: `addt config audit` with colored terminal output showing security posture
+- **Security posture summary**: Startup display shows security summary line
+- **Profiles**: `addt profile` command with embedded presets (develop, strict, paranoia)
+- **Global yolo config**: `security.yolo` global config with per-extension flag fallback
+- **Per-extension auth settings**: `auto_trust_workspace`, `auto_login`, `login_method` per extension
+- **Git config forwarding**: `git.forward_config` and `git.config_path` settings for .gitconfig
 - **Git hooks neutralization**: `git.disable_hooks` (default: true) creates a git wrapper that sets `core.hooksPath=/dev/null` via `GIT_CONFIG_COUNT`, preventing malicious git hooks from executing inside the container. Inspired by [IngmarKrusch/claude-docker](https://github.com/IngmarKrusch/claude-docker).
 - **GitHub token scoping**: `github.scope_token` scopes GH_TOKEN to workspace repo (+ configurable `github.scope_repos`) via git credential-cache. Inspired by [IngmarKrusch/claude-docker](https://github.com/IngmarKrusch/claude-docker).
 - **Credential scrubbing**: Credential env vars are overwritten with random data before unsetting inside containers, preventing recovery from `/proc/*/environ` or memory dumps. Secrets files are similarly scrubbed before deletion. Host-side temp files used during `docker cp`/`podman cp` are scrubbed before removal. Inspired by [IngmarKrusch/claude-docker](https://github.com/IngmarKrusch/claude-docker).
+- **Extension rebuild hashing**: Local/extra extension directory hashing triggers image rebuilds on changes
+- **macOS TCP fallback**: TCP fallback for Docker SSH, GPG, and tmux socket forwarding on macOS
+- **Podman-in-Podman**: DinD isolated mode for Podman matching Docker's pattern
+
+### Changed
+- **Config keys in YAML**: Consolidated config keys into embedded YAML with reflection-based Get/Set/Unset
+- **Root entrypoint**: Use root entrypoint with gosu for firewall and DinD instead of sudo
+- **Extension namespacing**: Restructured extension config with auth/config global keys and per-extension namespace
+- **Test reorganization**: Extracted shared helpers to `test/util`, moved extension tests to `test/extension`
+- **Extension updates**: Gemini, Codex, Copilot, Cursor, Tessl extensions updated with API key auth, workspace trust, and setup improvements
+
+### Fixed
+- **TERM override**: Force `TERM=xterm-256color` for container terminfo compatibility
+- **GPG agent forwarding**: Fix GPG agent forwarding on macOS for Docker/OrbStack
+- **Firewall init**: Use nftables instead of broken ipset on Docker/OrbStack
+- **.gitconfig busy error**: Fix "Device or resource busy" by copying bind mount to writable path
+- **install.sh**: Remove `local` keyword outside function and handle claude native installer versions
+- **Docker runWithSecrets**: Use sleep+exec pattern matching Podman
+- Various Podman and OrbStack compatibility fixes
 
 ## [0.0.10] - 2026-02-07
 
