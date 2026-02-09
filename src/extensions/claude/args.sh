@@ -2,6 +2,8 @@
 # Claude Code argument transformer
 # Transforms generic addt args to Claude-specific args
 
+set -e
+
 ARGS=()
 YOLO=false
 
@@ -29,4 +31,6 @@ if [ -n "$ADDT_SYSTEM_PROMPT" ]; then
 fi
 
 # Output transformed args (null-delimited to preserve multi-line values)
-printf '%s\0' "${ARGS[@]}"
+if [ ${#ARGS[@]} -gt 0 ]; then
+    printf '%s\0' "${ARGS[@]}"
+fi

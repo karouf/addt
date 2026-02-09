@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 echo "Setup [tessl]: Initializing Tessl environment"
 
 # Only create config if .tessl doesn't exist yet (respect mounted config from automount)

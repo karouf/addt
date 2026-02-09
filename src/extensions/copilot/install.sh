@@ -18,4 +18,7 @@ fi
 
 # Verify installation
 INSTALLED_VERSION=$(copilot --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
+# Clean up the .copilot directory, at this first run creates it
+rm -rf "$HOME/.copilot"
+
 echo "Extension [copilot]: Done. Installed Copilot CLI v${INSTALLED_VERSION}"

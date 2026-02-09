@@ -24,4 +24,6 @@ if [ "$YOLO" = "true" ] || [ "${ADDT_EXTENSION_COPILOT_YOLO}" = "true" ] || [ "$
 fi
 
 # Output transformed args (null-delimited to preserve multi-line values)
-printf '%s\0' "${ARGS[@]}"
+if [ ${#ARGS[@]} -gt 0 ]; then
+    printf '%s\0' "${ARGS[@]}"
+fi

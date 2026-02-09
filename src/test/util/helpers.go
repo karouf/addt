@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/jedi4ever/addt/config"
 )
 
 const (
@@ -325,6 +327,76 @@ func SaveRestoreEnv(t *testing.T, key, newValue string) func() {
 			os.Unsetenv(key)
 		}
 	}
+}
+
+// RequireTmux skips the test if tmux is not installed. Returns the tmux binary path.
+func RequireTmux(t *testing.T) string {
+	t.Helper()
+	tmuxBin, err := exec.LookPath("tmux")
+	if err != nil {
+		t.Skip("tmux not installed, skipping")
+	}
+	return tmuxBin
+}
+
+// GetAddtBinary returns the path to dist/addt, building it if needed.
+func GetAddtBinary(t *testing.T) string {
+	t.Helper()
+
+	// Resolve repo root: this file is at src/test/util/helpers.go
+	_, thisFile, _, _ := runtime.Caller(0)
+	repoRoot := filepath.Join(filepath.Dir(thisFile), "..", "..", "..")
+	binaryPath := filepath.Join(repoRoot, "dist", "addt")
+
+	if _, err := os.Stat(binaryPath); err != nil {
+		t.Logf("dist/addt not found, building...")
+		srcDir := filepath.Join(repoRoot, "src")
+		cmd := exec.Command("go", "build", "-o", binaryPath, ".")
+		cmd.Dir = srcDir
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("Failed to build addt binary: %v\n%s", err, string(output))
+		}
+	}
+
+	absPath, err := filepath.Abs(binaryPath)
+	if err != nil {
+		t.Fatalf("Failed to resolve absolute path for binary: %v", err)
+	}
+	return absPath
+}
+
+// RequireEnvKey checks os.Getenv(key); if empty, tries to load .env.addt
+// from the current directory, then from the repo root.
+// Skips the test if still empty. Returns the key value.
+func RequireEnvKey(t *testing.T, key string) string {
+	t.Helper()
+
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+
+	_, thisFile, _, _ := runtime.Caller(0)
+	repoRoot := filepath.Join(filepath.Dir(thisFile), "..", "..", "..")
+
+	// Try loading .env.addt from current directory, then repo root
+	cwd, _ := os.Getwd()
+	candidates := []string{
+		filepath.Join(cwd, ".env.addt"),
+		filepath.Join(repoRoot, ".env.addt"),
+	}
+
+	for _, f := range candidates {
+		if _, err := os.Stat(f); err == nil {
+			_ = config.LoadEnvFile(f)
+		}
+		if v := os.Getenv(key); v != "" {
+			return v
+		}
+	}
+
+	t.Skipf("%s not set (checked env and %v), skipping", key, candidates)
+	return ""
 }
 
 // RunCmd executes a host command and returns trimmed stdout, or empty on error.

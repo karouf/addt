@@ -1,9 +1,9 @@
 #!/bin/bash
+set -e
 echo "Setup [gemini]: Initializing Gemini CLI environment"
 
-# Makes gemin skip IDE integration nudge
+# Makes gemini skip IDE integration nudge
 unset TERM_PROGRAM
-unset GEMINI_CLI_IDE_SERVER_PORT
 unset GEMINI_CLI_IDE_SERVER_PORT
 
 # Only create config if .gemini doesn't exist yet (respect mounted config from automount)

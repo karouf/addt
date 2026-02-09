@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     gnupg \
     git \
+    jq \
     sudo \
     ripgrep \
     ca-certificates \

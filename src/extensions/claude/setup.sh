@@ -8,12 +8,12 @@ CLAUDE_INTERNAL_JSON="$CLAUDE_DIR/claude.json"
 CLAUDE_CREDENTIALS_FILE="$CLAUDE_DIR/.credentials.json"
 
 # Check if user already has authentication configured (from mounted config via automount)
-if [ -d "$CLAUDE_DIR" ] "$CLAUDE_JSON" 2>/dev/null; then
+if [ -d "$CLAUDE_DIR" ] || [ -f "$CLAUDE_JSON" ]; then
     echo "Setup [claude]: Found existing Claude config (likely from automount), not modifying"
     exit 0
 fi
 
-# Continuining with setup as no $ClAUDE dir exists
+# Continuing with setup as no $CLAUDE_DIR exists
 echo "Setup [claude]: No $CLAUDE_DIR found, creating it"
 mkdir -p "$CLAUDE_DIR"
 

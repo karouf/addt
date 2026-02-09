@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 echo "Setup [codex]: Initializing OpenAI Codex environment"
 
 CODEX_DIR="$HOME/.codex"

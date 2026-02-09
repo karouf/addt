@@ -35,6 +35,9 @@ var (
 	procEnvLeakCommand         = testutil.ProcEnvLeakCommand
 	runCmd                     = testutil.RunCmd
 	saveRestoreEnv             = testutil.SaveRestoreEnv
+	requireTmux                = testutil.RequireTmux
+	getAddtBinary              = testutil.GetAddtBinary
+	requireEnvKey              = testutil.RequireEnvKey
 )
 
 // --- Subprocess helpers ---

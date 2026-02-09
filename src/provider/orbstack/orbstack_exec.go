@@ -377,9 +377,9 @@ func (p *OrbStackProvider) runPersistent(baseArgs []string, spec *provider.RunSp
 		}
 	}
 
-	// Exec entrypoint — output goes directly to terminal
-	// Use -it only when original run had TTY; otherwise just -i
-	execArgs := []string{"exec"}
+	// Exec entrypoint as root so the root phase (chown secrets, firewall, DinD)
+	// runs before dropping to addt via gosu.
+	execArgs := []string{"exec", "--user", "root"}
 	if needsTTY {
 		execArgs = append(execArgs, "-it")
 	} else if needsStdin {
@@ -434,9 +434,9 @@ func (p *OrbStackProvider) runWithSecrets(baseArgs []string, spec *provider.RunS
 		return fmt.Errorf("failed to copy secrets: %w", err)
 	}
 
-	// Exec entrypoint — output goes directly to terminal
-	// Use -it only when original run had TTY; otherwise just -i
-	execArgs := []string{"exec"}
+	// Exec entrypoint as root so the root phase (chown secrets, firewall, DinD)
+	// runs before dropping to addt via gosu.
+	execArgs := []string{"exec", "--user", "root"}
 	if needsTTY {
 		execArgs = append(execArgs, "-it")
 	} else if needsStdin {
@@ -567,9 +567,8 @@ func (p *OrbStackProvider) shellPersistent(baseArgs []string, spec *provider.Run
 		return fmt.Errorf("failed to start persistent container: %w\n%s", err, string(output))
 	}
 
-	// Exec entrypoint with bash override
-	// Use -it only when original run had TTY; otherwise just -i
-	execArgs := []string{"exec"}
+	// Exec entrypoint as root so the root phase runs before dropping to addt via gosu.
+	execArgs := []string{"exec", "--user", "root"}
 	if needsTTY {
 		execArgs = append(execArgs, "-it")
 	} else if needsStdin {

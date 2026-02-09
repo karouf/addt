@@ -3,12 +3,8 @@ package docker
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
-
-	"github.com/jedi4ever/addt/util"
 )
 
 // prepareSecretsJSON collects secret environment variables and returns them as JSON
@@ -53,63 +49,16 @@ func (p *DockerProvider) prepareSecretsJSON(imageName string, env map[string]str
 	return string(jsonBytes), writtenSecrets, nil
 }
 
-// copySecretsToContainer copies secrets JSON to the container's tmpfs via docker cp
+// copySecretsToContainer writes secrets JSON directly into the container's tmpfs.
+// Uses docker exec instead of docker cp because docker cp writes to the overlay
+// layer beneath tmpfs mounts, making the file invisible inside the container.
 func (p *DockerProvider) copySecretsToContainer(containerName, secretsJSON string) error {
-	// Write secrets to a temp file
-	tmpFile, err := os.CreateTemp("", "addt-secrets-*.json")
-	if err != nil {
-		return fmt.Errorf("failed to create temp file: %w", err)
-	}
-	tmpPath := tmpFile.Name()
-	defer util.ScrubAndRemove(tmpPath)
-
-	if _, err := tmpFile.WriteString(secretsJSON); err != nil {
-		tmpFile.Close()
-		return fmt.Errorf("failed to write secrets: %w", err)
-	}
-	tmpFile.Close()
-
-	// Set restrictive permissions
-	if err := os.Chmod(tmpPath, 0600); err != nil {
-		return fmt.Errorf("failed to set permissions: %w", err)
-	}
-
-	// Copy to container's /run/secrets/.secrets
-	cmd := exec.Command("docker", "cp", tmpPath, containerName+":/run/secrets/.secrets")
+	cmd := exec.Command("docker", "exec", "-i", containerName,
+		"sh", "-c", "cat > /run/secrets/.secrets && chmod 644 /run/secrets/.secrets")
+	cmd.Stdin = strings.NewReader(secretsJSON)
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("docker cp failed: %w\n%s", err, string(output))
+		return fmt.Errorf("docker exec write secrets failed: %w\n%s", err, string(output))
 	}
-
-	return nil
-}
-
-// copySecretsToContainerPodman copies secrets JSON to the container's tmpfs via podman cp
-func copySecretsToContainerPodman(containerName, secretsJSON string) error {
-	// Write secrets to a temp file
-	tmpFile, err := os.CreateTemp("", "addt-secrets-*.json")
-	if err != nil {
-		return fmt.Errorf("failed to create temp file: %w", err)
-	}
-	tmpPath := tmpFile.Name()
-	defer util.ScrubAndRemove(tmpPath)
-
-	if _, err := tmpFile.WriteString(secretsJSON); err != nil {
-		tmpFile.Close()
-		return fmt.Errorf("failed to write secrets: %w", err)
-	}
-	tmpFile.Close()
-
-	// Set restrictive permissions
-	if err := os.Chmod(tmpPath, 0600); err != nil {
-		return fmt.Errorf("failed to set permissions: %w", err)
-	}
-
-	// Copy to container's /run/secrets/.secrets
-	cmd := exec.Command("podman", "cp", tmpPath, containerName+":/run/secrets/.secrets")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("podman cp failed: %w\n%s", err, string(output))
-	}
-
 	return nil
 }
 
@@ -127,38 +76,4 @@ func (p *DockerProvider) filterSecretEnvVars(env map[string]string, secretVarNam
 	for _, varName := range secretVarNames {
 		delete(env, varName)
 	}
-}
-
-// writeSecretsFile writes secrets JSON to a file for later docker cp
-func writeSecretsFile(secretsJSON string) (string, error) {
-	// Create secrets directory
-	addtHome := util.GetAddtHome()
-	if addtHome == "" {
-		return "", fmt.Errorf("failed to determine addt home directory")
-	}
-
-	secretsDir := filepath.Join(addtHome, "secrets")
-	if err := os.MkdirAll(secretsDir, 0700); err != nil {
-		return "", fmt.Errorf("failed to create secrets dir: %w", err)
-	}
-
-	// Write to temp file
-	tmpFile, err := os.CreateTemp(secretsDir, "secrets-*.json")
-	if err != nil {
-		return "", fmt.Errorf("failed to create temp file: %w", err)
-	}
-
-	if _, err := tmpFile.WriteString(secretsJSON); err != nil {
-		tmpFile.Close()
-		os.Remove(tmpFile.Name())
-		return "", fmt.Errorf("failed to write secrets: %w", err)
-	}
-	tmpFile.Close()
-
-	if err := os.Chmod(tmpFile.Name(), 0600); err != nil {
-		os.Remove(tmpFile.Name())
-		return "", fmt.Errorf("failed to set permissions: %w", err)
-	}
-
-	return tmpFile.Name(), nil
 }

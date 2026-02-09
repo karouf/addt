@@ -2,6 +2,8 @@
 # OpenAI Codex argument transformer
 # Transforms generic addt args to Codex-specific args
 
+set -e
+
 ARGS=()
 YOLO=false
 
@@ -24,4 +26,6 @@ if [ "$YOLO" = "true" ] || [ "${ADDT_EXTENSION_CODEX_YOLO}" = "true" ] || [ "${A
 fi
 
 # Output transformed args (null-delimited to preserve multi-line values)
-printf '%s\0' "${ARGS[@]}"
+if [ ${#ARGS[@]} -gt 0 ]; then
+    printf '%s\0' "${ARGS[@]}"
+fi

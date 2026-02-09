@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 echo "Setup [cursor]: Initializing Cursor CLI environment"
 
 # CURSOR_API_KEY is forwarded via env_vars in config.yaml.
