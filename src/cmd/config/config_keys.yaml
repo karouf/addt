@@ -297,6 +297,14 @@ keys:
     default: "30000"
     namespace: ports
 
+  # Terminal keys
+  - key: terminal.osc
+    description: "Forward terminal identification for OSC support (clipboard, links)"
+    type: bool
+    env_var: ADDT_TERMINAL_OSC
+    default: "false"
+    namespace: terminal
+
   # SSH keys
   - key: ssh.forward_keys
     description: "Enable SSH key forwarding (default: true)"

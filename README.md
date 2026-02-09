@@ -788,6 +788,7 @@ addt cli update                   # Update addt
 | `ADDT_GPG_FORWARD` | - | GPG mode: `proxy`, `agent`, `keys`, or `off` |
 | `ADDT_GPG_ALLOWED_KEY_IDS` | - | Filter GPG keys by ID: `ABC123,DEF456` |
 | `ADDT_TMUX_FORWARD` | false | Forward tmux socket into container |
+| `ADDT_TERMINAL_OSC` | false | Forward terminal identification for OSC support |
 | `ADDT_DOCKER_DIND_ENABLE` | false | Enable Docker-in-Docker |
 | `ADDT_DOCKER_DIND_MODE` | isolated | DinD mode: `isolated` or `host` |
 | `ADDT_GITHUB_FORWARD_TOKEN` | true | Forward `GH_TOKEN` to container |

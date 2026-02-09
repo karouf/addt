@@ -29,7 +29,7 @@ func BuildEnvironment(p provider.Provider, cfg *provider.Config) map[string]stri
 	addUserEnvVars(env, cfg)
 
 	// Add terminal environment variables
-	addTerminalEnvVars(env)
+	addTerminalEnvVars(env, cfg)
 
 	// Inject port mapping info into system prompt
 	PortsInjectPrompt(env, cfg)
@@ -222,8 +222,11 @@ func addUserEnvVars(env map[string]string, cfg *provider.Config) {
 	}
 }
 
-// addTerminalEnvVars adds terminal-related environment variables
-func addTerminalEnvVars(env map[string]string) {
+// addTerminalEnvVars adds terminal-related environment variables.
+// When cfg.TerminalOSC is true, terminal identification vars (TERM_PROGRAM, etc.)
+// are forwarded so apps can detect OSC capabilities (clipboard, links).
+// When false, only basic terminal vars (TERM, COLORTERM, COLUMNS, LINES) are set.
+func addTerminalEnvVars(env map[string]string, cfg *provider.Config) {
 	// Always use xterm-256color: the container's terminfo database may not
 	// have entries for host-specific values like xterm-kitty or xterm-ghostty.
 	// App-level terminal detection uses TERM_PROGRAM instead.
@@ -232,22 +235,24 @@ func addTerminalEnvVars(env map[string]string) {
 		env["COLORTERM"] = colorterm
 	}
 
-	// Pass terminal program identification (needed for OSC 52 clipboard,
-	// rich copy blocks, and terminal-specific feature detection)
-	terminalVars := []string{
-		"TERM_PROGRAM",
-		"TERM_PROGRAM_VERSION",
-		"LC_TERMINAL",
-		"LC_TERMINAL_VERSION",
-		// Terminal-specific identifiers for feature detection
-		"KITTY_WINDOW_ID",
-		"ITERM_SESSION_ID",
-		"VTE_VERSION",
-		"GHOSTTY_RESOURCES_DIR",
-	}
-	for _, v := range terminalVars {
-		if val := os.Getenv(v); val != "" {
-			env[v] = val
+	// Pass terminal program identification only when OSC forwarding is enabled
+	// (needed for OSC 52 clipboard, rich copy blocks, and terminal-specific feature detection)
+	if cfg.TerminalOSC {
+		terminalVars := []string{
+			"TERM_PROGRAM",
+			"TERM_PROGRAM_VERSION",
+			"LC_TERMINAL",
+			"LC_TERMINAL_VERSION",
+			// Terminal-specific identifiers for feature detection
+			"KITTY_WINDOW_ID",
+			"ITERM_SESSION_ID",
+			"VTE_VERSION",
+			"GHOSTTY_RESOURCES_DIR",
+		}
+		for _, v := range terminalVars {
+			if val := os.Getenv(v); val != "" {
+				env[v] = val
+			}
 		}
 	}
 

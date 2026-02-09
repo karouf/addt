@@ -9,12 +9,12 @@ import (
 	"testing"
 )
 
-func TestTerminalOSC_Addt_OSC52EmittedWhenTermProgramSet(t *testing.T) {
-	// Scenario: User runs from Ghostty terminal. Inside the container a
-	// clipboard-aware script detects TERM_PROGRAM, decides OSC 52 is supported,
-	// and emits an OSC 52 clipboard-set sequence. The raw escape sequence must
-	// pass through the container's stdout so the host terminal can intercept it
-	// and update the clipboard.
+func TestTerminalOSC_Addt_OSC52EmittedWhenEnabled(t *testing.T) {
+	// Scenario: User enables terminal.osc and runs from Ghostty terminal.
+	// Inside the container a clipboard-aware script detects TERM_PROGRAM,
+	// decides OSC 52 is supported, and emits an OSC 52 clipboard-set sequence.
+	// The raw escape sequence must pass through stdout so the host terminal
+	// can intercept it and update the clipboard.
 	providers := requireProviders(t)
 
 	payload := "hello from container"
@@ -28,7 +28,10 @@ func TestTerminalOSC_Addt_OSC52EmittedWhenTermProgramSet(t *testing.T) {
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
-			dir, cleanup := setupAddtDirWithExtensions(t, prov, ``)
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
+terminal:
+  osc: true
+`)
 			defer cleanup()
 			ensureAddtImage(t, dir, "debug")
 
@@ -60,7 +63,7 @@ func TestTerminalOSC_Addt_TermOverriddenToXterm256color(t *testing.T) {
 	// Scenario: User's host terminal sets TERM=xterm-kitty whose terminfo entry
 	// does not exist in the container. addt should override TERM to
 	// xterm-256color so TUI apps (Ink/Node.js, ncurses) render correctly.
-	// App-level detection still works via TERM_PROGRAM.
+	// This works regardless of terminal.osc setting.
 	providers := requireProviders(t)
 
 	// Script prints the TERM value seen inside the container
@@ -91,26 +94,24 @@ func TestTerminalOSC_Addt_TermOverriddenToXterm256color(t *testing.T) {
 	}
 }
 
-func TestTerminalOSC_Addt_OSC52SkippedWhenTermProgramUnset(t *testing.T) {
-	// Scenario: User's host has no TERM_PROGRAM set (e.g. plain SSH session).
-	// The script inside the container should detect the missing variable and
-	// NOT emit an OSC 52 sequence — falling back to plain output instead.
+func TestTerminalOSC_Addt_ConfigDisabledBlocksTermProgram(t *testing.T) {
+	// Scenario: User sets terminal.osc: false (the default). Even though the
+	// host has TERM_PROGRAM set, it must NOT reach the container. Apps inside
+	// the container won't detect OSC capabilities and fall back to plain output.
 	providers := requireProviders(t)
 
-	b64 := base64.StdEncoding.EncodeToString([]byte("should not appear"))
-	script := fmt.Sprintf(
-		`if [ -n "$TERM_PROGRAM" ]; then printf '\033]52;c;%s\007'; echo; echo "OSC52:emitted"; else echo "OSC52:skipped"; fi`,
-		b64,
-	)
+	script := `if [ -n "$TERM_PROGRAM" ]; then echo "OSC_CONFIG:leaked"; else echo "OSC_CONFIG:blocked"; fi`
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
-			dir, cleanup := setupAddtDirWithExtensions(t, prov, ``)
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
+terminal:
+  osc: false
+`)
 			defer cleanup()
 			ensureAddtImage(t, dir, "debug")
 
-			// Ensure TERM_PROGRAM is unset on the host
-			restore := saveRestoreEnv(t, "TERM_PROGRAM", "")
+			restore := saveRestoreEnv(t, "TERM_PROGRAM", "ghostty")
 			defer restore()
 
 			output, err := runRunSubcommand(t, dir, "debug", "-c", script)
@@ -119,15 +120,72 @@ func TestTerminalOSC_Addt_OSC52SkippedWhenTermProgramUnset(t *testing.T) {
 				t.Fatalf("run failed: %v\nOutput:\n%s", err, output)
 			}
 
-			// Verify the script chose NOT to emit
-			marker := extractMarker(output, "OSC52:")
-			if marker != "skipped" {
-				t.Errorf("Expected OSC52:skipped, got %q — TERM_PROGRAM leaked into container?", marker)
+			marker := extractMarker(output, "OSC_CONFIG:")
+			if marker != "blocked" {
+				t.Errorf("Expected OSC_CONFIG:blocked, got %q — TERM_PROGRAM leaked despite terminal.osc: false", marker)
+			}
+		})
+	}
+}
+
+func TestTerminalOSC_Addt_DefaultBlocksTermProgram(t *testing.T) {
+	// Scenario: User does not set terminal.osc at all (defaults to false).
+	// TERM_PROGRAM must NOT reach the container.
+	providers := requireProviders(t)
+
+	script := `if [ -n "$TERM_PROGRAM" ]; then echo "OSC_DEFAULT:leaked"; else echo "OSC_DEFAULT:blocked"; fi`
+
+	for _, prov := range providers {
+		t.Run(prov, func(t *testing.T) {
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, ``)
+			defer cleanup()
+			ensureAddtImage(t, dir, "debug")
+
+			restore := saveRestoreEnv(t, "TERM_PROGRAM", "kitty")
+			defer restore()
+
+			output, err := runRunSubcommand(t, dir, "debug", "-c", script)
+			t.Logf("Output:\n%s", output)
+			if err != nil {
+				t.Fatalf("run failed: %v\nOutput:\n%s", err, output)
 			}
 
-			// Verify no OSC 52 sequence in output
-			if strings.Contains(output, "\033]52;") {
-				t.Errorf("OSC 52 sequence found in output but should not be present when TERM_PROGRAM is unset")
+			marker := extractMarker(output, "OSC_DEFAULT:")
+			if marker != "blocked" {
+				t.Errorf("Expected OSC_DEFAULT:blocked, got %q — default should be false", marker)
+			}
+		})
+	}
+}
+
+func TestTerminalOSC_Addt_ConfigEnabledForwardsTermProgram(t *testing.T) {
+	// Scenario: User explicitly sets terminal.osc: true. TERM_PROGRAM from
+	// the host must be forwarded to the container so apps can detect OSC support.
+	providers := requireProviders(t)
+
+	script := `echo "TERM_PROG:$TERM_PROGRAM"`
+
+	for _, prov := range providers {
+		t.Run(prov, func(t *testing.T) {
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
+terminal:
+  osc: true
+`)
+			defer cleanup()
+			ensureAddtImage(t, dir, "debug")
+
+			restore := saveRestoreEnv(t, "TERM_PROGRAM", "ghostty")
+			defer restore()
+
+			output, err := runRunSubcommand(t, dir, "debug", "-c", script)
+			t.Logf("Output:\n%s", output)
+			if err != nil {
+				t.Fatalf("run failed: %v\nOutput:\n%s", err, output)
+			}
+
+			marker := extractMarker(output, "TERM_PROG:")
+			if marker != "ghostty" {
+				t.Errorf("Expected TERM_PROG:ghostty, got %q — terminal.osc: true should forward TERM_PROGRAM", marker)
 			}
 		})
 	}
@@ -135,9 +193,10 @@ func TestTerminalOSC_Addt_OSC52SkippedWhenTermProgramUnset(t *testing.T) {
 
 func TestTerminalOSC_Addt_OSC52RoundtripContent(t *testing.T) {
 	// Scenario: User copies a multi-word string to clipboard via OSC 52 from
-	// inside the container. The test verifies the base64-encoded payload in
-	// the escape sequence decodes back to the original content — proving the
-	// full pipeline (env detection → encode → emit → passthrough) is intact.
+	// inside the container with terminal.osc: true. The test verifies the
+	// base64-encoded payload in the escape sequence decodes back to the original
+	// content — proving the full pipeline (env detection → encode → emit →
+	// passthrough) is intact.
 	providers := requireProviders(t)
 
 	payload := "rich copy block test: lines & borders!"
@@ -151,7 +210,10 @@ func TestTerminalOSC_Addt_OSC52RoundtripContent(t *testing.T) {
 
 	for _, prov := range providers {
 		t.Run(prov, func(t *testing.T) {
-			dir, cleanup := setupAddtDirWithExtensions(t, prov, ``)
+			dir, cleanup := setupAddtDirWithExtensions(t, prov, `
+terminal:
+  osc: true
+`)
 			defer cleanup()
 			ensureAddtImage(t, dir, "debug")
 

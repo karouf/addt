@@ -115,6 +115,11 @@ type ConfigSettings struct {
 	Readonly  *bool `yaml:"readonly,omitempty"`  // Mount extension config directories as read-only (default: false)
 }
 
+// TerminalSettings holds terminal configuration
+type TerminalSettings struct {
+	OSC *bool `yaml:"osc,omitempty"` // Forward terminal identification for OSC support (default: false)
+}
+
 // WorkdirSettings holds working directory configuration
 type WorkdirSettings struct {
 	Path      string `yaml:"path,omitempty"`      // Override working directory (default: current directory)
@@ -140,6 +145,7 @@ type GlobalConfig struct {
 	Persistent     *bool              `yaml:"persistent,omitempty"`
 	Ports          *PortsSettings     `yaml:"ports,omitempty"`
 	SSH            *SSHSettings       `yaml:"ssh,omitempty"`
+	Terminal       *TerminalSettings  `yaml:"terminal,omitempty"`
 	TmuxForward    *bool              `yaml:"tmux_forward,omitempty"`
 	HistoryPersist *bool              `yaml:"history_persist,omitempty"` // Persist shell history between sessions
 	UvVersion      string             `yaml:"uv_version,omitempty"`
@@ -224,6 +230,7 @@ type Config struct {
 	ExtensionAuthAutologin    map[string]bool            // Per-extension auth.autologin override
 	ExtensionAuthMethod       map[string]string          // Per-extension auth.method override (native, env, auto)
 	ExtensionFlagSettings     map[string]map[string]bool // Per-extension flag settings from config (e.g., {"claude": {"yolo": true}})
+	TerminalOSC               bool                       // Forward terminal identification for OSC support (default: false)
 	ContainerCPUs             string                     // Container CPU limit (e.g., "2", "0.5", "1.5")
 	ContainerMemory           string                     // Container memory limit (e.g., "512m", "2g", "4gb")
 

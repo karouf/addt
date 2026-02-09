@@ -1,7 +1,7 @@
 copy and paste blocks in claude in container
 - bracketed paste works in container bash shell but NOT in Claude Code (Ink/Node.js)
   Ink needs to enable bracketed paste mode (\e[?2004h) itself — not an addt issue
-- add config setting to enable/disable OSC support (terminal.osc or similar)
+- DONE: add config setting to enable/disable OSC support (terminal.osc)
 ====
 - resume sessions - mount or .addt ?
     or in ~/.addt outside of dir

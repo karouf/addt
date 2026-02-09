@@ -63,6 +63,7 @@ type Config struct {
 	GPGForward                string   // "proxy", "agent", "keys", or "off"
 	GPGAllowedKeyIDs          []string // GPG key IDs (fingerprints) that are allowed
 	GPGDir                    string
+	TerminalOSC               bool // Forward terminal identification for OSC support (default: false)
 	DockerDindMode            string
 	EnvFileLoad               bool
 	EnvFile                   string

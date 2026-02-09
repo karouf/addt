@@ -173,6 +173,18 @@ func LoadConfig(addtVersion, defaultNodeVersion, defaultGoVersion, defaultUvVers
 		cfg.HistoryPersist = v == "true"
 	}
 
+	// Terminal OSC: default (false) -> global -> project -> env
+	cfg.TerminalOSC = false
+	if globalCfg.Terminal != nil && globalCfg.Terminal.OSC != nil {
+		cfg.TerminalOSC = *globalCfg.Terminal.OSC
+	}
+	if projectCfg.Terminal != nil && projectCfg.Terminal.OSC != nil {
+		cfg.TerminalOSC = *projectCfg.Terminal.OSC
+	}
+	if v := os.Getenv("ADDT_TERMINAL_OSC"); v != "" {
+		cfg.TerminalOSC = v == "true"
+	}
+
 	// GPG forward: default (off) -> global -> project -> env
 	cfg.GPGForward = ""
 	if globalCfg.GPG != nil && globalCfg.GPG.Forward != "" {

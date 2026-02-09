@@ -12,9 +12,9 @@ func TestRegistryLoadsAllKeys(t *testing.T) {
 	if len(allKeyDefs) == 0 {
 		t.Fatal("allKeyDefs is empty, YAML not loaded")
 	}
-	// We expect 76 keys total
-	if len(allKeyDefs) != 76 {
-		t.Errorf("expected 76 key defs, got %d", len(allKeyDefs))
+	// We expect 77 keys total
+	if len(allKeyDefs) != 77 {
+		t.Errorf("expected 77 key defs, got %d", len(allKeyDefs))
 	}
 }
 
@@ -81,8 +81,8 @@ func TestRegistryIsValidKey(t *testing.T) {
 
 func TestRegistryGetKeys(t *testing.T) {
 	keys := registryGetKeys()
-	if len(keys) != 76 {
-		t.Errorf("registryGetKeys() returned %d keys, want 76", len(keys))
+	if len(keys) != 77 {
+		t.Errorf("registryGetKeys() returned %d keys, want 77", len(keys))
 	}
 	// Verify sorted
 	for i := 1; i < len(keys); i++ {

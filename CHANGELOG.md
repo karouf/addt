@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Extension rebuild hashing**: Local/extra extension directory hashing triggers image rebuilds on changes
 - **macOS TCP fallback**: TCP fallback for Docker SSH, GPG, and tmux socket forwarding on macOS
 - **Podman-in-Podman**: DinD isolated mode for Podman matching Docker's pattern
+- **Terminal OSC config**: `terminal.osc` setting (default: false) controls forwarding of terminal identification vars (TERM_PROGRAM, KITTY_WINDOW_ID, etc.) for OSC 52 clipboard and link support
 
 ### Changed
 - **Config keys in YAML**: Consolidated config keys into embedded YAML with reflection-based Get/Set/Unset

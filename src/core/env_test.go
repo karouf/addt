@@ -350,7 +350,7 @@ func TestAddFlagEnvVars_GlobalYoloFalseNoEffect(t *testing.T) {
 func TestAddTerminalEnvVars_TerminalIdentification(t *testing.T) {
 	// Scenario: host terminal sets identification vars that should be forwarded
 	// to the container so tools like Claude Code can detect terminal capabilities
-	// (OSC 52 clipboard, rich copy blocks, etc.)
+	// (OSC 52 clipboard, rich copy blocks, etc.) when terminal.osc is enabled.
 	terminalVars := map[string]string{
 		"TERM_PROGRAM":          "ghostty",
 		"TERM_PROGRAM_VERSION":  "1.2.0",
@@ -367,8 +367,9 @@ func TestAddTerminalEnvVars_TerminalIdentification(t *testing.T) {
 		t.Setenv(k, v)
 	}
 
+	cfg := &provider.Config{TerminalOSC: true}
 	env := make(map[string]string)
-	addTerminalEnvVars(env)
+	addTerminalEnvVars(env, cfg)
 
 	for k, v := range terminalVars {
 		if env[k] != v {
@@ -393,8 +394,9 @@ func TestAddTerminalEnvVars_TermAlwaysXterm256color(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("TERM", tt.hostVal)
+			cfg := &provider.Config{}
 			env := make(map[string]string)
-			addTerminalEnvVars(env)
+			addTerminalEnvVars(env, cfg)
 			if env["TERM"] != "xterm-256color" {
 				t.Errorf("env[TERM] = %q, want %q", env["TERM"], "xterm-256color")
 			}
@@ -404,7 +406,7 @@ func TestAddTerminalEnvVars_TermAlwaysXterm256color(t *testing.T) {
 
 func TestAddTerminalEnvVars_TerminalIdentificationUnset(t *testing.T) {
 	// Scenario: none of the terminal identification vars are set on the host;
-	// they should not appear in the container environment
+	// they should not appear in the container environment even with OSC enabled
 	varsToCheck := []string{
 		"TERM_PROGRAM",
 		"TERM_PROGRAM_VERSION",
@@ -421,13 +423,84 @@ func TestAddTerminalEnvVars_TerminalIdentificationUnset(t *testing.T) {
 		t.Setenv(k, "")
 	}
 
+	cfg := &provider.Config{TerminalOSC: true}
 	env := make(map[string]string)
-	addTerminalEnvVars(env)
+	addTerminalEnvVars(env, cfg)
 
 	for _, k := range varsToCheck {
 		if _, ok := env[k]; ok {
 			t.Errorf("env[%q] should not be set when host var is empty", k)
 		}
+	}
+}
+
+func TestAddTerminalEnvVars_OSCDisabledSkipsIdentification(t *testing.T) {
+	// Scenario: terminal.osc is false (default). Terminal identification vars
+	// should NOT be forwarded, preventing apps from detecting OSC capabilities.
+	// Basic vars (TERM, COLORTERM, COLUMNS, LINES) must still be set.
+	terminalVars := map[string]string{
+		"TERM_PROGRAM":          "ghostty",
+		"TERM_PROGRAM_VERSION":  "1.2.0",
+		"LC_TERMINAL":           "iTerm2",
+		"LC_TERMINAL_VERSION":   "3.5.0",
+		"KITTY_WINDOW_ID":       "42",
+		"ITERM_SESSION_ID":      "w0t0p0:ABC-123",
+		"VTE_VERSION":           "7200",
+		"GHOSTTY_RESOURCES_DIR": "/usr/share/ghostty",
+	}
+
+	for k, v := range terminalVars {
+		t.Setenv(k, v)
+	}
+	t.Setenv("COLORTERM", "truecolor")
+
+	cfg := &provider.Config{TerminalOSC: false}
+	env := make(map[string]string)
+	addTerminalEnvVars(env, cfg)
+
+	// Terminal identification vars must NOT be forwarded
+	for k := range terminalVars {
+		if _, ok := env[k]; ok {
+			t.Errorf("env[%q] should not be set when TerminalOSC is false", k)
+		}
+	}
+
+	// Basic terminal vars must still be present
+	if env["TERM"] != "xterm-256color" {
+		t.Errorf("env[TERM] = %q, want %q", env["TERM"], "xterm-256color")
+	}
+	if env["COLORTERM"] != "truecolor" {
+		t.Errorf("env[COLORTERM] = %q, want %q", env["COLORTERM"], "truecolor")
+	}
+	if env["COLUMNS"] == "" {
+		t.Error("COLUMNS not set")
+	}
+	if env["LINES"] == "" {
+		t.Error("LINES not set")
+	}
+}
+
+func TestAddTerminalEnvVars_OSCEnabledForwardsIdentification(t *testing.T) {
+	// Scenario: terminal.osc is true. Terminal identification vars should be
+	// forwarded so apps can detect OSC capabilities (clipboard, links, etc.)
+	t.Setenv("TERM_PROGRAM", "kitty")
+	t.Setenv("KITTY_WINDOW_ID", "99")
+
+	cfg := &provider.Config{TerminalOSC: true}
+	env := make(map[string]string)
+	addTerminalEnvVars(env, cfg)
+
+	if env["TERM_PROGRAM"] != "kitty" {
+		t.Errorf("env[TERM_PROGRAM] = %q, want %q", env["TERM_PROGRAM"], "kitty")
+	}
+	if env["KITTY_WINDOW_ID"] != "99" {
+		t.Errorf("env[KITTY_WINDOW_ID] = %q, want %q", env["KITTY_WINDOW_ID"], "99")
+	}
+	if env["TERM"] != "xterm-256color" {
+		t.Errorf("env[TERM] = %q, want %q", env["TERM"], "xterm-256color")
+	}
+	if env["COLUMNS"] == "" {
+		t.Error("COLUMNS not set")
 	}
 }
 

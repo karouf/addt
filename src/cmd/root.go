@@ -196,6 +196,7 @@ func Execute(version, defaultNodeVersion, defaultGoVersion, defaultUvVersion str
 		GPGDir:                    cfg.GPGDir,
 		TmuxForward:               cfg.TmuxForward,
 		HistoryPersist:            cfg.HistoryPersist,
+		TerminalOSC:               cfg.TerminalOSC,
 		DockerDindMode:            cfg.DockerDindMode,
 		EnvFileLoad:               cfg.EnvFileLoad,
 		EnvFile:                   cfg.EnvFile,
