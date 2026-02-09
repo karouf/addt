@@ -2,7 +2,7 @@
 
 **Run AI coding agents safely in containers.** Your code stays isolated - no surprises on your host machine.
 
-Supports **Podman** (default) and **Docker** as container runtimes.
+Supports **Podman** (default), **Docker**, and **OrbStack** as container runtimes.
 
 ```bash
 # Install (macOS)
@@ -62,9 +62,9 @@ chmod +x addt && sudo mv addt /usr/local/bin/
 
 **Container runtime:** Podman is auto-downloaded if not available. You can also use Docker if preferred.
 
-**Using Docker instead of Podman:**
+**Using Docker or OrbStack instead of Podman:**
 ```bash
-export ADDT_PROVIDER=docker
+export ADDT_PROVIDER=docker    # or orbstack
 addt run claude "Fix the bug"
 ```
 
@@ -380,6 +380,35 @@ addt config project set firewall true
 addt config extension claude set version 1.0.5
 ```
 
+### Security Profiles
+
+Apply preconfigured security profiles to quickly set multiple settings at once:
+
+```bash
+# List available profiles
+addt profile list
+
+# Apply a profile
+addt profile apply strict
+addt profile apply paranoia
+addt profile apply develop
+```
+
+Built-in profiles:
+- **develop** — Relaxed settings for development (firewall off, no read-only rootfs)
+- **strict** — Tighter security (firewall on, reduced capabilities, secrets isolation)
+- **paranoia** — Maximum lockdown (read-only rootfs, air-gapped network, time limits)
+
+### Config Audit
+
+Review your current security posture with a colored summary:
+
+```bash
+addt config audit
+```
+
+Shows which security settings are enabled/disabled across global and project config, with color-coded severity levels.
+
 ### Common Environment Variables
 
 | Variable | Description |
@@ -487,6 +516,30 @@ addt run claude "Access GPG config"
 - `proxy`: Filter which key IDs can sign operations
 - `keys`: Mount entire ~/.gnupg read-only (backward compatible with `true`)
 
+### Git Config Forwarding
+
+Your `.gitconfig` is automatically forwarded to the container (enabled by default), so git identity, aliases, and settings work inside containers:
+
+```bash
+# Disable .gitconfig forwarding
+addt config set git.forward_config false
+
+# Use a custom .gitconfig path
+addt config set git.config_path /path/to/custom/.gitconfig
+```
+
+### Custom SSH/GPG Directories
+
+Override the default SSH or GPG directory paths:
+
+```bash
+# Use a custom SSH directory
+addt config set ssh.dir /path/to/custom/.ssh
+
+# Use a custom GPG directory
+addt config set gpg.dir /path/to/custom/.gnupg
+```
+
 ### Tmux Forwarding
 
 Forward your host tmux session into the container for multi-pane workflows:
@@ -503,6 +556,19 @@ When enabled and you're running inside a tmux session, the container can:
 - Use tmux commands to split terminals
 
 **Note:** Only works when addt is run from within an active tmux session.
+
+### Terminal OSC Support
+
+Enable forwarding of terminal identification variables (TERM_PROGRAM, KITTY_WINDOW_ID, etc.) so apps inside the container can detect OSC capabilities like clipboard access (OSC 52) and hyperlinks:
+
+```bash
+# Enable OSC forwarding (disabled by default)
+addt config project set terminal.osc true
+# Or via env var
+export ADDT_TERMINAL_OSC=true
+```
+
+When enabled, the container receives terminal identification vars from the host, allowing tools like Claude Code to use clipboard copy via OSC 52. When disabled (the default), only basic terminal vars (TERM, COLORTERM, COLUMNS, LINES) are forwarded.
 
 ### Network Firewall
 
@@ -534,9 +600,15 @@ Rule evaluation: `Defaults → Extension → Global → Project` (most specific 
 ### Resource Limits
 
 ```bash
-export ADDT_DOCKER_CPUS=2
+export ADDT_CONTAINER_CPUS=2
 export ADDT_CONTAINER_MEMORY=4g
 addt run claude
+```
+
+Or via config:
+```bash
+addt config global set container.cpus 2
+addt config global set container.memory 4g
 ```
 
 ### Security Hardening
@@ -562,6 +634,14 @@ Containers run with security defaults enabled:
 | `disable_devices` | false | Drop MKNOD capability (prevent device creation) |
 | `memory_swap` | "" | Memory swap limit: "-1" to disable swap |
 | `isolate_secrets` | false | Isolate secrets from child processes via tmpfs |
+| `yolo` | false | Enable yolo mode globally for all extensions |
+| `audit_log` | false | Enable security audit logging |
+
+**Global yolo mode**: Set `security.yolo: true` to enable yolo/auto-accept mode across all extensions. Per-extension overrides take precedence:
+```bash
+addt config global set security.yolo true           # Enable globally
+addt config extension claude set yolo false          # But disable for claude
+```
 
 **Git hooks neutralization** (enabled by default): A compromised agent can plant git hooks (e.g., `.git/hooks/pre-commit`) that execute arbitrary code on `git commit`. When `git.disable_hooks` is true, a git wrapper sets `core.hooksPath=/dev/null` via `GIT_CONFIG_COUNT` on every invocation, which overrides all file-based config and cannot be bypassed by writing to `.git/config` or `~/.gitconfig`. Disable with `addt config set git.disable_hooks false` if you need pre-commit/lint-staged hooks.
 
@@ -590,7 +670,8 @@ security:
   isolate_secrets: true         # Isolate secrets from child processes
 
 # Mount workspace as read-only (agent can't modify your files)
-workdir_readonly: true
+workdir:
+  readonly: true
 ```
 
 Or via environment variables:
@@ -726,6 +807,11 @@ addt config global list           # Show global settings
 addt config global set <k> <v>    # Set global setting
 addt config project list          # Show project settings
 addt config extension <n> list    # Show extension settings
+addt config audit                 # Review security posture
+
+# Profiles
+addt profile list                 # List available profiles
+addt profile apply <name>         # Apply a security profile
 
 # Firewall
 addt firewall global list         # List global rules
@@ -769,12 +855,12 @@ addt cli update                   # Update addt
 ### Container Behavior
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ADDT_PROVIDER` | podman | Container runtime: `podman` (default), `docker`, or `daytona` |
+| `ADDT_PROVIDER` | podman | Container runtime: `podman` (default), `docker`, or `orbstack` |
 | `ADDT_PERSISTENT` | false | Keep container running |
 | `ADDT_PORTS_FORWARD` | true | Enable port forwarding |
 | `ADDT_PORTS` | - | Ports to expose: `3000,8080` |
-| `ADDT_DOCKER_CPUS` | - | CPU limit: `2` |
-| `ADDT_CONTAINER_MEMORY` | - | Memory limit: `4g` |
+| `ADDT_CONTAINER_CPUS` | 2 | CPU limit: `2` |
+| `ADDT_CONTAINER_MEMORY` | 4g | Memory limit: `4g` |
 | `ADDT_WORKDIR` | `.` | Working directory to mount |
 | `ADDT_WORKDIR_READONLY` | false | Mount workspace as read-only |
 | `ADDT_HISTORY_PERSIST` | false | Persist shell history between sessions |
@@ -785,8 +871,10 @@ addt cli update                   # Update addt
 | `ADDT_SSH_FORWARD_KEYS` | true | Enable SSH key forwarding |
 | `ADDT_SSH_FORWARD_MODE` | proxy | SSH mode: `proxy`, `agent`, or `keys` |
 | `ADDT_SSH_ALLOWED_KEYS` | - | Filter SSH keys by comment: `github,work` |
+| `ADDT_SSH_DIR` | - | Custom SSH directory path |
 | `ADDT_GPG_FORWARD` | - | GPG mode: `proxy`, `agent`, `keys`, or `off` |
 | `ADDT_GPG_ALLOWED_KEY_IDS` | - | Filter GPG keys by ID: `ABC123,DEF456` |
+| `ADDT_GPG_DIR` | - | Custom GPG directory path |
 | `ADDT_TMUX_FORWARD` | false | Forward tmux socket into container |
 | `ADDT_TERMINAL_OSC` | false | Forward terminal identification for OSC support |
 | `ADDT_DOCKER_DIND_ENABLE` | false | Enable Docker-in-Docker |
@@ -800,6 +888,8 @@ addt cli update                   # Update addt
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ADDT_GIT_DISABLE_HOOKS` | true | Neutralize git hooks inside container |
+| `ADDT_GIT_FORWARD_CONFIG` | true | Forward .gitconfig to container |
+| `ADDT_GIT_CONFIG_PATH` | - | Custom .gitconfig file path |
 | `ADDT_FIREWALL` | false | Enable network firewall |
 | `ADDT_FIREWALL_MODE` | strict | Mode: `strict`, `permissive`, `off` |
 | `ADDT_SECURITY_PIDS_LIMIT` | 200 | Max processes in container |
@@ -818,6 +908,9 @@ addt cli update                   # Update addt
 | `ADDT_SECURITY_USER_NAMESPACE` | "" | User namespace mode |
 | `ADDT_SECURITY_DISABLE_DEVICES` | false | Drop MKNOD capability |
 | `ADDT_SECURITY_MEMORY_SWAP` | "" | Memory swap limit |
+| `ADDT_SECURITY_YOLO` | false | Enable yolo mode globally for all extensions |
+| `ADDT_SECURITY_ISOLATE_SECRETS` | true | Isolate secrets from child processes |
+| `ADDT_SECURITY_AUDIT_LOG` | false | Enable security audit logging |
 
 ### Paths & Logging
 | Variable | Default | Description |

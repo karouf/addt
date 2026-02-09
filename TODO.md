@@ -167,3 +167,5 @@ This is a Podman VM kernel limitation — PinP only works on native Linux hosts.
   "autoUpdates": false,
 ===
 https://code.claude.com/docs/en/settings#environment-variables
+===
+- test extensions with auto configure (install.sh cleanup, setup.sh config generation)
