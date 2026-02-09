@@ -18,4 +18,6 @@ fi
 
 # Verify installation
 INSTALLED_VERSION=$(gemini --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
+# Cleaning up the .gemini directory, at this first run creates it
+rm -rf "$HOME/.gemini"
 echo "Extension [gemini]: Done. Installed Gemini CLI v${INSTALLED_VERSION}"

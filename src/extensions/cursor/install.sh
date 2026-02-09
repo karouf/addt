@@ -21,6 +21,8 @@ fi
 # Verify installation
 if command -v agent &> /dev/null; then
     INSTALLED_VERSION=$(agent --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
+    # Cleaning up the .cursor directory, at this first run creates it
+    rm -rf "$HOME/.cursor"
     echo "Extension [cursor]: Done. Installed Cursor CLI v${INSTALLED_VERSION}"
 else
     echo "Warning: agent command not found after installation"

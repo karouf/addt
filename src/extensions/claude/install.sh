@@ -38,4 +38,7 @@ fi
 
 # Verify installation
 INSTALLED_VERSION=$(claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
+# Cleaning up the .claude directory, at this first run creates it
+rm -rf "$HOME/.claude"
+rm -rf "$HOME/.claude.json"
 echo "Extension [claude]: Done. Installed Claude Code v${INSTALLED_VERSION}"
