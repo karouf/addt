@@ -224,12 +224,31 @@ func addUserEnvVars(env map[string]string, cfg *provider.Config) {
 
 // addTerminalEnvVars adds terminal-related environment variables
 func addTerminalEnvVars(env map[string]string) {
-	// Pass terminal type for proper rendering
-	if term := os.Getenv("TERM"); term != "" {
-		env["TERM"] = term
-	}
+	// Always use xterm-256color: the container's terminfo database may not
+	// have entries for host-specific values like xterm-kitty or xterm-ghostty.
+	// App-level terminal detection uses TERM_PROGRAM instead.
+	env["TERM"] = "xterm-256color"
 	if colorterm := os.Getenv("COLORTERM"); colorterm != "" {
 		env["COLORTERM"] = colorterm
+	}
+
+	// Pass terminal program identification (needed for OSC 52 clipboard,
+	// rich copy blocks, and terminal-specific feature detection)
+	terminalVars := []string{
+		"TERM_PROGRAM",
+		"TERM_PROGRAM_VERSION",
+		"LC_TERMINAL",
+		"LC_TERMINAL_VERSION",
+		// Terminal-specific identifiers for feature detection
+		"KITTY_WINDOW_ID",
+		"ITERM_SESSION_ID",
+		"VTE_VERSION",
+		"GHOSTTY_RESOURCES_DIR",
+	}
+	for _, v := range terminalVars {
+		if val := os.Getenv(v); val != "" {
+			env[v] = val
+		}
 	}
 
 	// Pass terminal size (critical for proper line handling in containers)

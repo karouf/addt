@@ -347,6 +347,90 @@ func TestAddFlagEnvVars_GlobalYoloFalseNoEffect(t *testing.T) {
 	}
 }
 
+func TestAddTerminalEnvVars_TerminalIdentification(t *testing.T) {
+	// Scenario: host terminal sets identification vars that should be forwarded
+	// to the container so tools like Claude Code can detect terminal capabilities
+	// (OSC 52 clipboard, rich copy blocks, etc.)
+	terminalVars := map[string]string{
+		"TERM_PROGRAM":          "ghostty",
+		"TERM_PROGRAM_VERSION":  "1.2.0",
+		"LC_TERMINAL":           "iTerm2",
+		"LC_TERMINAL_VERSION":   "3.5.0",
+		"KITTY_WINDOW_ID":       "42",
+		"ITERM_SESSION_ID":      "w0t0p0:ABC-123",
+		"VTE_VERSION":           "7200",
+		"GHOSTTY_RESOURCES_DIR": "/usr/share/ghostty",
+	}
+
+	// Set all vars
+	for k, v := range terminalVars {
+		t.Setenv(k, v)
+	}
+
+	env := make(map[string]string)
+	addTerminalEnvVars(env)
+
+	for k, v := range terminalVars {
+		if env[k] != v {
+			t.Errorf("env[%q] = %q, want %q", k, env[k], v)
+		}
+	}
+}
+
+func TestAddTerminalEnvVars_TermAlwaysXterm256color(t *testing.T) {
+	// Scenario: host uses a custom TERM value (xterm-kitty, xterm-ghostty, etc.)
+	// whose terminfo entry may not exist in the container. The container should
+	// always get TERM=xterm-256color so that TUI apps render correctly.
+	tests := []struct {
+		name    string
+		hostVal string
+	}{
+		{"kitty", "xterm-kitty"},
+		{"ghostty", "xterm-ghostty"},
+		{"plain xterm", "xterm"},
+		{"empty", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("TERM", tt.hostVal)
+			env := make(map[string]string)
+			addTerminalEnvVars(env)
+			if env["TERM"] != "xterm-256color" {
+				t.Errorf("env[TERM] = %q, want %q", env["TERM"], "xterm-256color")
+			}
+		})
+	}
+}
+
+func TestAddTerminalEnvVars_TerminalIdentificationUnset(t *testing.T) {
+	// Scenario: none of the terminal identification vars are set on the host;
+	// they should not appear in the container environment
+	varsToCheck := []string{
+		"TERM_PROGRAM",
+		"TERM_PROGRAM_VERSION",
+		"LC_TERMINAL",
+		"LC_TERMINAL_VERSION",
+		"KITTY_WINDOW_ID",
+		"ITERM_SESSION_ID",
+		"VTE_VERSION",
+		"GHOSTTY_RESOURCES_DIR",
+	}
+
+	// Ensure they are unset
+	for _, k := range varsToCheck {
+		t.Setenv(k, "")
+	}
+
+	env := make(map[string]string)
+	addTerminalEnvVars(env)
+
+	for _, k := range varsToCheck {
+		if _, ok := env[k]; ok {
+			t.Errorf("env[%q] should not be set when host var is empty", k)
+		}
+	}
+}
+
 func TestParseEnvVarSpec(t *testing.T) {
 	tests := []struct {
 		spec        string

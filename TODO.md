@@ -1,4 +1,6 @@
 copy and paste blocks in claude in container
+- bracketed paste works in container bash shell but NOT in Claude Code (Ink/Node.js)
+  Ink needs to enable bracketed paste mode (\e[?2004h) itself — not an addt issue
 ====
 - resume sessions - mount or .addt ?
     or in ~/.addt outside of dir
