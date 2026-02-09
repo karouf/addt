@@ -18,23 +18,23 @@ const testVersion = testutil.TestVersion
 // --- Convenience aliases so test files can use short names ---
 
 var (
-	extractMarker           = testutil.ExtractMarker
-	availableProviders      = testutil.AvailableProviders
-	requireProviders        = testutil.RequireProviders
-	requireSSHAgent         = testutil.RequireSSHAgent
-	setupAddtDir            = testutil.SetupAddtDir
+	extractMarker              = testutil.ExtractMarker
+	availableProviders         = testutil.AvailableProviders
+	requireProviders           = testutil.RequireProviders
+	requireSSHAgent            = testutil.RequireSSHAgent
+	setupAddtDir               = testutil.SetupAddtDir
 	setupAddtDirWithExtensions = testutil.SetupAddtDirWithExtensions
-	captureOutput           = testutil.CaptureOutput
-	runShellCommand         = testutil.RunShellCommand
-	runRunSubcommand        = testutil.RunRunSubcommand
-	runShellSubcommand      = testutil.RunShellSubcommand
-	runContainersSubcommand = testutil.RunContainersSubcommand
-	runAliasCommand         = testutil.RunAliasCommand
-	ensureAddtImage         = testutil.EnsureAddtImage
-	setDummyAnthropicKey    = testutil.SetDummyAnthropicKey
-	procEnvLeakCommand      = testutil.ProcEnvLeakCommand
-	runCmd                  = testutil.RunCmd
-	saveRestoreEnv          = testutil.SaveRestoreEnv
+	captureOutput              = testutil.CaptureOutput
+	runShellCommand            = testutil.RunShellCommand
+	runRunSubcommand           = testutil.RunRunSubcommand
+	runShellSubcommand         = testutil.RunShellSubcommand
+	runContainersSubcommand    = testutil.RunContainersSubcommand
+	runAliasCommand            = testutil.RunAliasCommand
+	ensureAddtImage            = testutil.EnsureAddtImage
+	setDummyAnthropicKey       = testutil.SetDummyAnthropicKey
+	procEnvLeakCommand         = testutil.ProcEnvLeakCommand
+	runCmd                     = testutil.RunCmd
+	saveRestoreEnv             = testutil.SaveRestoreEnv
 )
 
 // --- Subprocess helpers ---
