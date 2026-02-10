@@ -24,7 +24,10 @@ if [ ! -d "$HOME/.gemini" ]; then
       "selectedType": "gemini-api-key"
     }
   },
-  "hasSeenIdeIntegrationNudge": true
+  "hasSeenIdeIntegrationNudge": true,
+  "ide": {
+    "hasSeenNudge": true
+  }
 }
 EOF
             fi

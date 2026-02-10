@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -249,9 +250,10 @@ tmux_forward: true
 				}
 			}()
 
-			if prov == "podman" {
-				// Podman on macOS uses a TCP bridge — verify the proxy
-				// env vars are set inside the container
+			if runtime.GOOS == "darwin" {
+				// On macOS all providers use TCP bridge (Unix sockets
+				// can't cross the VM boundary via virtiofs) — verify the
+				// proxy env vars are set inside the container
 				output, err := runRunSubcommand(t, dir, "debug",
 					"-c", "echo HOST:${ADDT_TMUX_PROXY_HOST:-NOTSET} && echo PORT:${ADDT_TMUX_PROXY_PORT:-NOTSET}")
 				t.Logf("Output:\n%s", output)
@@ -269,8 +271,8 @@ tmux_forward: true
 					t.Errorf("Expected ADDT_TMUX_PROXY_PORT to be set, got %q\nFull output:\n%s", port, output)
 				}
 			} else {
-				// Docker mounts the socket directory directly — verify
-				// the socket dir exists inside the container
+				// Linux: Docker mounts the socket directory directly —
+				// verify the socket dir exists inside the container
 				socketDir := filepath.Dir(tmuxSess.socketPath)
 				output, err := runRunSubcommand(t, dir, "debug",
 					"-c", fmt.Sprintf("if [ -d %s ]; then echo SOCKET_DIR:yes; else echo SOCKET_DIR:no; fi", socketDir))
