@@ -13,7 +13,7 @@ func (p *DockerProvider) GetStatus(cfg *provider.Config, envName string) string 
 	var parts []string
 
 	// Provider name
-	parts = append(parts, "docker")
+	parts = append(parts, p.GetName())
 
 	// Resource limits
 	resources := buildResourceString(cfg)

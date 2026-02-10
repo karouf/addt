@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/jedi4ever/addt/config"
+	"github.com/jedi4ever/addt/provider"
 )
 
 const (
@@ -48,14 +49,21 @@ func ProcEnvLeakCommand(envVar string) string {
 func AvailableProviders(t *testing.T) []string {
 	t.Helper()
 	var providers []string
+	contexts := provider.DockerContextNames()
 
-	if path, err := exec.LookPath("docker"); err == nil {
-		c := exec.Command(path, "info")
-		if c.Run() == nil {
-			providers = append(providers, "docker")
-		}
+	// Check Docker Desktop (desktop-linux context)
+	if contains(contexts, "desktop-linux") {
+		providers = append(providers, "docker")
 	}
-
+	// Check Rancher Desktop (rancher-desktop context)
+	if contains(contexts, "rancher-desktop") {
+		providers = append(providers, "rancher")
+	}
+	// Check OrbStack (orbstack context, macOS only)
+	if runtime.GOOS == "darwin" && contains(contexts, "orbstack") {
+		providers = append(providers, "orbstack")
+	}
+	// Podman (own binary)
 	if path, err := exec.LookPath("podman"); err == nil {
 		c := exec.Command(path, "version")
 		if c.Run() == nil {
@@ -71,14 +79,16 @@ func AvailableProviders(t *testing.T) []string {
 		}
 	}
 
-	if path, err := exec.LookPath("orbctl"); err == nil {
-		c := exec.Command(path, "status")
-		if out, err := c.Output(); err == nil && strings.TrimSpace(string(out)) == "Running" {
-			providers = append(providers, "orbstack")
+	return providers
+}
+
+func contains(ss []string, s string) bool {
+	for _, v := range ss {
+		if v == s {
+			return true
 		}
 	}
-
-	return providers
+	return false
 }
 
 // RequireProviders skips the test if no container providers are available.

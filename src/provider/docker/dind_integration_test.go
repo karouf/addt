@@ -4,7 +4,6 @@ package docker
 
 import (
 	"os"
-	"os/exec"
 	"strings"
 	"testing"
 
@@ -17,12 +16,8 @@ func checkDockerForDind(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping container test in short mode")
 	}
-	if _, err := exec.LookPath("docker"); err != nil {
-		t.Skip("Docker not found in PATH, skipping integration test")
-	}
-	cmd := provider.DockerCmd("default", "info")
-	if err := cmd.Run(); err != nil {
-		t.Skip("Docker daemon not running, skipping integration test")
+	if !provider.HasDockerContext("desktop-linux") {
+		t.Skip("Docker Desktop not installed (no desktop-linux context)")
 	}
 }
 
@@ -170,7 +165,7 @@ func TestDockerForwarding_Integration_HostModeInContainer(t *testing.T) {
 	}
 
 	// Run a container with the docker socket mounted and verify docker works
-	cmd := provider.DockerCmd("default", "run", "--rm",
+	cmd := provider.DockerCmd("desktop-linux", "run", "--rm",
 		"-v", "/var/run/docker.sock:/var/run/docker.sock",
 		"docker:cli",
 		"docker", "version", "--format", "{{.Server.Version}}")
@@ -197,11 +192,11 @@ func TestDockerForwarding_Integration_IsolatedModeInContainer(t *testing.T) {
 	containerName := "addt-dind-integration-test"
 
 	// Clean up any existing container
-	provider.DockerCmd("default", "rm", "-f", containerName).Run()
-	defer provider.DockerCmd("default", "rm", "-f", containerName).Run()
+	provider.DockerCmd("desktop-linux", "rm", "-f", containerName).Run()
+	defer provider.DockerCmd("desktop-linux", "rm", "-f", containerName).Run()
 
 	// Start a dind container in background
-	startCmd := provider.DockerCmd("default", "run", "-d",
+	startCmd := provider.DockerCmd("desktop-linux", "run", "-d",
 		"--name", containerName,
 		"--privileged",
 		"-v", "addt-dind-test:/var/lib/docker",
@@ -213,11 +208,11 @@ func TestDockerForwarding_Integration_IsolatedModeInContainer(t *testing.T) {
 	}
 
 	// Wait a bit for dockerd to start
-	provider.DockerCmd("default", "exec", containerName, "sh", "-c",
+	provider.DockerCmd("desktop-linux", "exec", containerName, "sh", "-c",
 		"for i in 1 2 3 4 5; do docker info >/dev/null 2>&1 && break || sleep 2; done").Run()
 
 	// Try to run docker info inside the container
-	checkCmd := provider.DockerCmd("default", "exec", containerName, "docker", "info", "--format", "{{.ServerVersion}}")
+	checkCmd := provider.DockerCmd("desktop-linux", "exec", containerName, "docker", "info", "--format", "{{.ServerVersion}}")
 	output, err := checkCmd.CombinedOutput()
 	if err != nil {
 		t.Logf("Note: dind may take time to start. Output: %s", string(output))
@@ -228,7 +223,7 @@ func TestDockerForwarding_Integration_IsolatedModeInContainer(t *testing.T) {
 	t.Logf("Isolated Docker version: %s", strings.TrimSpace(string(output)))
 
 	// Clean up the test volume
-	provider.DockerCmd("default", "volume", "rm", "-f", "addt-dind-test").Run()
+	provider.DockerCmd("desktop-linux", "volume", "rm", "-f", "addt-dind-test").Run()
 }
 
 func TestDockerForwarding_Integration_GetDockerSocketGID(t *testing.T) {

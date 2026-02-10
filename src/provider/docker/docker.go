@@ -12,6 +12,7 @@ import (
 
 // DockerProvider implements the Provider interface for Docker
 type DockerProvider struct {
+	dockerContext          string // Docker context name (e.g. "desktop-linux", "rancher-desktop")
 	config                 *provider.Config
 	tempDirs               []string
 	sshProxy               *security.SSHProxyAgent
@@ -25,9 +26,11 @@ type DockerProvider struct {
 	embeddedExtensions     embed.FS
 }
 
-// NewDockerProvider creates a new Docker provider
-func NewDockerProvider(cfg *provider.Config, dockerfile, dockerfileBase, entrypoint, initFirewall, installSh []byte, extensions embed.FS) (provider.Provider, error) {
+// NewDockerProvider creates a new Docker provider.
+// dockerContext is the Docker context name (e.g. "desktop-linux", "rancher-desktop").
+func NewDockerProvider(cfg *provider.Config, dockerContext string, dockerfile, dockerfileBase, entrypoint, initFirewall, installSh []byte, extensions embed.FS) (provider.Provider, error) {
 	return &DockerProvider{
+		dockerContext:          dockerContext,
 		config:                 cfg,
 		tempDirs:               []string{},
 		embeddedDockerfile:     dockerfile,
@@ -51,6 +54,9 @@ func (p *DockerProvider) Initialize(cfg *provider.Config) error {
 
 // GetName returns the provider name
 func (p *DockerProvider) GetName() string {
+	if p.dockerContext == "rancher-desktop" {
+		return "rancher"
+	}
 	return "docker"
 }
 
@@ -74,9 +80,14 @@ func (p *DockerProvider) CheckPrerequisites() error {
 // and name generation (GenerateContainerName, GenerateEphemeralName, GeneratePersistentName)
 // are defined in persistent.go
 
-// dockerCmd creates an exec.Cmd for docker targeting the "default" context.
+// dockerCmd creates an exec.Cmd for docker targeting the provider's context.
 func (p *DockerProvider) dockerCmd(args ...string) *exec.Cmd {
-	return provider.DockerCmd("default", args...)
+	return provider.DockerCmd(p.dockerContext, args...)
+}
+
+// dockerEnv returns the environment slice for Docker commands in this context.
+func (p *DockerProvider) dockerEnv() []string {
+	return append(os.Environ(), "DOCKER_CONTEXT="+p.dockerContext)
 }
 
 // Cleanup removes temporary directories and stops proxies

@@ -4,8 +4,8 @@ package orbstack
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -18,12 +18,11 @@ func checkDockerForGPG(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping container test in short mode")
 	}
-	if _, err := exec.LookPath("docker"); err != nil {
-		t.Skip("Docker not found in PATH, skipping integration test")
+	if runtime.GOOS != "darwin" {
+		t.Skip("OrbStack is only available on macOS")
 	}
-	cmd := provider.DockerCmd("orbstack", "info")
-	if err := cmd.Run(); err != nil {
-		t.Skip("Docker daemon not running, skipping integration test")
+	if !provider.HasDockerContext("orbstack") {
+		t.Skip("OrbStack not installed (no orbstack context)")
 	}
 }
 

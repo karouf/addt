@@ -71,7 +71,7 @@ func (p *OrbStackProvider) BuildBaseImage() error {
 	}
 
 	// Run build with progress indication
-	if err := util.RunBuildCommand("docker", args); err != nil {
+	if err := util.RunBuildCommandWithEnv("docker", args, p.dockerEnv()); err != nil {
 		util.PrintError(fmt.Sprintf("Failed to build base image: %v", err))
 		return fmt.Errorf("failed to build base Docker image: %w", err)
 	}
@@ -214,7 +214,7 @@ func (p *OrbStackProvider) BuildImage(embeddedDockerfile, embeddedEntrypoint []b
 	)
 
 	// Run build with progress indication
-	if err := util.RunBuildCommand("docker", args); err != nil {
+	if err := util.RunBuildCommandWithEnv("docker", args, p.dockerEnv()); err != nil {
 		util.PrintError(fmt.Sprintf("Failed to build image: %v", err))
 		return fmt.Errorf("failed to build Docker image: %w", err)
 	}

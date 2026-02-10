@@ -4,7 +4,6 @@ package docker
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -18,12 +17,8 @@ func checkDockerForSSH(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping container test in short mode")
 	}
-	if _, err := exec.LookPath("docker"); err != nil {
-		t.Skip("Docker not found in PATH, skipping integration test")
-	}
-	cmd := provider.DockerCmd("default", "info")
-	if err := cmd.Run(); err != nil {
-		t.Skip("Docker daemon not running, skipping integration test")
+	if !provider.HasDockerContext("desktop-linux") {
+		t.Skip("Docker Desktop not installed (no desktop-linux context)")
 	}
 }
 
@@ -198,7 +193,7 @@ func TestSSHForwarding_Integration_SafeFilesInContainer(t *testing.T) {
 	}
 
 	// Run container and verify only safe files exist
-	cmd := provider.DockerCmd("default", "run", "--rm",
+	cmd := provider.DockerCmd("desktop-linux", "run", "--rm",
 		"-v", mountArg,
 		"alpine:latest",
 		"ls", "-1", "/home/testuser/.ssh/")

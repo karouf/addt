@@ -32,6 +32,7 @@ func createTestProvider(t *testing.T, cfg *provider.Config) provider.Provider {
 	t.Helper()
 	prov, err := docker.NewDockerProvider(
 		cfg,
+		"desktop-linux",
 		assets.DockerDockerfile,
 		assets.DockerDockerfileBase,
 		assets.DockerEntrypoint,

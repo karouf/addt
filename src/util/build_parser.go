@@ -24,8 +24,9 @@ type BuildOutput struct {
 
 // BuildRunner executes a container build command with progress output
 type BuildRunner struct {
-	Command     string // "docker" or "podman"
+	Command     string   // "docker" or "podman"
 	Args        []string
+	Env         []string // optional env override; if set, used as cmd.Env
 	Verbose     bool
 	startTime   time.Time
 	currentStep int
@@ -49,6 +50,9 @@ func (br *BuildRunner) Run() error {
 	// If verbose mode, just run normally
 	if br.Verbose {
 		cmd := exec.Command(br.Command, br.Args...)
+		if len(br.Env) > 0 {
+			cmd.Env = br.Env
+		}
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		return cmd.Run()
@@ -56,6 +60,9 @@ func (br *BuildRunner) Run() error {
 
 	// Create command with piped output
 	cmd := exec.Command(br.Command, br.Args...)
+	if len(br.Env) > 0 {
+		cmd.Env = br.Env
+	}
 
 	// Combine stdout and stderr
 	stdout, err := cmd.StdoutPipe()
@@ -186,6 +193,13 @@ func (br *BuildRunner) parseLine(line string, buildkitRegex, legacyRegex, podman
 // RunBuildCommand runs a docker/podman build with progress indication
 func RunBuildCommand(command string, args []string) error {
 	runner := NewBuildRunner(command, args)
+	return runner.Run()
+}
+
+// RunBuildCommandWithEnv runs a docker/podman build with a custom environment.
+func RunBuildCommandWithEnv(command string, args, env []string) error {
+	runner := NewBuildRunner(command, args)
+	runner.Env = env
 	return runner.Run()
 }
 

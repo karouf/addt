@@ -33,6 +33,7 @@ func createFirewallTestProvider(t *testing.T, cfg *provider.Config) provider.Pro
 	t.Helper()
 	prov, err := docker.NewDockerProvider(
 		cfg,
+		"desktop-linux",
 		assets.DockerDockerfile,
 		assets.DockerDockerfileBase,
 		assets.DockerEntrypoint,

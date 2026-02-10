@@ -103,7 +103,8 @@ Environment Variables:
     ADDT_UV_VERSION        UV Python version (default: latest)
 
   Other:
-    ADDT_PROVIDER          Provider: docker, podman, orbstack, or daytona (auto-detected)
+    ADDT_PROVIDER          Provider: docker, rancher, podman, orbstack, or daytona (auto-detected)
+    ADDT_PROVIDER_AUTOSELECT  Provider auto-detection order (default: orbstack,rancher,docker,podman)
     ADDT_HOME              Addt data directory (default: ~/.addt)
     ADDT_CONFIG_DIR        Global config directory (overrides ADDT_HOME for config only)
     ADDT_GITHUB_FORWARD_TOKEN  Forward GH_TOKEN to container (default: true)

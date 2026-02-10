@@ -128,8 +128,14 @@ type WorkdirSettings struct {
 	Autotrust *bool  `yaml:"autotrust,omitempty"` // Trust the /workspace directory on first launch (default: true)
 }
 
+// ProviderSettings holds provider selection configuration
+type ProviderSettings struct {
+	Autoselect []string `yaml:"autoselect,omitempty"`
+}
+
 // GlobalConfig represents the persistent configuration stored in ~/.addt/config.yaml
 type GlobalConfig struct {
+	Provider *ProviderSettings `yaml:"provider,omitempty"`
 	Container      *ContainerSettings `yaml:"container,omitempty"`
 	Docker         *DockerSettings    `yaml:"docker,omitempty"`
 	Vm             *VmSettings        `yaml:"vm,omitempty"`

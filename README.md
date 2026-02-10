@@ -2,7 +2,7 @@
 
 **Run AI coding agents safely in containers.** Your code stays isolated - no surprises on your host machine.
 
-Supports **Podman** (default), **Docker**, and **OrbStack** as container runtimes.
+Supports **Podman** (default), **Docker**, **Rancher Desktop**, and **OrbStack** as container runtimes.
 
 ```bash
 # Install (macOS)
@@ -62,10 +62,15 @@ chmod +x addt && sudo mv addt /usr/local/bin/
 
 **Container runtime:** Podman is auto-downloaded if not available. You can also use Docker if preferred.
 
-**Using Docker or OrbStack instead of Podman:**
+**Using Docker, Rancher Desktop, or OrbStack instead of Podman:**
 ```bash
-export ADDT_PROVIDER=docker    # or orbstack
+export ADDT_PROVIDER=docker    # or rancher, orbstack
 addt run claude "Fix the bug"
+```
+
+**Auto-detection order:** By default addt tries providers in order: `orbstack → rancher → docker → podman`. Customize with:
+```bash
+addt config set provider.autoselect "rancher,orbstack,podman" -g
 ```
 
 ---
@@ -874,7 +879,8 @@ addt cli update                   # Update addt
 ### Container Behavior
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ADDT_PROVIDER` | podman | Container runtime: `podman` (default), `docker`, or `orbstack` |
+| `ADDT_PROVIDER` | (auto) | Container runtime: `docker`, `rancher`, `podman`, or `orbstack` |
+| `ADDT_PROVIDER_AUTOSELECT` | orbstack,rancher,docker,podman | Auto-detection priority order |
 | `ADDT_PERSISTENT` | false | Keep container running |
 | `ADDT_PORTS_FORWARD` | true | Enable port forwarding |
 | `ADDT_PORTS` | - | Ports to expose: `3000,8080` |

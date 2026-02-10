@@ -4,7 +4,6 @@ package docker
 
 import (
 	"os"
-	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -18,12 +17,8 @@ func checkDockerForPersistent(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping container test in short mode")
 	}
-	if _, err := exec.LookPath("docker"); err != nil {
-		t.Skip("Docker not found in PATH, skipping integration test")
-	}
-	cmd := provider.DockerCmd("default", "info")
-	if err := cmd.Run(); err != nil {
-		t.Skip("Docker daemon not running, skipping integration test")
+	if !provider.HasDockerContext("desktop-linux") {
+		t.Skip("Docker Desktop not installed (no desktop-linux context)")
 	}
 }
 
@@ -40,7 +35,7 @@ func createPersistentTestProvider(workdir, extensions string) *DockerProvider {
 
 // cleanupContainer removes a container if it exists
 func cleanupContainer(name string) {
-	provider.DockerCmd("default", "rm", "-f", name).Run()
+	provider.DockerCmd("desktop-linux", "rm", "-f", name).Run()
 }
 
 func TestPersistent_Integration_GenerateContainerName(t *testing.T) {
@@ -180,7 +175,7 @@ func TestPersistent_Integration_ContainerLifecycle(t *testing.T) {
 	}
 
 	// Create a container
-	cmd := provider.DockerCmd("default", "run", "-d", "--name", containerName, "alpine:latest", "sleep", "60")
+	cmd := provider.DockerCmd("desktop-linux", "run", "-d", "--name", containerName, "alpine:latest", "sleep", "60")
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("Failed to create container: %v", err)
 	}
@@ -249,7 +244,7 @@ func TestPersistent_Integration_ListContainers(t *testing.T) {
 
 	// Create containers
 	for _, name := range testContainers {
-		cmd := provider.DockerCmd("default", "run", "-d", "--name", name, "alpine:latest", "sleep", "60")
+		cmd := provider.DockerCmd("desktop-linux", "run", "-d", "--name", name, "alpine:latest", "sleep", "60")
 		if err := cmd.Run(); err != nil {
 			t.Fatalf("Failed to create container %s: %v", name, err)
 		}
@@ -347,14 +342,14 @@ func TestPersistent_Integration_ReuseExistingContainer(t *testing.T) {
 	defer cleanupContainer(containerName)
 
 	// Create a container with a marker file
-	cmd := provider.DockerCmd("default", "run", "-d", "--name", containerName,
+	cmd := provider.DockerCmd("desktop-linux", "run", "-d", "--name", containerName,
 		"alpine:latest", "sh", "-c", "echo 'marker' > /tmp/marker && sleep 60")
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("Failed to create container: %v", err)
 	}
 
 	// Verify marker file exists
-	checkCmd := provider.DockerCmd("default", "exec", containerName, "cat", "/tmp/marker")
+	checkCmd := provider.DockerCmd("desktop-linux", "exec", containerName, "cat", "/tmp/marker")
 	output, err := checkCmd.Output()
 	if err != nil {
 		t.Fatalf("Failed to check marker file: %v", err)
@@ -376,7 +371,7 @@ func TestPersistent_Integration_ReuseExistingContainer(t *testing.T) {
 	}
 
 	// Marker file should still exist (persistent state)
-	checkCmd = provider.DockerCmd("default", "exec", containerName, "cat", "/tmp/marker")
+	checkCmd = provider.DockerCmd("desktop-linux", "exec", containerName, "cat", "/tmp/marker")
 	output, err = checkCmd.Output()
 	if err != nil {
 		t.Fatalf("Failed to check marker file after restart: %v", err)

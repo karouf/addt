@@ -20,6 +20,7 @@ import (
 func createShellDockerProvider(cfg *provider.Config) (provider.Provider, error) {
 	return docker.NewDockerProvider(
 		cfg,
+		"desktop-linux",
 		assets.DockerDockerfile,
 		assets.DockerDockerfileBase,
 		assets.DockerEntrypoint,

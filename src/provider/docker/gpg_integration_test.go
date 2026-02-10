@@ -4,7 +4,6 @@ package docker
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -18,12 +17,8 @@ func checkDockerForGPG(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping container test in short mode")
 	}
-	if _, err := exec.LookPath("docker"); err != nil {
-		t.Skip("Docker not found in PATH, skipping integration test")
-	}
-	cmd := provider.DockerCmd("default", "info")
-	if err := cmd.Run(); err != nil {
-		t.Skip("Docker daemon not running, skipping integration test")
+	if !provider.HasDockerContext("desktop-linux") {
+		t.Skip("Docker Desktop not installed (no desktop-linux context)")
 	}
 }
 
@@ -113,7 +108,7 @@ func TestGPGForwarding_Integration_MountInContainer(t *testing.T) {
 	}
 
 	// Run container with GPG mount and verify files are accessible
-	cmd := provider.DockerCmd("default", "run", "--rm",
+	cmd := provider.DockerCmd("desktop-linux", "run", "--rm",
 		"-v", gnupgDir+":/home/testuser/.gnupg",
 		"-e", "GPG_TTY=/dev/console",
 		"alpine:latest",
@@ -197,7 +192,7 @@ func TestGPGForwarding_Integration_VerifyGPGTTYInContainer(t *testing.T) {
 	checkDockerForGPG(t)
 
 	// Run container and verify GPG_TTY is set correctly
-	cmd := provider.DockerCmd("default", "run", "--rm",
+	cmd := provider.DockerCmd("desktop-linux", "run", "--rm",
 		"-e", "GPG_TTY=/dev/console",
 		"alpine:latest",
 		"sh", "-c", "echo $GPG_TTY")

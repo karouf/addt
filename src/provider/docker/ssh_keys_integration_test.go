@@ -82,7 +82,7 @@ func TestSSHForwarding_Integration_KeysModeInContainer(t *testing.T) {
 	}
 
 	// Run container with SSH mount and verify files are accessible
-	cmd := provider.DockerCmd("default", "run", "--rm",
+	cmd := provider.DockerCmd("desktop-linux", "run", "--rm",
 		"-v", sshDir+":/home/testuser/.ssh:ro",
 		"alpine:latest",
 		"cat", "/home/testuser/.ssh/config")

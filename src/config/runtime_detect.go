@@ -6,47 +6,109 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+
+	"github.com/jedi4ever/addt/provider"
 )
 
-// DetectContainerRuntime automatically detects which container runtime to use
-// Priority: explicit ADDT_PROVIDER > Podman (if available) > Docker (if running) > Podman (default)
+// defaultAutoselect is the default provider priority order.
+var defaultAutoselect = []string{"orbstack", "rancher", "docker", "podman"}
+
+// getAutoselect returns the provider autoselect order from config or default.
+func getAutoselect() []string {
+	// Check env var first
+	if v := os.Getenv("ADDT_PROVIDER_AUTOSELECT"); v != "" {
+		return splitTrimmed(v)
+	}
+
+	// Check global config
+	cfg := loadGlobalConfig()
+	if cfg != nil && cfg.Provider != nil && len(cfg.Provider.Autoselect) > 0 {
+		return cfg.Provider.Autoselect
+	}
+
+	return defaultAutoselect
+}
+
+// splitTrimmed splits a comma-separated string and trims whitespace.
+func splitTrimmed(s string) []string {
+	parts := strings.Split(s, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			result = append(result, p)
+		}
+	}
+	return result
+}
+
+// DetectContainerRuntime automatically detects which container runtime to use.
+// Priority: explicit ADDT_PROVIDER > autoselect order > podman (fallback)
 func DetectContainerRuntime() string {
 	// If explicitly set, use that
-	if provider := os.Getenv("ADDT_PROVIDER"); provider != "" {
-		return provider
+	if p := os.Getenv("ADDT_PROVIDER"); p != "" {
+		return p
 	}
 
-	// Check if Podman is available (preferred - no daemon required)
-	if isPodmanAvailable() {
-		return "podman"
+	// Iterate over autoselect order
+	for _, candidate := range getAutoselect() {
+		switch candidate {
+		case "orbstack":
+			if runtime.GOOS == "darwin" && isOrbstackRunning() {
+				return "orbstack"
+			}
+		case "rancher":
+			if provider.HasDockerContext("rancher-desktop") {
+				return "rancher"
+			}
+		case "docker":
+			if provider.HasDockerContext("desktop-linux") {
+				return "docker"
+			}
+		case "podman":
+			if isPodmanAvailable() {
+				return "podman"
+			}
+		}
 	}
 
-	// Check if Docker is available and running
-	if isDockerRunning() {
-		return "docker"
-	}
-
-	// Default to podman (will offer to install if not available)
+	// Default fallback
 	return "podman"
 }
 
-// EnsureContainerRuntime ensures a container runtime is available
-// Downloads Podman automatically if needed (unless Docker or OrbStack is explicitly selected)
+// EnsureContainerRuntime ensures a container runtime is available.
+// Downloads Podman automatically if needed (unless another provider is explicitly selected).
 func EnsureContainerRuntime() (string, error) {
-	// If OrbStack is explicitly selected, verify it's running
-	if provider := os.Getenv("ADDT_PROVIDER"); provider == "orbstack" {
+	p := os.Getenv("ADDT_PROVIDER")
+
+	// Handle explicitly selected providers
+	switch p {
+	case "orbstack":
 		if !isOrbstackRunning() {
 			return "", fmt.Errorf("OrbStack is explicitly selected but not running")
 		}
 		return "orbstack", nil
-	}
-
-	// If Docker is explicitly selected, use it without auto-download
-	if provider := os.Getenv("ADDT_PROVIDER"); provider == "docker" {
-		if !isDockerRunning() {
-			return "", fmt.Errorf("Docker is explicitly selected but not running")
+	case "docker":
+		if !provider.HasDockerContext("desktop-linux") {
+			return "", fmt.Errorf("Docker Desktop is explicitly selected but desktop-linux context not found")
 		}
 		return "docker", nil
+	case "rancher":
+		if !provider.HasDockerContext("rancher-desktop") {
+			return "", fmt.Errorf("Rancher Desktop is explicitly selected but rancher-desktop context not found")
+		}
+		return "rancher", nil
+	}
+
+	// If explicitly set to something else (e.g. podman), honour it
+	if p != "" {
+		// Fall through to podman handling below
+	}
+
+	// Auto-detect: try autoselect order
+	detected := DetectContainerRuntime()
+	if detected != "podman" {
+		return detected, nil
 	}
 
 	// Check if Podman binary exists (even if machine not running)
@@ -59,11 +121,6 @@ func EnsureContainerRuntime() (string, error) {
 			}
 		}
 		return "podman", nil
-	}
-
-	// Check if Docker is available as fallback
-	if isDockerRunning() {
-		return "docker", nil
 	}
 
 	// Neither available - auto-download Podman
@@ -93,21 +150,6 @@ func isOrbstackRunning() bool {
 		return false
 	}
 	return strings.TrimSpace(string(output)) == "Running"
-}
-
-// isDockerRunning checks if Docker daemon is running
-func isDockerRunning() bool {
-	// First check if docker command exists
-	dockerPath, err := exec.LookPath("docker")
-	if err != nil {
-		return false
-	}
-
-	// Check if daemon is responsive
-	cmd := exec.Command(dockerPath, "info")
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	return cmd.Run() == nil
 }
 
 // isPodmanAvailable checks if Podman is available and functional
@@ -185,11 +227,11 @@ func GetPodmanPath() string {
 }
 
 // GetRuntimeInfo returns information about the detected runtime
-func GetRuntimeInfo() (runtime string, version string, extras []string) {
-	runtime = DetectContainerRuntime()
+func GetRuntimeInfo() (rt string, version string, extras []string) {
+	rt = DetectContainerRuntime()
 
-	switch runtime {
-	case "docker":
+	switch rt {
+	case "docker", "rancher":
 		version = getDockerVersion()
 	case "orbstack":
 		version = getOrbstackVersion()
@@ -200,7 +242,7 @@ func GetRuntimeInfo() (runtime string, version string, extras []string) {
 		}
 	}
 
-	return runtime, version, extras
+	return rt, version, extras
 }
 
 func getOrbstackVersion() string {

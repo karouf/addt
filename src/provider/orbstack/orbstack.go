@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 
 	"github.com/jedi4ever/addt/config/security"
 	"github.com/jedi4ever/addt/provider"
@@ -56,6 +57,11 @@ func (p *OrbStackProvider) GetName() string {
 
 // CheckPrerequisites verifies OrbStack and Docker CLI are installed and OrbStack is running
 func (p *OrbStackProvider) CheckPrerequisites() error {
+	// OrbStack is macOS-only
+	if runtime.GOOS != "darwin" {
+		return fmt.Errorf("OrbStack is only available on macOS")
+	}
+
 	// Check orbctl is installed
 	if _, err := exec.LookPath("orbctl"); err != nil {
 		return fmt.Errorf("OrbStack is not installed. Please install OrbStack from: https://orbstack.dev/")
@@ -86,6 +92,11 @@ func (p *OrbStackProvider) CheckPrerequisites() error {
 // dockerCmd creates an exec.Cmd for docker targeting the "orbstack" context.
 func (p *OrbStackProvider) dockerCmd(args ...string) *exec.Cmd {
 	return provider.DockerCmd("orbstack", args...)
+}
+
+// dockerEnv returns the environment slice for Docker commands in the orbstack context.
+func (p *OrbStackProvider) dockerEnv() []string {
+	return append(os.Environ(), "DOCKER_CONTEXT=orbstack")
 }
 
 // Cleanup removes temporary directories and stops proxies

@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -22,12 +22,11 @@ func checkDockerForSecrets(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping container test in short mode")
 	}
-	if _, err := exec.LookPath("docker"); err != nil {
-		t.Skip("Docker not found in PATH, skipping integration test")
+	if runtime.GOOS != "darwin" {
+		t.Skip("OrbStack is only available on macOS")
 	}
-	cmd := provider.DockerCmd("orbstack", "info")
-	if err := cmd.Run(); err != nil {
-		t.Skip("Docker daemon not running, skipping integration test")
+	if !provider.HasDockerContext("orbstack") {
+		t.Skip("OrbStack not installed (no orbstack context)")
 	}
 }
 
