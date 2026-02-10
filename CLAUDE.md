@@ -25,4 +25,7 @@
 - for addt tests when you want to run a shell command change the addt_command, for extensions specific tests keep the existing command
 - for addt tests , make them read as user scenarios in the comments
 - for addt tests you typically use a testdata debug extension not one of the extensions itself
-- when running the addt tests, run them in groups as they run quite long
+- when running the addt tests, ALWAYS use `make test-addt` (runs in groups with proper timeouts)
+- for a specific group: `make test-addt-config`, `make test-addt-container`, or `make test-addt-trust`
+- for a single test: `cd src && go test -tags addt -v -timeout 600s -run TestName_Addt ./test/addt/`
+- NEVER use a timeout below 600s for addt tests — image builds take 1-2 minutes each
