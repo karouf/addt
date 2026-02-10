@@ -349,7 +349,8 @@ func RequireTmux(t *testing.T) string {
 	return tmuxBin
 }
 
-// GetAddtBinary returns the path to dist/addt, building it if needed.
+// GetAddtBinary returns the path to dist/addt, always rebuilding from source
+// to ensure tests run against the current code.
 func GetAddtBinary(t *testing.T) string {
 	t.Helper()
 
@@ -358,15 +359,13 @@ func GetAddtBinary(t *testing.T) string {
 	repoRoot := filepath.Join(filepath.Dir(thisFile), "..", "..", "..")
 	binaryPath := filepath.Join(repoRoot, "dist", "addt")
 
-	if _, err := os.Stat(binaryPath); err != nil {
-		t.Logf("dist/addt not found, building...")
-		srcDir := filepath.Join(repoRoot, "src")
-		cmd := exec.Command("go", "build", "-o", binaryPath, ".")
-		cmd.Dir = srcDir
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			t.Fatalf("Failed to build addt binary: %v\n%s", err, string(output))
-		}
+	srcDir := filepath.Join(repoRoot, "src")
+	os.MkdirAll(filepath.Dir(binaryPath), 0755)
+	cmd := exec.Command("go", "build", "-o", binaryPath, ".")
+	cmd.Dir = srcDir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("Failed to build addt binary: %v\n%s", err, string(output))
 	}
 
 	absPath, err := filepath.Abs(binaryPath)

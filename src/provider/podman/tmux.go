@@ -117,6 +117,8 @@ func (p *PodmanProvider) handleTmuxForwardingTCP(socketPath string, tmuxParts []
 
 // createTmuxProxyTCP creates a TCP-based tmux proxy for macOS.
 func (p *PodmanProvider) createTmuxProxyTCP(upstreamSocket string) (*tmuxProxy, error) {
+	// Must bind 0.0.0.0 because containers connect via host.docker.internal
+	// which resolves to a non-loopback IP (VM gateway)
 	listener, err := net.Listen("tcp", "0.0.0.0:0")
 	if err != nil {
 		return nil, fmt.Errorf("failed to listen on TCP: %w", err)

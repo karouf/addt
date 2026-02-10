@@ -188,9 +188,9 @@ func (p *DockerProvider) addContainerVolumesAndEnv(dockerArgs []string, spec *pr
 		dockerArgs = append(dockerArgs, "--user", "root")
 	}
 
-	// Add ports
+	// Add ports (bind to localhost only to avoid exposing dev ports to the network)
 	for _, port := range spec.Ports {
-		dockerArgs = append(dockerArgs, "-p", fmt.Sprintf("%d:%d", port.Host, port.Container))
+		dockerArgs = append(dockerArgs, "-p", fmt.Sprintf("127.0.0.1:%d:%d", port.Host, port.Container))
 	}
 
 	// Handle isolate_secrets: add tmpfs mount for secrets

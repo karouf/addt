@@ -8,360 +8,350 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jedi4ever/addt/assets"
 	"github.com/jedi4ever/addt/config"
-	"github.com/jedi4ever/addt/extensions"
 	"github.com/jedi4ever/addt/provider"
-	"github.com/jedi4ever/addt/provider/docker"
+	testutil "github.com/jedi4ever/addt/test/util"
 )
 
-// createDockerProvider creates a Docker provider with embedded assets
-func createDockerProvider(cfg *provider.Config) (provider.Provider, error) {
-	return docker.NewDockerProvider(
-		cfg,
-		"desktop-linux",
-		assets.DockerDockerfile,
-		assets.DockerDockerfileBase,
-		assets.DockerEntrypoint,
-		assets.DockerInitFirewall,
-		assets.DockerInstallSh,
-		extensions.FS,
-	)
-}
-
-// skipIfNoDocker verifies Docker is available and running
-func skipIfNoDocker(t *testing.T) {
-	t.Helper()
-	if _, err := exec.LookPath("docker"); err != nil {
-		t.Skip("Docker not found in PATH, skipping integration test")
-	}
-	cmd := exec.Command("docker", "info")
-	if err := cmd.Run(); err != nil {
-		t.Skip("Docker daemon not running, skipping integration test")
+// providerImageCmd returns an exec.Cmd for image operations on the given provider.
+func providerImageCmd(providerType string, args ...string) *exec.Cmd {
+	switch providerType {
+	case "podman":
+		return exec.Command("podman", args...)
+	case "docker":
+		return provider.DockerCmd("desktop-linux", args...)
+	case "rancher":
+		return provider.DockerCmd("rancher-desktop", args...)
+	case "orbstack":
+		return provider.DockerCmd("orbstack", args...)
+	default:
+		return exec.Command("docker", args...)
 	}
 }
 
-// imageExists checks if a Docker image exists
-func imageExists(imageName string) bool {
-	cmd := exec.Command("docker", "image", "inspect", imageName)
+// providerImageExists checks if an image exists for the given provider.
+func providerImageExists(providerType, imageName string) bool {
+	cmd := providerImageCmd(providerType, "image", "inspect", imageName)
 	return cmd.Run() == nil
 }
 
-// removeImage removes a Docker image if it exists
-func removeImage(imageName string) {
-	exec.Command("docker", "rmi", "-f", imageName).Run()
+// providerRemoveImage removes an image for the given provider.
+func providerRemoveImage(providerType, imageName string) {
+	providerImageCmd(providerType, "rmi", "-f", imageName).Run()
 }
 
 func TestBuildCommand_Integration_Claude(t *testing.T) {
-	skipIfNoDocker(t)
 	if testing.Short() {
 		t.Skip("skipping image build test in short mode")
 	}
 
-	// Use a test-specific image name to avoid conflicts
-	testImageName := "addt-test-claude-integration"
+	providers := testutil.RequireProviders(t)
+	for _, prov := range providers {
+		t.Run(prov, func(t *testing.T) {
+			testImageName := "addt-test-claude-integration-" + prov
 
-	// Clean up before and after test
-	removeImage(testImageName)
-	defer removeImage(testImageName)
+			providerRemoveImage(prov, testImageName)
+			defer providerRemoveImage(prov, testImageName)
 
-	// Load config with defaults
-	cfg := config.LoadConfig("0.0.0-test", "22", "1.23.5", "0.4.17", 49152)
-	cfg.Extensions = "claude"
+			cfg := config.LoadConfig("0.0.0-test", "22", "1.23.5", "0.4.17", 49152)
+			cfg.Extensions = "claude"
 
-	// Create provider config
-	providerCfg := &provider.Config{
-		Extensions:        cfg.Extensions,
-		ExtensionVersions: cfg.ExtensionVersions,
-		NodeVersion:       cfg.NodeVersion,
-		GoVersion:         cfg.GoVersion,
-		UvVersion:         cfg.UvVersion,
-		ImageName:         testImageName,
-	}
+			providerCfg := &provider.Config{
+				Extensions:        cfg.Extensions,
+				ExtensionVersions: cfg.ExtensionVersions,
+				NodeVersion:       cfg.NodeVersion,
+				GoVersion:         cfg.GoVersion,
+				UvVersion:         cfg.UvVersion,
+				ImageName:         testImageName,
+			}
 
-	// Create Docker provider
-	prov, err := createDockerProvider(providerCfg)
-	if err != nil {
-		t.Fatalf("Failed to create Docker provider: %v", err)
-	}
+			p, err := NewProvider(prov, providerCfg)
+			if err != nil {
+				t.Fatalf("Failed to create %s provider: %v", prov, err)
+			}
 
-	// Initialize provider
-	if err := prov.Initialize(providerCfg); err != nil {
-		t.Fatalf("Failed to initialize provider: %v", err)
-	}
+			if err := p.Initialize(providerCfg); err != nil {
+				t.Fatalf("Failed to initialize %s provider: %v", prov, err)
+			}
 
-	// Build the image
-	if err := prov.BuildIfNeeded(true, false); err != nil {
-		t.Fatalf("BuildIfNeeded failed: %v", err)
-	}
+			if err := p.BuildIfNeeded(true, false); err != nil {
+				t.Fatalf("BuildIfNeeded failed for %s: %v", prov, err)
+			}
 
-	// Verify image was created
-	if !imageExists(testImageName) {
-		t.Error("Expected image to exist after build")
+			if !providerImageExists(prov, testImageName) {
+				t.Errorf("Expected image to exist after build on %s", prov)
+			}
+		})
 	}
 }
 
 func TestBuildCommand_Integration_WithNoCache(t *testing.T) {
-	skipIfNoDocker(t)
 	if testing.Short() {
 		t.Skip("skipping image build test in short mode")
 	}
 
-	testImageName := "addt-test-nocache-integration"
+	providers := testutil.RequireProviders(t)
+	for _, prov := range providers {
+		t.Run(prov, func(t *testing.T) {
+			testImageName := "addt-test-nocache-integration-" + prov
 
-	removeImage(testImageName)
-	defer removeImage(testImageName)
+			providerRemoveImage(prov, testImageName)
+			defer providerRemoveImage(prov, testImageName)
 
-	cfg := config.LoadConfig("0.0.0-test", "22", "1.23.5", "0.4.17", 49152)
-	cfg.Extensions = "claude"
+			cfg := config.LoadConfig("0.0.0-test", "22", "1.23.5", "0.4.17", 49152)
+			cfg.Extensions = "claude"
 
-	providerCfg := &provider.Config{
-		Extensions:        cfg.Extensions,
-		ExtensionVersions: cfg.ExtensionVersions,
-		NodeVersion:       cfg.NodeVersion,
-		GoVersion:         cfg.GoVersion,
-		UvVersion:         cfg.UvVersion,
-		ImageName:         testImageName,
-		NoCache:           true, // Test no-cache flag
-	}
+			providerCfg := &provider.Config{
+				Extensions:        cfg.Extensions,
+				ExtensionVersions: cfg.ExtensionVersions,
+				NodeVersion:       cfg.NodeVersion,
+				GoVersion:         cfg.GoVersion,
+				UvVersion:         cfg.UvVersion,
+				ImageName:         testImageName,
+				NoCache:           true,
+			}
 
-	prov, err := createDockerProvider(providerCfg)
-	if err != nil {
-		t.Fatalf("Failed to create Docker provider: %v", err)
-	}
+			p, err := NewProvider(prov, providerCfg)
+			if err != nil {
+				t.Fatalf("Failed to create %s provider: %v", prov, err)
+			}
 
-	if err := prov.Initialize(providerCfg); err != nil {
-		t.Fatalf("Failed to initialize provider: %v", err)
-	}
+			if err := p.Initialize(providerCfg); err != nil {
+				t.Fatalf("Failed to initialize %s provider: %v", prov, err)
+			}
 
-	if err := prov.BuildIfNeeded(true, false); err != nil {
-		t.Fatalf("BuildIfNeeded with NoCache failed: %v", err)
-	}
+			if err := p.BuildIfNeeded(true, false); err != nil {
+				t.Fatalf("BuildIfNeeded with NoCache failed for %s: %v", prov, err)
+			}
 
-	if !imageExists(testImageName) {
-		t.Error("Expected image to exist after no-cache build")
+			if !providerImageExists(prov, testImageName) {
+				t.Errorf("Expected image to exist after no-cache build on %s", prov)
+			}
+		})
 	}
 }
 
 func TestBuildCommand_Integration_Binary(t *testing.T) {
-	skipIfNoDocker(t)
 	if testing.Short() {
 		t.Skip("skipping image build test in short mode")
 	}
 
-	// Get absolute path to the binary
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Could not get working directory: %v", err)
-	}
+	providers := testutil.RequireProviders(t)
+	for _, prov := range providers {
+		t.Run(prov, func(t *testing.T) {
+			wd, err := os.Getwd()
+			if err != nil {
+				t.Fatalf("Could not get working directory: %v", err)
+			}
 
-	// Binary should be at src/../dist/addt = dist/addt from repo root
-	srcDir := wd + "/.."
-	distDir := srcDir + "/../dist"
-	binaryPath := distDir + "/addt"
+			srcDir := wd + "/.."
+			distDir := srcDir + "/../dist"
+			binaryPath := distDir + "/addt"
 
-	// Try to find or build the binary
-	if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
-		// Create dist directory if needed
-		os.MkdirAll(distDir, 0755)
+			if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
+				os.MkdirAll(distDir, 0755)
+				buildCmd := exec.Command("go", "build", "-o", binaryPath, ".")
+				buildCmd.Dir = srcDir
+				if output, err := buildCmd.CombinedOutput(); err != nil {
+					t.Skipf("Could not build addt binary: %v\nOutput: %s", err, string(output))
+				}
+			}
 
-		// Try building it from src directory
-		buildCmd := exec.Command("go", "build", "-o", binaryPath, ".")
-		buildCmd.Dir = srcDir
-		if output, err := buildCmd.CombinedOutput(); err != nil {
-			t.Skipf("Could not build addt binary: %v\nOutput: %s", err, string(output))
-		}
-	}
+			if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
+				t.Skip("Binary does not exist after build attempt, skipping")
+			}
 
-	// Verify binary exists after build attempt
-	if _, err := os.Stat(binaryPath); os.IsNotExist(err) {
-		t.Skip("Binary does not exist after build attempt, skipping")
-	}
+			cmd := exec.Command(binaryPath, "build", "claude")
+			cmd.Env = append(os.Environ(), "ADDT_PROVIDER="+prov)
 
-	// Run the actual binary to build claude extension
-	// The image name will be auto-generated (e.g., addt:claude-X.Y.Z)
-	cmd := exec.Command(binaryPath, "build", "claude")
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				t.Fatalf("addt build command failed for %s: %v\nOutput: %s", prov, err, string(output))
+			}
 
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("addt build command failed: %v\nOutput: %s", err, string(output))
-	}
-
-	// Verify the build produced output indicating success
-	outputStr := string(output)
-	if !strings.Contains(outputStr, "Image tagged as:") && !strings.Contains(outputStr, "Using cached") {
-		t.Errorf("Expected build success output, got: %s", outputStr)
+			outputStr := string(output)
+			if !strings.Contains(outputStr, "Image tagged as:") && !strings.Contains(outputStr, "Using cached") {
+				t.Errorf("Expected build success output for %s, got: %s", prov, outputStr)
+			}
+		})
 	}
 }
 
 func TestBuildCommand_Integration_ExtensionVersion(t *testing.T) {
-	skipIfNoDocker(t)
 	if testing.Short() {
 		t.Skip("skipping image build test in short mode")
 	}
 
-	testImageName := "addt-test-version-integration"
+	providers := testutil.RequireProviders(t)
+	for _, prov := range providers {
+		t.Run(prov, func(t *testing.T) {
+			testImageName := "addt-test-version-integration-" + prov
 
-	removeImage(testImageName)
-	defer removeImage(testImageName)
+			providerRemoveImage(prov, testImageName)
+			defer providerRemoveImage(prov, testImageName)
 
-	cfg := config.LoadConfig("0.0.0-test", "22", "1.23.5", "0.4.17", 49152)
-	cfg.Extensions = "claude"
+			cfg := config.LoadConfig("0.0.0-test", "22", "1.23.5", "0.4.17", 49152)
+			cfg.Extensions = "claude"
 
-	// Set a specific version
-	providerCfg := &provider.Config{
-		Extensions: cfg.Extensions,
-		ExtensionVersions: map[string]string{
-			"claude": "1.0.21", // Use a specific known version
-		},
-		NodeVersion: cfg.NodeVersion,
-		GoVersion:   cfg.GoVersion,
-		UvVersion:   cfg.UvVersion,
-		ImageName:   testImageName,
-	}
+			providerCfg := &provider.Config{
+				Extensions: cfg.Extensions,
+				ExtensionVersions: map[string]string{
+					"claude": "1.0.21",
+				},
+				NodeVersion: cfg.NodeVersion,
+				GoVersion:   cfg.GoVersion,
+				UvVersion:   cfg.UvVersion,
+				ImageName:   testImageName,
+			}
 
-	prov, err := createDockerProvider(providerCfg)
-	if err != nil {
-		t.Fatalf("Failed to create Docker provider: %v", err)
-	}
+			p, err := NewProvider(prov, providerCfg)
+			if err != nil {
+				t.Fatalf("Failed to create %s provider: %v", prov, err)
+			}
 
-	if err := prov.Initialize(providerCfg); err != nil {
-		t.Fatalf("Failed to initialize provider: %v", err)
-	}
+			if err := p.Initialize(providerCfg); err != nil {
+				t.Fatalf("Failed to initialize %s provider: %v", prov, err)
+			}
 
-	if err := prov.BuildIfNeeded(true, false); err != nil {
-		t.Fatalf("BuildIfNeeded with specific version failed: %v", err)
-	}
+			if err := p.BuildIfNeeded(true, false); err != nil {
+				t.Fatalf("BuildIfNeeded with specific version failed for %s: %v", prov, err)
+			}
 
-	if !imageExists(testImageName) {
-		t.Error("Expected image to exist after versioned build")
-	}
+			if !providerImageExists(prov, testImageName) {
+				t.Errorf("Expected image to exist after versioned build on %s", prov)
+			}
 
-	// Verify the version is in the image labels or env
-	cmd := exec.Command("docker", "inspect", "--format", "{{.Config.Labels}}", testImageName)
-	output, err := cmd.Output()
-	if err == nil {
-		// Check if version is mentioned (implementation-dependent)
-		t.Logf("Image labels: %s", string(output))
+			cmd := providerImageCmd(prov, "inspect", "--format", "{{.Config.Labels}}", testImageName)
+			output, err := cmd.Output()
+			if err == nil {
+				t.Logf("Image labels for %s: %s", prov, string(output))
+			}
+		})
 	}
 }
 
 func TestBuildCommand_Integration_MultipleExtensions(t *testing.T) {
-	skipIfNoDocker(t)
 	if testing.Short() {
 		t.Skip("skipping image build test in short mode")
 	}
 
-	testImageName := "addt-test-multi-integration"
+	providers := testutil.RequireProviders(t)
+	for _, prov := range providers {
+		t.Run(prov, func(t *testing.T) {
+			testImageName := "addt-test-multi-integration-" + prov
 
-	removeImage(testImageName)
-	defer removeImage(testImageName)
+			providerRemoveImage(prov, testImageName)
+			defer providerRemoveImage(prov, testImageName)
 
-	cfg := config.LoadConfig("0.0.0-test", "22", "1.23.5", "0.4.17", 49152)
-	cfg.Extensions = "claude,codex"
+			cfg := config.LoadConfig("0.0.0-test", "22", "1.23.5", "0.4.17", 49152)
+			cfg.Extensions = "claude,codex"
 
-	providerCfg := &provider.Config{
-		Extensions:        cfg.Extensions,
-		ExtensionVersions: cfg.ExtensionVersions,
-		NodeVersion:       cfg.NodeVersion,
-		GoVersion:         cfg.GoVersion,
-		UvVersion:         cfg.UvVersion,
-		ImageName:         testImageName,
-	}
+			providerCfg := &provider.Config{
+				Extensions:        cfg.Extensions,
+				ExtensionVersions: cfg.ExtensionVersions,
+				NodeVersion:       cfg.NodeVersion,
+				GoVersion:         cfg.GoVersion,
+				UvVersion:         cfg.UvVersion,
+				ImageName:         testImageName,
+			}
 
-	prov, err := createDockerProvider(providerCfg)
-	if err != nil {
-		t.Fatalf("Failed to create Docker provider: %v", err)
-	}
+			p, err := NewProvider(prov, providerCfg)
+			if err != nil {
+				t.Fatalf("Failed to create %s provider: %v", prov, err)
+			}
 
-	if err := prov.Initialize(providerCfg); err != nil {
-		t.Fatalf("Failed to initialize provider: %v", err)
-	}
+			if err := p.Initialize(providerCfg); err != nil {
+				t.Fatalf("Failed to initialize %s provider: %v", prov, err)
+			}
 
-	if err := prov.BuildIfNeeded(true, false); err != nil {
-		t.Fatalf("BuildIfNeeded with multiple extensions failed: %v", err)
-	}
+			if err := p.BuildIfNeeded(true, false); err != nil {
+				t.Fatalf("BuildIfNeeded with multiple extensions failed for %s: %v", prov, err)
+			}
 
-	if !imageExists(testImageName) {
-		t.Error("Expected image to exist after multi-extension build")
+			if !providerImageExists(prov, testImageName) {
+				t.Errorf("Expected image to exist after multi-extension build on %s", prov)
+			}
+		})
 	}
 }
 
 func TestBuildCommand_Integration_InvalidExtension(t *testing.T) {
-	skipIfNoDocker(t)
 	if testing.Short() {
 		t.Skip("skipping image build test in short mode")
 	}
 
-	cfg := config.LoadConfig("0.0.0-test", "22", "1.23.5", "0.4.17", 49152)
-	cfg.Extensions = "nonexistent-extension-xyz"
+	providers := testutil.RequireProviders(t)
+	for _, prov := range providers {
+		t.Run(prov, func(t *testing.T) {
+			testImageName := "addt-test-invalid-" + prov
 
-	providerCfg := &provider.Config{
-		Extensions:  cfg.Extensions,
-		NodeVersion: cfg.NodeVersion,
-		GoVersion:   cfg.GoVersion,
-		UvVersion:   cfg.UvVersion,
-		ImageName:   "addt-test-invalid",
-	}
+			cfg := config.LoadConfig("0.0.0-test", "22", "1.23.5", "0.4.17", 49152)
+			cfg.Extensions = "nonexistent-extension-xyz"
 
-	prov, err := createDockerProvider(providerCfg)
-	if err != nil {
-		// Provider creation should fail for invalid extension
-		t.Logf("Provider creation failed as expected for invalid extension: %v", err)
-		return
-	}
+			providerCfg := &provider.Config{
+				Extensions:  cfg.Extensions,
+				NodeVersion: cfg.NodeVersion,
+				GoVersion:   cfg.GoVersion,
+				UvVersion:   cfg.UvVersion,
+				ImageName:   testImageName,
+			}
 
-	if err := prov.Initialize(providerCfg); err != nil {
-		// Initialization should fail for invalid extension
-		t.Logf("Initialization failed as expected for invalid extension: %v", err)
-		return
-	}
+			p, err := NewProvider(prov, providerCfg)
+			if err != nil {
+				t.Logf("Provider creation failed as expected for invalid extension on %s: %v", prov, err)
+				return
+			}
 
-	// Build should fail for invalid extension
-	err = prov.BuildIfNeeded(true, false)
-	if err == nil {
-		// If build succeeds, the extension was silently ignored - this is also acceptable behavior
-		// but we should clean up the image
-		t.Log("Build succeeded for invalid extension (extension was likely ignored)")
-		removeImage("addt-test-invalid")
-	} else {
-		t.Logf("Build failed as expected for invalid extension: %v", err)
+			if err := p.Initialize(providerCfg); err != nil {
+				t.Logf("Initialization failed as expected for invalid extension on %s: %v", prov, err)
+				return
+			}
+
+			err = p.BuildIfNeeded(true, false)
+			if err == nil {
+				t.Logf("Build succeeded for invalid extension on %s (extension was likely ignored)", prov)
+				providerRemoveImage(prov, testImageName)
+			} else {
+				t.Logf("Build failed as expected for invalid extension on %s: %v", prov, err)
+			}
+		})
 	}
 }
 
 func TestBuildCommand_Integration_ImageNameFormat(t *testing.T) {
-	skipIfNoDocker(t)
+	providers := testutil.RequireProviders(t)
+	for _, prov := range providers {
+		t.Run(prov, func(t *testing.T) {
+			cfg := config.LoadConfig("0.0.0-test", "22", "1.23.5", "0.4.17", 49152)
+			cfg.Extensions = "claude"
 
-	cfg := config.LoadConfig("0.0.0-test", "22", "1.23.5", "0.4.17", 49152)
-	cfg.Extensions = "claude"
+			providerCfg := &provider.Config{
+				Extensions:  cfg.Extensions,
+				NodeVersion: cfg.NodeVersion,
+				GoVersion:   cfg.GoVersion,
+				UvVersion:   cfg.UvVersion,
+			}
 
-	providerCfg := &provider.Config{
-		Extensions:  cfg.Extensions,
-		NodeVersion: cfg.NodeVersion,
-		GoVersion:   cfg.GoVersion,
-		UvVersion:   cfg.UvVersion,
+			p, err := NewProvider(prov, providerCfg)
+			if err != nil {
+				t.Fatalf("Failed to create %s provider: %v", prov, err)
+			}
+
+			if err := p.Initialize(providerCfg); err != nil {
+				t.Fatalf("Failed to initialize %s provider: %v", prov, err)
+			}
+
+			imageName := p.DetermineImageName()
+
+			if imageName == "" {
+				t.Error("DetermineImageName returned empty string")
+			}
+
+			if !strings.Contains(imageName, "claude") {
+				t.Errorf("Expected image name to contain 'claude', got: %s", imageName)
+			}
+
+			t.Logf("Generated image name for %s: %s", prov, imageName)
+		})
 	}
-
-	prov, err := createDockerProvider(providerCfg)
-	if err != nil {
-		t.Fatalf("Failed to create Docker provider: %v", err)
-	}
-
-	if err := prov.Initialize(providerCfg); err != nil {
-		t.Fatalf("Failed to initialize provider: %v", err)
-	}
-
-	// Test DetermineImageName returns expected format
-	imageName := prov.DetermineImageName()
-
-	if imageName == "" {
-		t.Error("DetermineImageName returned empty string")
-	}
-
-	// Image name should contain the extension name
-	if !strings.Contains(imageName, "claude") {
-		t.Errorf("Expected image name to contain 'claude', got: %s", imageName)
-	}
-
-	t.Logf("Generated image name: %s", imageName)
 }

@@ -199,9 +199,9 @@ func (p *PodmanProvider) addContainerVolumesAndEnv(podmanArgs []string, spec *pr
 		podmanArgs = append(podmanArgs, "--user", "root")
 	}
 
-	// Add ports
+	// Add ports (bind to localhost only to avoid exposing dev ports to the network)
 	for _, port := range spec.Ports {
-		podmanArgs = append(podmanArgs, "-p", fmt.Sprintf("%d:%d", port.Host, port.Container))
+		podmanArgs = append(podmanArgs, "-p", fmt.Sprintf("127.0.0.1:%d:%d", port.Host, port.Container))
 	}
 
 	// Handle isolate_secrets: add tmpfs mount for secrets

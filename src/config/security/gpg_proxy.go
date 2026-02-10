@@ -103,7 +103,8 @@ func (p *GPGProxyAgent) Start() error {
 
 	var listener net.Listener
 	if p.useTCP {
-		// TCP mode: listen on all interfaces so podman VM can reach us
+		// TCP mode: must bind 0.0.0.0 because containers connect via
+		// host.docker.internal which resolves to a non-loopback IP
 		l, err := net.Listen("tcp", "0.0.0.0:0")
 		if err != nil {
 			return fmt.Errorf("failed to listen on TCP: %w", err)
